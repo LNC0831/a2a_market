@@ -17,6 +17,7 @@ const router = express.Router();
 // 导入质量体系服务
 const { CreditSystem } = require('../services/creditSystem');
 const AutoJudge = require('../services/autoJudge');
+const { JudgeSystem, JUDGE_REQUIREMENTS, JUDGE_REWARD_RATES } = require('../services/judgeSystem');
 
 // ==================== 认证中间件 ====================
 
@@ -517,19 +518,71 @@ router.post('/hall/tasks/:id/submit', authenticateAgent, (req, res) => {
             // 运行自动裁判
             autoJudge.judge(id)
               .then(judgeResult => {
-                res.json({
-                  success: true,
-                  task_id: id,
-                  status: 'submitted',
-                  message: 'Result submitted. Waiting for client acceptance.',
-                  expected_earnings: Math.round(task.budget * 0.7),
-                  track_url: `/api/hall/track/${id}`,
-                  auto_judge: {
-                    score: judgeResult.score,
-                    passed: judgeResult.passed,
-                    details: judgeResult.details
-                  }
-                });
+                const judgeSystem = new JudgeSystem(req.db);
+
+                // 检查是否需要 Tier 2 裁判评审 (分数在 50-75 之间)
+                if (judgeSystem.shouldTriggerTier2Review(judgeResult.score)) {
+                  // 分配裁判
+                  judgeSystem.assignJudge(id)
+                    .then(assignResult => {
+                      res.json({
+                        success: true,
+                        task_id: id,
+                        status: 'submitted',
+                        message: 'Result submitted. Assigned to Tier 2 judge for review.',
+                        expected_earnings: Math.round(task.budget * 0.7),
+                        track_url: `/api/hall/track/${id}`,
+                        auto_judge: {
+                          score: judgeResult.score,
+                          passed: judgeResult.passed,
+                          details: judgeResult.details,
+                          tier2_triggered: true
+                        },
+                        judge_review: {
+                          assigned: assignResult.success,
+                          judge_id: assignResult.judgeId,
+                          message: assignResult.message
+                        }
+                      });
+                    })
+                    .catch(assignErr => {
+                      console.error('Failed to assign judge:', assignErr);
+                      // 即使分配裁判失败，提交仍然成功
+                      res.json({
+                        success: true,
+                        task_id: id,
+                        status: 'submitted',
+                        message: 'Result submitted. Waiting for client acceptance.',
+                        expected_earnings: Math.round(task.budget * 0.7),
+                        track_url: `/api/hall/track/${id}`,
+                        auto_judge: {
+                          score: judgeResult.score,
+                          passed: judgeResult.passed,
+                          details: judgeResult.details,
+                          tier2_triggered: true
+                        },
+                        judge_review: {
+                          assigned: false,
+                          message: 'No qualified judge available'
+                        }
+                      });
+                    });
+                } else {
+                  // 不需要 Tier 2 评审，直接返回
+                  res.json({
+                    success: true,
+                    task_id: id,
+                    status: 'submitted',
+                    message: 'Result submitted. Waiting for client acceptance.',
+                    expected_earnings: Math.round(task.budget * 0.7),
+                    track_url: `/api/hall/track/${id}`,
+                    auto_judge: {
+                      score: judgeResult.score,
+                      passed: judgeResult.passed,
+                      details: judgeResult.details
+                    }
+                  });
+                }
               })
               .catch(judgeErr => {
                 console.error('Auto judge failed:', judgeErr);
@@ -1026,6 +1079,217 @@ router.get('/hall/credit', authenticateAgent, (req, res) => {
       console.error('Failed to get credit details:', err);
       res.status(500).json({ error: 'Failed to get credit details' });
     });
+});
+
+// ==================== 裁判系统 ====================
+
+/**
+ * 申请成为裁判
+ *
+ * POST /api/hall/judge/apply
+ * Headers: X-Agent-Key
+ * Body: { "category": "writing" }
+ */
+router.post('/hall/judge/apply', authenticateAgent, (req, res) => {
+  const { category } = req.body;
+  const agentId = req.agent.id;
+
+  if (!category) {
+    return res.status(400).json({ error: 'Category is required' });
+  }
+
+  const judgeSystem = new JudgeSystem(req.db);
+
+  judgeSystem.applyForJudge(agentId, category)
+    .then(result => {
+      res.json(result);
+    })
+    .catch(err => {
+      res.status(400).json({ error: err.message });
+    });
+});
+
+/**
+ * 检查裁判资格要求
+ *
+ * GET /api/hall/judge/requirements
+ * Headers: X-Agent-Key
+ */
+router.get('/hall/judge/requirements', authenticateAgent, (req, res) => {
+  const judgeSystem = new JudgeSystem(req.db);
+  const qualCheck = judgeSystem.checkQualifications(req.agent);
+
+  res.json({
+    requirements: JUDGE_REQUIREMENTS,
+    your_status: qualCheck,
+    categories: ['writing', 'coding', 'translation', 'general'],
+    reward_rates: JUDGE_REWARD_RATES
+  });
+});
+
+/**
+ * 获取考试题目
+ *
+ * GET /api/hall/judge/exam/:examId
+ * Headers: X-Agent-Key
+ */
+router.get('/hall/judge/exam/:examId', authenticateAgent, (req, res) => {
+  const { examId } = req.params;
+  const agentId = req.agent.id;
+
+  const judgeSystem = new JudgeSystem(req.db);
+
+  judgeSystem.getExam(examId, agentId)
+    .then(exam => {
+      res.json(exam);
+    })
+    .catch(err => {
+      res.status(400).json({ error: err.message });
+    });
+});
+
+/**
+ * 提交考试答案
+ *
+ * POST /api/hall/judge/exam/:examId/submit
+ * Headers: X-Agent-Key
+ * Body: { "answers": { "q1": 2, "q2": 1, ... } }
+ */
+router.post('/hall/judge/exam/:examId/submit', authenticateAgent, (req, res) => {
+  const { examId } = req.params;
+  const { answers } = req.body;
+  const agentId = req.agent.id;
+
+  if (!answers || typeof answers !== 'object') {
+    return res.status(400).json({ error: 'Answers object is required' });
+  }
+
+  const judgeSystem = new JudgeSystem(req.db);
+
+  judgeSystem.submitExam(examId, agentId, answers)
+    .then(result => {
+      res.json(result);
+    })
+    .catch(err => {
+      res.status(400).json({ error: err.message });
+    });
+});
+
+/**
+ * 获取待评审的任务 (裁判视角)
+ *
+ * GET /api/hall/judge/pending
+ * Headers: X-Agent-Key
+ */
+router.get('/hall/judge/pending', authenticateAgent, (req, res) => {
+  const agentId = req.agent.id;
+
+  if (!req.agent.is_judge) {
+    return res.status(403).json({ error: 'You are not a judge' });
+  }
+
+  const judgeSystem = new JudgeSystem(req.db);
+
+  judgeSystem.getPendingReviews(agentId)
+    .then(tasks => {
+      res.json({
+        pending_reviews: tasks,
+        total: tasks.length
+      });
+    })
+    .catch(err => {
+      res.status(500).json({ error: err.message });
+    });
+});
+
+/**
+ * 提交评审结果
+ *
+ * POST /api/hall/judge/review/:reviewId
+ * Headers: X-Agent-Key
+ * Body: {
+ *   "score": 75,
+ *   "decision": "approve",  // approve, reject, needs_revision
+ *   "comment": "Good work overall",
+ *   "criteria_scores": { "quality": 80, "completeness": 70 }
+ * }
+ */
+router.post('/hall/judge/review/:reviewId', authenticateAgent, (req, res) => {
+  const { reviewId } = req.params;
+  const { score, decision, comment, criteria_scores } = req.body;
+  const agentId = req.agent.id;
+
+  if (!req.agent.is_judge) {
+    return res.status(403).json({ error: 'You are not a judge' });
+  }
+
+  if (score === undefined || !decision) {
+    return res.status(400).json({ error: 'Score and decision are required' });
+  }
+
+  const judgeSystem = new JudgeSystem(req.db);
+
+  judgeSystem.submitReview(reviewId, agentId, score, decision, comment, criteria_scores)
+    .then(result => {
+      res.json(result);
+    })
+    .catch(err => {
+      res.status(400).json({ error: err.message });
+    });
+});
+
+/**
+ * 获取裁判统计信息
+ *
+ * GET /api/hall/judge/stats
+ * Headers: X-Agent-Key
+ */
+router.get('/hall/judge/stats', authenticateAgent, (req, res) => {
+  const agentId = req.agent.id;
+  const judgeSystem = new JudgeSystem(req.db);
+
+  judgeSystem.getJudgeStats(agentId)
+    .then(stats => {
+      res.json(stats);
+    })
+    .catch(err => {
+      res.status(500).json({ error: err.message });
+    });
+});
+
+/**
+ * 获取所有裁判列表 (公开)
+ *
+ * GET /api/hall/judges
+ */
+router.get('/hall/judges', (req, res) => {
+  const { category } = req.query;
+
+  let sql = `SELECT id, name, judge_categories, judge_rating, judge_total_reviews
+             FROM agents WHERE is_judge = 1 AND status = 'active'`;
+  const params = [];
+
+  if (category) {
+    sql += ` AND judge_categories LIKE ?`;
+    params.push(`%"${category}"%`);
+  }
+
+  sql += ' ORDER BY judge_rating DESC, judge_total_reviews DESC LIMIT 50';
+
+  req.db.all(sql, params, (err, judges) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    res.json({
+      judges: judges.map(j => ({
+        id: j.id,
+        name: j.name,
+        categories: JSON.parse(j.judge_categories || '[]'),
+        rating: j.judge_rating,
+        total_reviews: j.judge_total_reviews
+      })),
+      total: judges.length
+    });
+  });
 });
 
 // ==================== 兼容旧接口 ====================

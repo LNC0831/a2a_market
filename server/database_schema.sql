@@ -38,6 +38,14 @@ CREATE TABLE IF NOT EXISTS tasks (
     auto_judge_score INTEGER,               -- 自动裁判评分 (0-100)
     auto_judge_passed INTEGER DEFAULT 1,    -- 自动裁判是否通过
 
+    -- 裁判系统字段
+    needs_judge_review INTEGER DEFAULT 0,   -- 是否需要裁判评审 (Tier 2)
+    judge_id TEXT,                          -- 分配的裁判 Agent ID
+    judge_score INTEGER,                    -- 裁判评分 (0-100)
+    judge_comment TEXT,                     -- 裁判评语
+    judge_decision TEXT,                    -- 裁判决定: approve/reject/needs_revision
+    judged_at DATETIME,                     -- 裁判评审时间
+
     -- 时间戳
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     claimed_at DATETIME,
@@ -117,6 +125,14 @@ CREATE TABLE IF NOT EXISTS agents (
     timeout_count INTEGER DEFAULT 0,        -- 超时次数
     consecutive_rejections INTEGER DEFAULT 0, -- 连续被拒次数
 
+    -- 裁判资格字段
+    is_judge INTEGER DEFAULT 0,             -- 是否为裁判
+    judge_categories TEXT,                  -- 裁判资格类别 JSON: ["writing", "coding"]
+    judge_rating REAL DEFAULT 5.0,          -- 裁判评分
+    judge_total_reviews INTEGER DEFAULT 0,  -- 裁判总评审数
+    judge_earnings INTEGER DEFAULT 0,       -- 裁判收益
+    judge_qualified_at DATETIME,            -- 获得裁判资格时间
+
     status TEXT DEFAULT 'active',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -131,6 +147,75 @@ CREATE TABLE IF NOT EXISTS agent_credit_history (
     balance_after INTEGER NOT NULL,         -- 变化后的余额
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (agent_id) REFERENCES agents(id)
+);
+
+-- 裁判资格考试表
+CREATE TABLE IF NOT EXISTS judge_exams (
+    id TEXT PRIMARY KEY,
+    agent_id TEXT NOT NULL,
+    category TEXT NOT NULL,                 -- 考试类别: writing, coding, translation, general
+    status TEXT DEFAULT 'pending',          -- pending, passed, failed
+    score INTEGER,                          -- 考试得分 (0-100)
+    pass_threshold INTEGER DEFAULT 80,      -- 通过阈值
+    questions TEXT,                         -- JSON: 考试题目
+    answers TEXT,                           -- JSON: 考生答案
+    correct_answers TEXT,                   -- JSON: 正确答案 (评分后填入)
+    started_at DATETIME,
+    submitted_at DATETIME,
+    graded_at DATETIME,
+    expires_at DATETIME,                    -- 考试过期时间
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (agent_id) REFERENCES agents(id)
+);
+
+-- 裁判评审记录表
+CREATE TABLE IF NOT EXISTS judge_reviews (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    judge_id TEXT NOT NULL,                 -- 裁判 Agent ID
+    executor_id TEXT NOT NULL,              -- 执行者 Agent ID
+
+    -- 评审内容
+    score INTEGER NOT NULL,                 -- 评分 (0-100)
+    decision TEXT NOT NULL,                 -- approve, reject, needs_revision
+    comment TEXT,                           -- 评语
+    criteria_scores TEXT,                   -- JSON: 各项评分 {"quality": 80, "completeness": 90, ...}
+
+    -- 奖励
+    reward_amount INTEGER DEFAULT 0,        -- 裁判奖励金额 (任务金额的 5%)
+    reward_paid INTEGER DEFAULT 0,          -- 是否已支付
+
+    -- 时间戳
+    assigned_at DATETIME,
+    submitted_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (task_id) REFERENCES tasks(id),
+    FOREIGN KEY (judge_id) REFERENCES agents(id),
+    FOREIGN KEY (executor_id) REFERENCES agents(id)
+);
+
+-- 裁判资格申请表
+CREATE TABLE IF NOT EXISTS judge_applications (
+    id TEXT PRIMARY KEY,
+    agent_id TEXT NOT NULL,
+    category TEXT NOT NULL,                 -- 申请类别
+    status TEXT DEFAULT 'pending',          -- pending, exam_assigned, approved, rejected
+
+    -- 申请要求检查
+    min_rating_met INTEGER DEFAULT 0,       -- 是否满足最低评分要求 (4.5+)
+    min_tasks_met INTEGER DEFAULT 0,        -- 是否满足最低任务数要求 (20+)
+    min_credit_met INTEGER DEFAULT 0,       -- 是否满足最低信用分要求 (80+)
+
+    exam_id TEXT,                           -- 关联的考试 ID
+    reviewed_by TEXT,                       -- 审核人 (系统/人工)
+    review_comment TEXT,                    -- 审核意见
+
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at DATETIME,
+
+    FOREIGN KEY (agent_id) REFERENCES agents(id),
+    FOREIGN KEY (exam_id) REFERENCES judge_exams(id)
 );
 
 -- Skills表 (技能商店)
