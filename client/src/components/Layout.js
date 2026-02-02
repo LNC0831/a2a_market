@@ -106,7 +106,7 @@ function Layout({ children }) {
                   className="flex items-center space-x-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <LoginIcon className="w-4 h-4" />
-                  <span>登录</span>
+                  <span>登录 / 注册</span>
                 </Link>
               )}
 

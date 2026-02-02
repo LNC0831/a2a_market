@@ -18,6 +18,7 @@ const router = express.Router();
 const { CreditSystem } = require('../services/creditSystem');
 const AutoJudge = require('../services/autoJudge');
 const { JudgeSystem, JUDGE_REQUIREMENTS, JUDGE_REWARD_RATES } = require('../services/judgeSystem');
+const { AuthService } = require('../services/authService');
 
 // ==================== 认证中间件 ====================
 
@@ -102,37 +103,138 @@ function logTaskEvent(db, taskId, event, actor, actorType, details = {}) {
  * 人类客户注册
  *
  * POST /api/hall/client/register
+ * Body: { name, email, password, recaptchaToken }
  */
-router.post('/hall/client/register', (req, res) => {
-  const { name, email } = req.body;
+router.post('/hall/client/register', async (req, res) => {
+  const { name, email, password, recaptchaToken } = req.body;
 
+  // 验证必填字段
   if (!email) {
-    return res.status(400).json({ error: 'Email is required' });
+    return res.status(400).json({ error: '请输入邮箱' });
+  }
+  if (!password) {
+    return res.status(400).json({ error: '请输入密码' });
   }
 
-  const clientId = uuidv4();
-  const apiKey = 'client_' + crypto.randomBytes(32).toString('hex');
+  const authService = new AuthService(req.db);
 
-  req.db.run(
-    `INSERT INTO clients (id, name, email, api_key, created_at)
-     VALUES (?, ?, ?, ?, datetime('now'))`,
-    [clientId, name || '', email, apiKey],
-    function(err) {
-      if (err) {
-        if (err.message.includes('UNIQUE')) {
-          return res.status(400).json({ error: 'Email already registered' });
+  // 验证密码强度
+  const passwordCheck = authService.validatePasswordStrength(password);
+  if (!passwordCheck.valid) {
+    return res.status(400).json({ error: passwordCheck.errors.join(', ') });
+  }
+
+  // 验证 reCAPTCHA
+  const captchaResult = await authService.verifyRecaptcha(recaptchaToken);
+  if (!captchaResult.success) {
+    return res.status(400).json({ error: captchaResult.error });
+  }
+
+  try {
+    // 哈希密码
+    const passwordHash = await authService.hashPassword(password);
+
+    const clientId = uuidv4();
+    const apiKey = 'client_' + crypto.randomBytes(32).toString('hex');
+
+    req.db.run(
+      `INSERT INTO clients (id, name, email, password_hash, api_key, created_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+      [clientId, name || '', email, passwordHash, apiKey],
+      function(err) {
+        if (err) {
+          if (err.message.includes('UNIQUE')) {
+            return res.status(400).json({ error: '该邮箱已注册' });
+          }
+          return res.status(500).json({ error: err.message });
         }
-        return res.status(500).json({ error: err.message });
-      }
 
-      res.json({
-        success: true,
-        client_id: clientId,
-        api_key: apiKey,
-        message: 'Registration successful. Use X-Client-Key header for authentication.'
+        res.json({
+          success: true,
+          client_id: clientId,
+          api_key: apiKey,
+          message: '注册成功'
+        });
+      }
+    );
+  } catch (err) {
+    console.error('Registration error:', err);
+    res.status(500).json({ error: '注册失败，请稍后重试' });
+  }
+});
+
+/**
+ * 人类客户登录
+ *
+ * POST /api/hall/client/login
+ * Body: { email, password, recaptchaToken }
+ */
+router.post('/hall/client/login', async (req, res) => {
+  const { email, password, recaptchaToken } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: '请输入邮箱和密码' });
+  }
+
+  const authService = new AuthService(req.db);
+
+  // 验证 reCAPTCHA
+  const captchaResult = await authService.verifyRecaptcha(recaptchaToken);
+  if (!captchaResult.success) {
+    return res.status(400).json({ error: captchaResult.error });
+  }
+
+  // 查找用户
+  req.db.get('SELECT * FROM clients WHERE email = ?', [email], async (err, client) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    if (!client) {
+      return res.status(401).json({ error: '邮箱或密码错误' });
+    }
+
+    // 检查账户锁定
+    const lockStatus = authService.checkAccountLock(client);
+    if (lockStatus.locked) {
+      return res.status(423).json({ error: lockStatus.message });
+    }
+
+    // 检查是否有密码（兼容旧用户）
+    if (!client.password_hash) {
+      return res.status(400).json({
+        error: '该账户需要设置密码',
+        needsPasswordReset: true
       });
     }
-  );
+
+    // 验证密码
+    const isValid = await authService.verifyPassword(password, client.password_hash);
+
+    if (!isValid) {
+      // 记录失败尝试
+      const failResult = await authService.recordFailedLogin(client.id);
+      if (failResult.locked) {
+        return res.status(423).json({
+          error: `密码错误次数过多，账户已锁定 15 分钟`
+        });
+      }
+      return res.status(401).json({
+        error: `邮箱或密码错误，还剩 ${failResult.remainingAttempts} 次尝试机会`
+      });
+    }
+
+    // 登录成功，重置尝试次数
+    await authService.resetLoginAttempts(client.id);
+
+    res.json({
+      success: true,
+      client_id: client.id,
+      api_key: client.api_key,
+      name: client.name,
+      message: '登录成功'
+    });
+  });
 });
 
 // ==================== Agent 服务者注册 ====================

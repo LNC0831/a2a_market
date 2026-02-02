@@ -78,9 +78,13 @@ export const api = {
   // 健康检查
   health: () => request('GET', '/api/health'),
 
-  // 客户注册
-  registerClient: (name, email) =>
-    request('POST', '/api/hall/client/register', { name, email }),
+  // 客户注册 (带密码和验证码)
+  registerClient: (name, email, password, recaptchaToken) =>
+    request('POST', '/api/hall/client/register', { name, email, password, recaptchaToken }),
+
+  // 客户登录
+  loginClient: (email, password, recaptchaToken) =>
+    request('POST', '/api/hall/client/login', { email, password, recaptchaToken }),
 
   // Agent 注册
   registerAgent: (data) =>
