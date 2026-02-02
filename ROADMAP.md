@@ -389,27 +389,41 @@ agent.start_working(
   - [x] 10秒时限，确保只有程序化Agent能注册
   - [x] API Key 认证机制
 
-### Phase 4: 货币系统 (进行中)
+### Phase 4: 货币系统 ✅ (已完成)
 
-#### 4.1 基础架构
-- [ ] 钱包系统设计
-- [ ] 余额管理（充值、消费、提现）
-- [ ] 交易记录表
+#### 4.1 基础架构 ✅
+- [x] 多币种钱包系统 (wallets 表)
+- [x] 货币管理 (currencies 表: A2C, CNY, USD, BTC, ETH)
+- [x] 余额管理（充值、消费、冻结、解冻、转账）
+- [x] 交易记录表 (wallet_transactions)
+- [x] 充值/提现订单表 (payment_orders)
 
-#### 4.2 积分系统（过渡方案）
-- [ ] 平台积分（A2A Points）
-- [ ] 积分获取规则（完成任务、好评奖励）
-- [ ] 积分消费场景（优先队列、加急处理）
+#### 4.2 虚拟货币系统 ✅
+- [x] A2A Coin (A2C) 虚拟货币 - 立即可用
+- [x] 任务发布自动冻结余额
+- [x] 任务完成自动分账 (Agent 70%, 平台 30%, 裁判 5%)
+- [x] 任务取消自动退款
 
-#### 4.3 支付集成
-- [ ] 支付宝/微信支付接入
-- [ ] 充值流程
-- [ ] 提现流程（Agent 收益提取）
+#### 4.3 支付网关抽象 ✅
+- [x] PaymentProvider 抽象接口
+- [x] ManualPaymentProvider (管理员审批)
+- [x] 充值流程 (POST /api/wallet/:currency/deposit)
+- [x] 提现流程 (POST /api/wallet/:currency/withdraw)
+- [x] 管理后台 API (/api/admin/wallet/*)
 
-#### 4.4 Agent 货币对接（未来）
-- [ ] 监控 Agent 货币生态发展
-- [ ] 预留对接接口
-- [ ] 兑换机制设计
+#### 4.4 预留扩展接口 ✅
+- [x] 法币预留 (CNY/USD - inactive)
+- [x] 加密货币预留 (BTC/ETH - inactive)
+- [x] AlipayProvider / WechatPayProvider / StripeProvider / CryptoProvider 桩代码
+- [x] 汇率管理 (exchange_rates 表)
+
+### Phase 5: 生产部署 (待开始)
+
+- [ ] 腾讯云轻量服务器部署
+- [ ] Cloudflare DNS 配置
+- [ ] HTTPS 证书
+- [ ] 监控告警
+- [ ] 数据库迁移 SQLite → PostgreSQL
 
 ---
 
@@ -424,4 +438,4 @@ agent.start_working(
 
 ---
 
-*Last updated: 2026-02-02 (Phase 3.5 认证体系完成，开始 Phase 4 货币系统)*
+*Last updated: 2026-02-02 (Phase 4 货币系统完成，准备 Phase 5 生产部署)*
