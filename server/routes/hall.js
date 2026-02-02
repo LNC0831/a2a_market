@@ -14,6 +14,10 @@ const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const router = express.Router();
 
+// 导入质量体系服务
+const { CreditSystem } = require('../services/creditSystem');
+const AutoJudge = require('../services/autoJudge');
+
 // ==================== 认证中间件 ====================
 
 /**
@@ -372,7 +376,7 @@ router.get('/hall/tasks', optionalAuth, (req, res) => {
 });
 
 /**
- * Agent 接单 - 带锁单机制
+ * Agent 接单 - 带锁单机制和停权检查
  *
  * POST /api/hall/tasks/:id/claim
  */
@@ -381,56 +385,75 @@ router.post('/hall/tasks/:id/claim', authenticateAgent, (req, res) => {
   const agentId = req.agent.id;
   const agentName = req.agent.name;
 
-  // 使用 UPDATE ... WHERE status = 'open' 实现乐观锁
-  req.db.run(
-    `UPDATE tasks
-     SET status = 'claimed', agent_id = ?, claimed_at = datetime('now')
-     WHERE id = ? AND status = 'open'`,
-    [agentId, id],
-    function(err) {
-      if (err) return res.status(500).json({ error: err.message });
+  const creditSystem = new CreditSystem(req.db);
 
-      // 检查是否真的更新了（乐观锁检查）
-      if (this.changes === 0) {
-        // 没有更新，说明任务已被其他Agent抢走或状态已变
-        req.db.get('SELECT status, agent_id FROM tasks WHERE id = ?', [id], (err, task) => {
-          if (!task) return res.status(404).json({ error: 'Task not found' });
-          return res.status(409).json({
-            error: 'Task is no longer available',
-            current_status: task.status,
-            message: task.status === 'claimed' ? 'Already claimed by another agent' : `Task status is ${task.status}`
-          });
+  // 检查 Agent 是否被停权
+  creditSystem.checkAgentSuspension(agentId)
+    .then(suspensionStatus => {
+      if (suspensionStatus.isSuspended) {
+        return res.status(403).json({
+          error: 'Agent is suspended',
+          suspension_until: suspensionStatus.suspensionUntil,
+          reason: suspensionStatus.reason,
+          message: 'You cannot claim tasks while suspended'
         });
-        return;
       }
 
-      // 成功接单，记录事件
-      logTaskEvent(req.db, id, 'claimed', agentId, 'agent', { agent_name: agentName });
+      // 使用 UPDATE ... WHERE status = 'open' 实现乐观锁
+      req.db.run(
+        `UPDATE tasks
+         SET status = 'claimed', agent_id = ?, claimed_at = datetime('now')
+         WHERE id = ? AND status = 'open'`,
+        [agentId, id],
+        function(err) {
+          if (err) return res.status(500).json({ error: err.message });
 
-      // 获取任务详情返回
-      req.db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
-        res.json({
-          success: true,
-          task_id: id,
-          status: 'claimed',
-          message: 'Task claimed successfully. Execute and submit your result.',
-          submit_url: `/api/hall/tasks/${id}/submit`,
-          task: {
-            title: task.title,
-            description: task.description,
-            category: task.category,
-            budget: task.budget,
-            deadline: task.deadline
-          },
-          expected_earnings: Math.round(task.budget * 0.7)
-        });
-      });
-    }
-  );
+          // 检查是否真的更新了（乐观锁检查）
+          if (this.changes === 0) {
+            // 没有更新，说明任务已被其他Agent抢走或状态已变
+            req.db.get('SELECT status, agent_id FROM tasks WHERE id = ?', [id], (err, task) => {
+              if (!task) return res.status(404).json({ error: 'Task not found' });
+              return res.status(409).json({
+                error: 'Task is no longer available',
+                current_status: task.status,
+                message: task.status === 'claimed' ? 'Already claimed by another agent' : `Task status is ${task.status}`
+              });
+            });
+            return;
+          }
+
+          // 成功接单，记录事件
+          logTaskEvent(req.db, id, 'claimed', agentId, 'agent', { agent_name: agentName });
+
+          // 获取任务详情返回
+          req.db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
+            res.json({
+              success: true,
+              task_id: id,
+              status: 'claimed',
+              message: 'Task claimed successfully. Execute and submit your result.',
+              submit_url: `/api/hall/tasks/${id}/submit`,
+              task: {
+                title: task.title,
+                description: task.description,
+                category: task.category,
+                budget: task.budget,
+                deadline: task.deadline
+              },
+              expected_earnings: Math.round(task.budget * 0.7)
+            });
+          });
+        }
+      );
+    })
+    .catch(err => {
+      console.error('Suspension check failed:', err);
+      return res.status(500).json({ error: 'Failed to check suspension status' });
+    });
 });
 
 /**
- * Agent 提交结果
+ * Agent 提交结果 - 集成停权检查和自动裁判
  *
  * POST /api/hall/tasks/:id/submit
  */
@@ -443,38 +466,92 @@ router.post('/hall/tasks/:id/submit', authenticateAgent, (req, res) => {
     return res.status(400).json({ error: 'Result is required' });
   }
 
-  req.db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!task) return res.status(404).json({ error: 'Task not found' });
-    if (task.agent_id !== agentId) {
-      return res.status(403).json({ error: 'This task is not assigned to you' });
-    }
-    if (task.status !== 'claimed' && task.status !== 'rejected') {
-      return res.status(400).json({ error: `Cannot submit (current status: ${task.status})` });
-    }
+  const creditSystem = new CreditSystem(req.db);
+  const autoJudge = new AutoJudge(req.db);
 
-    req.db.run(
-      `UPDATE tasks SET status = 'submitted', result = ?, metadata = ?, submitted_at = datetime('now') WHERE id = ?`,
-      [result, JSON.stringify(metadata || {}), id],
-      function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-
-        logTaskEvent(req.db, id, 'submitted', agentId, 'agent', {
-          result_length: result.length,
-          metadata: metadata
-        });
-
-        res.json({
-          success: true,
-          task_id: id,
-          status: 'submitted',
-          message: 'Result submitted. Waiting for client acceptance.',
-          expected_earnings: Math.round(task.budget * 0.7),
-          track_url: `/api/hall/track/${id}`
+  // 检查 Agent 是否被停权
+  creditSystem.checkAgentSuspension(agentId)
+    .then(suspensionStatus => {
+      if (suspensionStatus.isSuspended) {
+        return res.status(403).json({
+          error: 'Agent is suspended',
+          suspension_until: suspensionStatus.suspensionUntil,
+          reason: suspensionStatus.reason,
+          message: 'You cannot submit tasks while suspended'
         });
       }
-    );
-  });
+
+      req.db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!task) return res.status(404).json({ error: 'Task not found' });
+        if (task.agent_id !== agentId) {
+          return res.status(403).json({ error: 'This task is not assigned to you' });
+        }
+        if (task.status !== 'claimed' && task.status !== 'rejected') {
+          return res.status(400).json({ error: `Cannot submit (current status: ${task.status})` });
+        }
+
+        // 检查重提交截止时间
+        if (task.status === 'rejected' && task.resubmit_deadline) {
+          const deadline = new Date(task.resubmit_deadline);
+          if (deadline < new Date()) {
+            return res.status(400).json({
+              error: 'Resubmit deadline has passed',
+              deadline: task.resubmit_deadline,
+              message: 'The task has been released back to the pool'
+            });
+          }
+        }
+
+        req.db.run(
+          `UPDATE tasks SET status = 'submitted', result = ?, metadata = ?, submitted_at = datetime('now') WHERE id = ?`,
+          [result, JSON.stringify(metadata || {}), id],
+          function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+
+            logTaskEvent(req.db, id, 'submitted', agentId, 'agent', {
+              result_length: result.length,
+              metadata: metadata
+            });
+
+            // 运行自动裁判
+            autoJudge.judge(id)
+              .then(judgeResult => {
+                res.json({
+                  success: true,
+                  task_id: id,
+                  status: 'submitted',
+                  message: 'Result submitted. Waiting for client acceptance.',
+                  expected_earnings: Math.round(task.budget * 0.7),
+                  track_url: `/api/hall/track/${id}`,
+                  auto_judge: {
+                    score: judgeResult.score,
+                    passed: judgeResult.passed,
+                    details: judgeResult.details
+                  }
+                });
+              })
+              .catch(judgeErr => {
+                console.error('Auto judge failed:', judgeErr);
+                // 即使自动裁判失败，提交仍然成功
+                res.json({
+                  success: true,
+                  task_id: id,
+                  status: 'submitted',
+                  message: 'Result submitted. Waiting for client acceptance.',
+                  expected_earnings: Math.round(task.budget * 0.7),
+                  track_url: `/api/hall/track/${id}`,
+                  auto_judge: null
+                });
+              });
+          }
+        );
+      });
+    })
+    .catch(err => {
+      console.error('Suspension check failed:', err);
+      return res.status(500).json({ error: 'Failed to check suspension status' });
+    });
 });
 
 /**
@@ -587,7 +664,7 @@ router.get('/hall/my-orders', authenticateClient, (req, res) => {
 });
 
 /**
- * 验收通过
+ * 验收通过 - 奖励信用分
  *
  * POST /api/hall/tasks/:id/accept
  */
@@ -601,6 +678,7 @@ router.post('/hall/tasks/:id/accept', (req, res) => {
       return res.status(400).json({ error: `Cannot accept (current status: ${task.status})` });
     }
 
+    const creditSystem = new CreditSystem(req.db);
     const agentEarnings = Math.round(task.budget * 0.7);
     const platformFee = Math.round(task.budget * 0.3);
 
@@ -628,27 +706,55 @@ router.post('/hall/tasks/:id/accept', (req, res) => {
           agent_earnings: agentEarnings
         });
 
-        res.json({
-          success: true,
-          task_id: id,
-          status: 'completed',
-          settlement: {
-            total: task.budget,
-            agent_earnings: agentEarnings,
-            platform_fee: platformFee
-          },
-          message: 'Task completed. Agent has been paid.',
-          rate_url: `/api/hall/tasks/${id}/rate`
-        });
+        // 奖励信用分 (+5)
+        creditSystem.rewardTaskCompletion(task.agent_id, id)
+          .then(creditResult => {
+            res.json({
+              success: true,
+              task_id: id,
+              status: 'completed',
+              settlement: {
+                total: task.budget,
+                agent_earnings: agentEarnings,
+                platform_fee: platformFee
+              },
+              credit_impact: {
+                change: creditResult.change,
+                new_balance: creditResult.newBalance
+              },
+              message: 'Task completed. Agent has been paid.',
+              rate_url: `/api/hall/tasks/${id}/rate`
+            });
+          })
+          .catch(err => {
+            console.error('Failed to reward credit:', err);
+            res.json({
+              success: true,
+              task_id: id,
+              status: 'completed',
+              settlement: {
+                total: task.budget,
+                agent_earnings: agentEarnings,
+                platform_fee: platformFee
+              },
+              message: 'Task completed. Agent has been paid.',
+              rate_url: `/api/hall/tasks/${id}/rate`
+            });
+          });
       }
     );
   });
 });
 
 /**
- * 验收拒绝
+ * 验收拒绝 - 带三振机制
  *
  * POST /api/hall/tasks/:id/reject
+ *
+ * 三振机制:
+ * - 第1次拒绝: 状态 → rejected, 设置24h重提交期限, 信用分 -5
+ * - 第2次拒绝: 状态 → open (释放回池), 清除 agent_id, 信用分 -15
+ * - 第3次拒绝: 状态 → open, 信用分 -30, Agent 停权 7 天
  */
 router.post('/hall/tasks/:id/reject', (req, res) => {
   const { id } = req.params;
@@ -661,29 +767,115 @@ router.post('/hall/tasks/:id/reject', (req, res) => {
       return res.status(400).json({ error: `Cannot reject (current status: ${task.status})` });
     }
 
-    req.db.run(
-      `UPDATE tasks SET status = 'rejected', reject_reason = ? WHERE id = ?`,
-      [reason || '', id],
-      function(err) {
-        if (err) return res.status(500).json({ error: err.message });
+    const creditSystem = new CreditSystem(req.db);
+    const currentRejectionCount = (task.rejection_count || 0) + 1;
+    const agentId = task.agent_id;
 
-        logTaskEvent(req.db, id, 'rejected', task.client_id || 'client', task.client_type || 'human', {
-          reason: reason
-        });
+    // 根据拒绝次数决定处理方式
+    let newStatus;
+    let newAgentId;
+    let resubmitDeadline;
+    let responseMessage;
 
-        res.json({
-          success: true,
-          task_id: id,
-          status: 'rejected',
-          message: 'Task rejected. Agent can resubmit with improvements.'
+    if (currentRejectionCount === 1) {
+      // 第1次拒绝: 允许24h内重新提交
+      newStatus = 'rejected';
+      newAgentId = agentId; // 保留 agent_id
+      resubmitDeadline = `datetime('now', '+24 hours')`;
+      responseMessage = 'Task rejected (1st time). Agent can resubmit within 24 hours.';
+    } else if (currentRejectionCount === 2) {
+      // 第2次拒绝: 释放回任务池
+      newStatus = 'open';
+      newAgentId = null; // 清除 agent_id
+      resubmitDeadline = null;
+      responseMessage = 'Task rejected (2nd time). Task released back to the pool.';
+    } else {
+      // 第3次及以上拒绝: 释放任务 + 停权
+      newStatus = 'open';
+      newAgentId = null;
+      resubmitDeadline = null;
+      responseMessage = 'Task rejected (3rd time). Task released and agent suspended for 7 days.';
+    }
+
+    // 更新任务状态
+    const updateSQL = newAgentId === null
+      ? `UPDATE tasks SET
+           status = ?,
+           reject_reason = ?,
+           rejection_count = ?,
+           agent_id = NULL,
+           resubmit_deadline = ${resubmitDeadline || 'NULL'},
+           claimed_at = NULL,
+           submitted_at = NULL
+         WHERE id = ?`
+      : `UPDATE tasks SET
+           status = ?,
+           reject_reason = ?,
+           rejection_count = ?,
+           resubmit_deadline = ${resubmitDeadline || 'NULL'}
+         WHERE id = ?`;
+
+    const params = newAgentId === null
+      ? [newStatus, reason || '', currentRejectionCount, id]
+      : [newStatus, reason || '', currentRejectionCount, id];
+
+    req.db.run(updateSQL, params, function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+
+      // 记录事件
+      logTaskEvent(req.db, id, 'rejected', task.client_id || 'client', task.client_type || 'human', {
+        reason: reason,
+        rejection_count: currentRejectionCount,
+        released_to_pool: newAgentId === null
+      });
+
+      // 处理信用分变化
+      creditSystem.handleRejection(agentId, id, currentRejectionCount)
+        .then(creditResult => {
+          const response = {
+            success: true,
+            task_id: id,
+            status: newStatus,
+            rejection_count: currentRejectionCount,
+            message: responseMessage,
+            credit_impact: {
+              change: creditResult.change,
+              new_balance: creditResult.newBalance
+            }
+          };
+
+          // 添加重提交截止时间 (仅第1次拒绝)
+          if (currentRejectionCount === 1) {
+            response.resubmit_deadline = '24 hours from now';
+          }
+
+          // 添加停权信息 (第3次拒绝或信用分触发)
+          if (creditResult.suspended || creditResult.threeStrikes) {
+            response.agent_suspended = true;
+            response.suspension_days = creditResult.suspensionDays || 7;
+            response.suspension_reason = creditResult.reason || '三振出局';
+          }
+
+          res.json(response);
+        })
+        .catch(err => {
+          console.error('Failed to update credit:', err);
+          // 即使信用分更新失败，也返回任务状态更新成功
+          res.json({
+            success: true,
+            task_id: id,
+            status: newStatus,
+            rejection_count: currentRejectionCount,
+            message: responseMessage,
+            warning: 'Credit update failed'
+          });
         });
-      }
-    );
+    });
   });
 });
 
 /**
- * 评价 Agent
+ * 评价 Agent - 5星评价奖励信用分
  *
  * POST /api/hall/tasks/:id/rate
  * { "rating": 5, "comment": "非常满意" }
@@ -706,6 +898,8 @@ router.post('/hall/tasks/:id/rate', (req, res) => {
       return res.status(400).json({ error: 'Task already rated' });
     }
 
+    const creditSystem = new CreditSystem(req.db);
+
     req.db.run(
       `UPDATE tasks SET client_rating = ?, client_comment = ? WHERE id = ?`,
       [rating, comment || '', id],
@@ -724,10 +918,33 @@ router.post('/hall/tasks/:id/rate', (req, res) => {
           rating, comment
         });
 
-        res.json({
-          success: true,
-          message: 'Thank you for your rating!'
-        });
+        // 5星评价奖励信用分 (+10)
+        if (rating === 5) {
+          creditSystem.rewardFiveStarRating(task.agent_id, id)
+            .then(creditResult => {
+              res.json({
+                success: true,
+                message: 'Thank you for your rating!',
+                credit_bonus: {
+                  awarded: true,
+                  change: creditResult.change,
+                  reason: '5星好评奖励'
+                }
+              });
+            })
+            .catch(err => {
+              console.error('Failed to reward 5-star credit:', err);
+              res.json({
+                success: true,
+                message: 'Thank you for your rating!'
+              });
+            });
+        } else {
+          res.json({
+            success: true,
+            message: 'Thank you for your rating!'
+          });
+        }
       }
     );
   });
@@ -764,6 +981,51 @@ router.post('/hall/tasks/:id/cancel', (req, res) => {
       }
     );
   });
+});
+
+// ==================== 信用分查询 ====================
+
+/**
+ * 查看 Agent 信用分详情
+ *
+ * GET /api/hall/credit
+ * Headers: X-Agent-Key
+ *
+ * 返回:
+ * - credit_score: 当前信用分
+ * - status: 账号状态 (active/suspended)
+ * - suspension: 停权信息 (如果被停权)
+ * - stats: 统计数据 (超时次数、连续被拒次数)
+ * - recent_history: 最近的信用分变化历史
+ */
+router.get('/hall/credit', authenticateAgent, (req, res) => {
+  const agentId = req.agent.id;
+  const creditSystem = new CreditSystem(req.db);
+
+  creditSystem.getCreditDetails(agentId)
+    .then(details => {
+      res.json({
+        agent_id: agentId,
+        ...details,
+        thresholds: {
+          warning: 30,      // 低于30分停权7天
+          danger: 10,       // 低于10分停权30天
+          permanent_ban: 0  // 等于0永久封禁
+        },
+        rules: {
+          task_completed: '+5',
+          five_star_rating: '+10',
+          first_rejection: '-5',
+          second_rejection: '-15',
+          third_rejection: '-30 + 7-day suspension',
+          timeout: '-10'
+        }
+      });
+    })
+    .catch(err => {
+      console.error('Failed to get credit details:', err);
+      res.status(500).json({ error: 'Failed to get credit details' });
+    });
 });
 
 // ==================== 兼容旧接口 ====================

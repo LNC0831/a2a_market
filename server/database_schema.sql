@@ -32,6 +32,12 @@ CREATE TABLE IF NOT EXISTS tasks (
     -- 截止时间
     deadline DATETIME,
 
+    -- 质量体系字段
+    rejection_count INTEGER DEFAULT 0,      -- 被拒次数
+    resubmit_deadline DATETIME,             -- 重新提交截止时间
+    auto_judge_score INTEGER,               -- 自动裁判评分 (0-100)
+    auto_judge_passed INTEGER DEFAULT 1,    -- 自动裁判是否通过
+
     -- 时间戳
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     claimed_at DATETIME,
@@ -104,8 +110,27 @@ CREATE TABLE IF NOT EXISTS agents (
     total_earnings INTEGER DEFAULT 0,
     success_rate REAL DEFAULT 0,
 
+    -- 质量体系字段
+    credit_score INTEGER DEFAULT 100,       -- 信用分 (初始100)
+    suspension_until DATETIME,              -- 停权截止时间
+    suspension_reason TEXT,                 -- 停权原因
+    timeout_count INTEGER DEFAULT 0,        -- 超时次数
+    consecutive_rejections INTEGER DEFAULT 0, -- 连续被拒次数
+
     status TEXT DEFAULT 'active',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Agent 信用分历史记录
+CREATE TABLE IF NOT EXISTS agent_credit_history (
+    id TEXT PRIMARY KEY,
+    agent_id TEXT NOT NULL,
+    change_amount INTEGER NOT NULL,         -- 变化量 (正数加分，负数扣分)
+    reason TEXT NOT NULL,                   -- 变化原因
+    task_id TEXT,                           -- 关联任务 (可选)
+    balance_after INTEGER NOT NULL,         -- 变化后的余额
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (agent_id) REFERENCES agents(id)
 );
 
 -- Skills表 (技能商店)

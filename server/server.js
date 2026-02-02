@@ -13,6 +13,7 @@ const agentDeveloperRoutes = require('./routes/agentDeveloper');
 const agentAccessRoutes = require('./routes/agentAccess');
 const agentContributorRoutes = require('./routes/agentContributor');
 const mcpRoutes = require('./routes/mcp');
+const TimeoutChecker = require('./jobs/timeoutChecker');  // 超时检查后台任务
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -45,11 +46,33 @@ db.serialize(() => {
 
 // 健康检查
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    version: '2.0.0-agent-taobao',
-    features: ['multi-agent', 'skill-store', 'dynamic-pricing'],
-    timestamp: new Date().toISOString() 
+  res.json({
+    status: 'ok',
+    version: '2.1.0-agent-taobao',
+    features: [
+      'multi-agent',
+      'skill-store',
+      'dynamic-pricing',
+      'credit-system',
+      'auto-judge',
+      'timeout-checker'
+    ],
+    quality_system: {
+      credit_rules: {
+        task_completed: '+5',
+        five_star_rating: '+10',
+        first_rejection: '-5',
+        second_rejection: '-15',
+        third_rejection: '-30',
+        timeout: '-10'
+      },
+      suspension_thresholds: {
+        warning: 30,
+        danger: 10,
+        permanent_ban: 0
+      }
+    },
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -415,8 +438,8 @@ app.get('/.well-known/ai-agent.json', (req, res) => {
   res.json({
     name: 'AI Task Market',
     description: 'Autonomous AI skill marketplace where agents can discover, use, create skills, and earn money',
-    version: '2.0.0',
-    capabilities: ['skill_discovery', 'task_execution', 'skill_development', 'skill_contribution', 'task_claiming', 'payment_processing', 'analytics'],
+    version: '2.1.0',
+    capabilities: ['skill_discovery', 'task_execution', 'skill_development', 'skill_contribution', 'task_claiming', 'payment_processing', 'analytics', 'credit_system', 'auto_judge'],
     endpoints: {
       skills: '/api/agent/skills',
       execute: '/api/agent/execute',
@@ -424,6 +447,7 @@ app.get('/.well-known/ai-agent.json', (req, res) => {
       contribute_skill: '/api/agent-contributor/skills/submit',
       claim_task: '/api/agent-contributor/available-tasks',
       earnings: '/api/agent-contributor/earnings',
+      credit: '/api/hall/credit',
       webhooks: '/api/agent/webhooks',
       mcp: '/api/mcp'
     },
@@ -432,6 +456,21 @@ app.get('/.well-known/ai-agent.json', (req, res) => {
     earning_model: {
       skill_contribution: '70% revenue share to human owner',
       task_completion: '70% of task fee'
+    },
+    quality_system: {
+      description: 'Credit score system with rewards and penalties',
+      credit_endpoint: '/api/hall/credit',
+      rules: {
+        task_completed: '+5 credit',
+        five_star_rating: '+10 credit',
+        rejection: '-5/-15/-30 credit (escalating)',
+        timeout: '-10 credit'
+      },
+      suspension_thresholds: {
+        credit_below_30: '7-day suspension',
+        credit_below_10: '30-day suspension',
+        credit_zero: 'permanent ban'
+      }
     },
     contact: { agent_support: 'agent-support@aitask.market', docs: 'https://docs.aitask.market/agents' }
   });
@@ -464,19 +503,28 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: '服务器内部错误' });
 });
 
+// 初始化超时检查后台任务
+const timeoutChecker = new TimeoutChecker(db);
+
 // 启动服务器
 app.listen(PORT, () => {
   console.log(`\n🚀 Agent淘宝平台已启动！`);
-  console.log(`   版本: 2.0.0 (Multi-Agent)`);
+  console.log(`   版本: 2.1.0 (Multi-Agent + 质量体系)`);
   console.log(`   API地址: http://localhost:${PORT}/api`);
   console.log(`\n📊 核心功能:`);
   console.log(`   ✓ Multi-Agent协作 (调度/执行/审核)`);
   console.log(`   ✓ 技能商店 (开发者生态)`);
   console.log(`   ✓ 动态定价 (AI报价)`);
   console.log(`   ✓ 自动结算 (三方分成)`);
+  console.log(`   ✓ 信用分系统 (奖惩机制)`);
+  console.log(`   ✓ 超时检查 (自动释放)`);
+  console.log(`   ✓ 自动裁判 (质量检查)`);
   console.log(`\n🔗 访问地址:`);
   console.log(`   前端: http://localhost:3000`);
   console.log(`   API文档: http://localhost:${PORT}/api/health\n`);
+
+  // 启动超时检查后台任务 (每分钟检查一次)
+  timeoutChecker.start(60000);
 });
 
 module.exports = app;
