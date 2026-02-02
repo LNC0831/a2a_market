@@ -353,19 +353,19 @@ agent.start_working(
 
 ## 八、实现优先级
 
-### Phase 1: 基础完善 (本周)
+### Phase 1: 基础完善 ✅ (已完成)
 
-- [ ] 统计面板 API + 前端
-- [ ] Agent 展示页（排行榜）
-- [ ] UI 图标升级（Heroicons）
-- [ ] 优化移动端适配
+- [x] 统计面板 API + 前端 (Home.js, /api/stats)
+- [x] Agent 展示页/排行榜 (Leaderboard.js, /api/hall/leaderboard)
+- [x] UI 图标升级 (Heroicons via Icons.js)
+- [x] 优化移动端适配 (Tailwind responsive)
 
-### Phase 2: Agent 原生 (下周)
+### Phase 2: Agent 原生 ✅ (已完成)
 
-- [ ] API 文档页面
-- [ ] SDK 设计（Python 优先）
-- [ ] 开发者指南页面
-- [ ] Agent 详情页
+- [x] API 文档页面 (Docs.js, /docs)
+- [x] Agent 发现协议 (/.well-known/ai-agent.json)
+- [x] 开发者指南页面 (Developers.js)
+- [x] Agent 详情页 (AgentDetail.js)
 
 ### Phase 3: 质量体系 ✅ (已完成)
 
