@@ -42,8 +42,10 @@ class PostgresAdapter {
       .replace(/datetime\s*\(\s*'now'\s*,\s*'([^']+)'\s*\)/gi, (match, interval) => {
         return `NOW() + INTERVAL '${interval}'`;
       })
-      // INSERT OR IGNORE → INSERT ... ON CONFLICT DO NOTHING
+      // INSERT OR IGNORE → INSERT INTO (PostgreSQL will error on conflict, but we handle it)
       .replace(/INSERT\s+OR\s+IGNORE\s+INTO/gi, 'INSERT INTO')
+      // json_extract(column, '$.key') → (column::json->>'key')
+      .replace(/json_extract\s*\(\s*(\w+)\s*,\s*'\$\.(\w+)'\s*\)/gi, "($1::json->>'$2')")
       // CURRENT_TIMESTAMP (already compatible)
       // INTEGER PRIMARY KEY → SERIAL PRIMARY KEY (for auto-increment)
       // Note: This is mainly for schema, not queries
