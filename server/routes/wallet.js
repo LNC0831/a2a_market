@@ -166,6 +166,146 @@ router.get('/wallet', authenticate, async (req, res) => {
   }
 });
 
+// ==================== Orders Endpoints (MUST be before :currency routes) ====================
+
+/**
+ * GET /api/wallet/orders
+ * Get deposit/withdraw orders
+ */
+router.get('/wallet/orders', authenticate, async (req, res) => {
+  try {
+    const { type, status, limit = 50, offset = 0 } = req.query;
+
+    let sql = `
+      SELECT po.*, w.currency_code
+      FROM payment_orders po
+      JOIN wallets w ON po.wallet_id = w.id
+      WHERE w.owner_id = ?
+    `;
+    const params = [req.user.id];
+
+    if (type) {
+      sql += ' AND po.type = ?';
+      params.push(type);
+    }
+
+    if (status) {
+      sql += ' AND po.status = ?';
+      params.push(status);
+    }
+
+    sql += ' ORDER BY po.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+
+    req.db.all(sql, params, (err, rows) => {
+      if (err) {
+        console.error('Error fetching orders:', err);
+        return res.status(500).json({ error: 'Failed to fetch orders' });
+      }
+
+      res.json({
+        orders: rows || [],
+        count: rows ? rows.length : 0
+      });
+    });
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
+/**
+ * GET /api/wallet/orders/:id
+ * Get order details
+ */
+router.get('/wallet/orders/:id', authenticate, async (req, res) => {
+  try {
+    const orderId = req.params.id;
+
+    req.db.get(
+      `SELECT po.*, w.owner_id, w.currency_code
+       FROM payment_orders po
+       JOIN wallets w ON po.wallet_id = w.id
+       WHERE po.id = ?`,
+      [orderId],
+      (err, order) => {
+        if (err) {
+          console.error('Error fetching order:', err);
+          return res.status(500).json({ error: 'Failed to fetch order' });
+        }
+
+        if (!order) {
+          return res.status(404).json({ error: 'Order not found' });
+        }
+
+        // Check ownership
+        if (order.owner_id !== req.user.id) {
+          return res.status(403).json({ error: 'Access denied' });
+        }
+
+        res.json(order);
+      }
+    );
+  } catch (error) {
+    console.error('Error fetching order:', error);
+    res.status(500).json({ error: 'Failed to fetch order' });
+  }
+});
+
+/**
+ * POST /api/wallet/orders/:id/cancel
+ * Cancel pending order
+ */
+router.post('/wallet/orders/:id/cancel', authenticate, async (req, res) => {
+  try {
+    const orderId = req.params.id;
+
+    // Get order and verify ownership
+    const order = await new Promise((resolve, reject) => {
+      req.db.get(
+        `SELECT po.*, w.owner_id
+         FROM payment_orders po
+         JOIN wallets w ON po.wallet_id = w.id
+         WHERE po.id = ?`,
+        [orderId],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        }
+      );
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    if (order.owner_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    if (order.status !== 'pending') {
+      return res.status(400).json({ error: 'Only pending orders can be cancelled' });
+    }
+
+    // Cancel order
+    const provider = new ManualPaymentProvider(req.db);
+    const result = await provider.cancelOrder(orderId);
+
+    // If withdrawal, unfreeze balance
+    if (order.type === 'withdraw') {
+      const walletService = new WalletService(req.db);
+      await walletService.unfreezeBalance(order.wallet_id, order.amount, null, 'Withdrawal cancelled');
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error cancelling order:', error);
+    res.status(500).json({ error: error.message || 'Failed to cancel order' });
+  }
+});
+
+// ==================== Currency-specific Wallet Endpoints ====================
+
 /**
  * GET /api/wallet/:currency
  * Get specific currency wallet
@@ -407,142 +547,6 @@ router.post('/wallet/:currency/withdraw', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Error creating withdraw:', error);
     res.status(500).json({ error: error.message || 'Failed to create withdraw request' });
-  }
-});
-
-/**
- * GET /api/wallet/orders
- * Get deposit/withdraw orders
- */
-router.get('/wallet/orders', authenticate, async (req, res) => {
-  try {
-    const { type, status, limit = 50, offset = 0 } = req.query;
-
-    let sql = `
-      SELECT po.*, w.currency_code
-      FROM payment_orders po
-      JOIN wallets w ON po.wallet_id = w.id
-      WHERE w.owner_id = ?
-    `;
-    const params = [req.user.id];
-
-    if (type) {
-      sql += ' AND po.type = ?';
-      params.push(type);
-    }
-
-    if (status) {
-      sql += ' AND po.status = ?';
-      params.push(status);
-    }
-
-    sql += ' ORDER BY po.created_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), parseInt(offset));
-
-    req.db.all(sql, params, (err, rows) => {
-      if (err) {
-        console.error('Error fetching orders:', err);
-        return res.status(500).json({ error: 'Failed to fetch orders' });
-      }
-
-      res.json({
-        orders: rows || [],
-        count: rows ? rows.length : 0
-      });
-    });
-  } catch (error) {
-    console.error('Error fetching orders:', error);
-    res.status(500).json({ error: 'Failed to fetch orders' });
-  }
-});
-
-/**
- * GET /api/wallet/orders/:id
- * Get order details
- */
-router.get('/wallet/orders/:id', authenticate, async (req, res) => {
-  try {
-    const orderId = req.params.id;
-
-    req.db.get(
-      `SELECT po.*, w.owner_id, w.currency_code
-       FROM payment_orders po
-       JOIN wallets w ON po.wallet_id = w.id
-       WHERE po.id = ?`,
-      [orderId],
-      (err, order) => {
-        if (err) {
-          console.error('Error fetching order:', err);
-          return res.status(500).json({ error: 'Failed to fetch order' });
-        }
-
-        if (!order) {
-          return res.status(404).json({ error: 'Order not found' });
-        }
-
-        // Check ownership
-        if (order.owner_id !== req.user.id) {
-          return res.status(403).json({ error: 'Access denied' });
-        }
-
-        res.json(order);
-      }
-    );
-  } catch (error) {
-    console.error('Error fetching order:', error);
-    res.status(500).json({ error: 'Failed to fetch order' });
-  }
-});
-
-/**
- * POST /api/wallet/orders/:id/cancel
- * Cancel pending order
- */
-router.post('/wallet/orders/:id/cancel', authenticate, async (req, res) => {
-  try {
-    const orderId = req.params.id;
-
-    // Get order and verify ownership
-    const order = await new Promise((resolve, reject) => {
-      req.db.get(
-        `SELECT po.*, w.owner_id
-         FROM payment_orders po
-         JOIN wallets w ON po.wallet_id = w.id
-         WHERE po.id = ?`,
-        [orderId],
-        (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
-        }
-      );
-    });
-
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-
-    if (order.owner_id !== req.user.id) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    if (order.status !== 'pending') {
-      return res.status(400).json({ error: 'Only pending orders can be cancelled' });
-    }
-
-    // Cancel order
-    const provider = new ManualPaymentProvider(req.db);
-    const result = await provider.cancelOrder(orderId);
-
-    // If withdrawal, unfreeze balance
-    if (order.type === 'withdraw') {
-      const walletService = new WalletService(req.db);
-      await walletService.unfreezeBalance(order.wallet_id, order.amount, null, 'Withdrawal cancelled');
-    }
-
-    res.json(result);
-  } catch (error) {
-    console.error('Error cancelling order:', error);
-    res.status(500).json({ error: error.message || 'Failed to cancel order' });
   }
 });
 
