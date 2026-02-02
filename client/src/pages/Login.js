@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api, { setAuth } from '../api';
+import {
+  UserIcon,
+  AgentIcon,
+  WriteIcon,
+  CodeIcon,
+  AnalysisIcon,
+  TranslateIcon,
+  CheckCircleIcon,
+} from '../components/Icons';
 
 function Login() {
   const navigate = useNavigate();
@@ -19,10 +28,10 @@ function Login() {
   });
 
   const skillOptions = [
-    { value: 'writing', label: '写作' },
-    { value: 'coding', label: '编程' },
-    { value: 'analysis', label: '分析' },
-    { value: 'translation', label: '翻译' },
+    { value: 'writing', label: '写作', icon: WriteIcon },
+    { value: 'coding', label: '编程', icon: CodeIcon },
+    { value: 'analysis', label: '分析', icon: AnalysisIcon },
+    { value: 'translation', label: '翻译', icon: TranslateIcon },
   ];
 
   const handleClientRegister = async (e) => {
@@ -76,34 +85,41 @@ function Login() {
     <div className="max-w-md mx-auto">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-gray-900">登录 / 注册</h1>
-        <p className="text-gray-500 mt-2">选择你的身份</p>
+        <p className="text-gray-500 mt-2">选择你的身份开始使用</p>
       </div>
 
       {/* 身份切换 */}
-      <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
+      <div className="flex mb-6 bg-gray-100 rounded-xl p-1">
         <button
           onClick={() => setMode('client')}
-          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-            mode === 'client' ? 'bg-white shadow text-gray-900' : 'text-gray-500'
+          className={`flex-1 flex items-center justify-center space-x-2 py-3 rounded-lg text-sm font-medium transition-all ${
+            mode === 'client'
+              ? 'bg-white shadow text-gray-900'
+              : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          👤 我是客户
+          <UserIcon className="w-5 h-5" />
+          <span>我是客户</span>
         </button>
         <button
           onClick={() => setMode('agent')}
-          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-            mode === 'agent' ? 'bg-white shadow text-gray-900' : 'text-gray-500'
+          className={`flex-1 flex items-center justify-center space-x-2 py-3 rounded-lg text-sm font-medium transition-all ${
+            mode === 'agent'
+              ? 'bg-white shadow text-gray-900'
+              : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          🤖 我是 Agent
+          <AgentIcon className="w-5 h-5" />
+          <span>我是 Agent</span>
         </button>
       </div>
 
       {/* 客户注册 */}
       {mode === 'client' && (
         <form onSubmit={handleClientRegister} className="bg-white rounded-xl p-6 shadow-sm border space-y-4">
-          <div className="text-center text-gray-600 text-sm mb-4">
-            发布任务，让 Agent 为你完成工作
+          <div className="text-center text-gray-600 text-sm mb-4 flex items-center justify-center space-x-2">
+            <UserIcon className="w-5 h-5 text-blue-500" />
+            <span>发布任务，让 Agent 为你完成工作</span>
           </div>
 
           <div>
@@ -115,7 +131,7 @@ function Login() {
               value={clientForm.name}
               onChange={(e) => setClientForm({ ...clientForm, name: e.target.value })}
               placeholder="你的昵称"
-              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
@@ -128,7 +144,7 @@ function Login() {
               value={clientForm.email}
               onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })}
               placeholder="your@email.com"
-              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
@@ -136,7 +152,7 @@ function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             {loading ? '注册中...' : '注册'}
           </button>
@@ -146,8 +162,9 @@ function Login() {
       {/* Agent 注册 */}
       {mode === 'agent' && (
         <form onSubmit={handleAgentRegister} className="bg-white rounded-xl p-6 shadow-sm border space-y-4">
-          <div className="text-center text-gray-600 text-sm mb-4">
-            注册成为 Agent，接单赚取收益
+          <div className="text-center text-gray-600 text-sm mb-4 flex items-center justify-center space-x-2">
+            <AgentIcon className="w-5 h-5 text-purple-500" />
+            <span>注册成为 Agent，接单赚取收益</span>
           </div>
 
           <div>
@@ -159,7 +176,7 @@ function Login() {
               value={agentForm.name}
               onChange={(e) => setAgentForm({ ...agentForm, name: e.target.value })}
               placeholder="例如：写作专家 Agent"
-              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
@@ -168,21 +185,27 @@ function Login() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               技能 <span className="text-red-500">*</span>
             </label>
-            <div className="flex flex-wrap gap-2">
-              {skillOptions.map((skill) => (
-                <button
-                  key={skill.value}
-                  type="button"
-                  onClick={() => toggleSkill(skill.value)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    agentForm.skills.includes(skill.value)
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {skill.label}
-                </button>
-              ))}
+            <div className="grid grid-cols-2 gap-2">
+              {skillOptions.map((skill) => {
+                const Icon = skill.icon;
+                const selected = agentForm.skills.includes(skill.value);
+                return (
+                  <button
+                    key={skill.value}
+                    type="button"
+                    onClick={() => toggleSkill(skill.value)}
+                    className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-all border ${
+                      selected
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{skill.label}</span>
+                    {selected && <CheckCircleIcon className="w-4 h-4" />}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -195,7 +218,7 @@ function Login() {
               onChange={(e) => setAgentForm({ ...agentForm, description: e.target.value })}
               placeholder="介绍一下你的能力..."
               rows={3}
-              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             />
           </div>
 
@@ -208,19 +231,19 @@ function Login() {
               value={agentForm.contact_email}
               onChange={(e) => setAgentForm({ ...agentForm, contact_email: e.target.value })}
               placeholder="agent@example.com"
-              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             {loading ? '注册中...' : '注册成为 Agent'}
           </button>
 
-          <div className="text-center text-xs text-gray-500">
+          <div className="text-center text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
             注册后将获得 API Key，可用于程序化接入
           </div>
         </form>

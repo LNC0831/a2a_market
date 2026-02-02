@@ -156,22 +156,127 @@ app.get('/api/tasks', (req, res) => {
   });
 });
 
-// 获取统计数据
+// 获取统计数据（增强版）
 app.get('/api/stats', (req, res) => {
-  db.get(`SELECT 
-    COUNT(*) as total_tasks,
-    SUM(price) as total_revenue,
-    COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_tasks
-    FROM tasks`, [], (err, row) => {
+  // 并行查询多个统计数据
+  const queries = {
+    tasks: `SELECT
+      COUNT(*) as total,
+      COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
+      COUNT(CASE WHEN status = 'open' THEN 1 END) as open,
+      COUNT(CASE WHEN status = 'claimed' THEN 1 END) as in_progress,
+      COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled,
+      COUNT(CASE WHEN client_type = 'human' OR client_type = 'anonymous' THEN 1 END) as human_orders,
+      COUNT(CASE WHEN client_type = 'agent' THEN 1 END) as agent_orders,
+      SUM(CASE WHEN status = 'completed' THEN budget ELSE 0 END) as revenue
+      FROM tasks`,
+    agents: `SELECT
+      COUNT(*) as total,
+      COUNT(CASE WHEN status = 'active' THEN 1 END) as active,
+      AVG(rating) as avg_rating
+      FROM agents`,
+    ratings: `SELECT AVG(client_rating) as avg FROM tasks WHERE client_rating IS NOT NULL`
+  };
+
+  db.get(queries.tasks, [], (err, taskStats) => {
     if (err) return res.status(500).json({ error: err.message });
-    
-    res.json({
-      total: row.total_tasks || 0,
-      revenue: row.total_revenue || 0,
-      completed: row.completed_tasks || 0
+
+    db.get(queries.agents, [], (err, agentStats) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      db.get(queries.ratings, [], (err, ratingStats) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        const total = taskStats.total || 0;
+        const completed = taskStats.completed || 0;
+        const cancelled = taskStats.cancelled || 0;
+
+        res.json({
+          // 基础统计
+          total: total,
+          completed: completed,
+          revenue: taskStats.revenue || 0,
+
+          // Agent 统计
+          agents: {
+            total: agentStats.total || 0,
+            active: agentStats.active || 0
+          },
+
+          // 订单类型
+          orders: {
+            human: taskStats.human_orders || 0,
+            agent: taskStats.agent_orders || 0,
+            open: taskStats.open || 0,
+            in_progress: taskStats.in_progress || 0
+          },
+
+          // 质量指标
+          quality: {
+            completion_rate: total > 0 ? ((completed / (total - (taskStats.open || 0))) * 100).toFixed(1) : 0,
+            avg_rating: ratingStats.avg ? ratingStats.avg.toFixed(1) : '0.0'
+          }
+        });
+      });
     });
   });
 });
+
+// Agent 排行榜
+app.get('/api/leaderboard', (req, res) => {
+  const { sort = 'rating', limit = 10 } = req.query;
+
+  let orderBy;
+  switch (sort) {
+    case 'tasks':
+      orderBy = 'total_tasks DESC';
+      break;
+    case 'earnings':
+      orderBy = 'total_earnings DESC';
+      break;
+    case 'rating':
+    default:
+      orderBy = 'rating DESC, total_tasks DESC';
+  }
+
+  db.all(`
+    SELECT
+      id, name, skills, rating, total_tasks, total_earnings, status,
+      description, created_at
+    FROM agents
+    WHERE status = 'active' AND total_tasks > 0
+    ORDER BY ${orderBy}
+    LIMIT ?
+  `, [parseInt(limit)], (err, agents) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const enriched = agents.map((agent, index) => ({
+      rank: index + 1,
+      id: agent.id,
+      name: agent.name,
+      skills: JSON.parse(agent.skills || '[]'),
+      rating: agent.rating,
+      total_tasks: agent.total_tasks,
+      total_earnings: agent.total_earnings,
+      description: agent.description,
+      badge: getBadge(agent)
+    }));
+
+    res.json({
+      leaderboard: enriched,
+      sort: sort,
+      updated_at: new Date().toISOString()
+    });
+  });
+});
+
+function getBadge(agent) {
+  if (agent.rating >= 4.9 && agent.total_tasks >= 100) return { name: '金牌', color: 'gold' };
+  if (agent.rating >= 4.7 && agent.total_tasks >= 50) return { name: '银牌', color: 'silver' };
+  if (agent.rating >= 4.5 && agent.total_tasks >= 20) return { name: '铜牌', color: 'bronze' };
+  if (agent.total_tasks >= 5) return { name: '新星', color: 'blue' };
+  return null;
+}
 
 // 获取交易记录
 app.get('/api/transactions', (req, res) => {

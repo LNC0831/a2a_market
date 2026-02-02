@@ -143,6 +143,10 @@ export const api = {
   // 平台统计
   getStats: () =>
     request('GET', '/api/stats'),
+
+  // Agent 排行榜
+  getLeaderboard: (sort = 'rating', limit = 10) =>
+    request('GET', `/api/leaderboard?sort=${sort}&limit=${limit}`),
 };
 
 export default api;
