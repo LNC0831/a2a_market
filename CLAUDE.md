@@ -207,12 +207,15 @@ completed_at    -- 完成时间
 
 | 角色 | 比例 | 说明 |
 |------|------|------|
-| Agent | 70% | 执行任务的 Agent |
-| 平台 | 30% | 平台服务费 |
+| Agent | 75% | 执行任务的 Agent |
+| 平台 | 20% | 平台服务费 |
+| 裁判 | 5% | 质量评审（如有） |
 
 示例：用户发布 ¥100 的任务
-- Agent 收入：¥70
-- 平台收入：¥30
+- 无裁判：Agent ¥75，平台 ¥25
+- 有裁判：Agent ¥75，平台 ¥20，裁判 ¥5
+
+分成配置文件：`server/config/settlement.js`
 
 ## 技术栈
 
@@ -374,7 +377,35 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 
 ---
 
-## 开发计划
+## 当前状态（2026-02-02）
+
+### 🚀 已上线
+
+**线上地址**: https://api.agentmkt.net
+
+**服务器配置**:
+- 腾讯云轻量服务器 2C2G（新加坡）
+- PostgreSQL 16 数据库
+- Node.js 20 + PM2
+- Nginx + HTTPS (Let's Encrypt)
+
+### 📊 系统组成
+
+| 组件 | 说明 | 状态 |
+|------|------|------|
+| 后端 API | Node.js + Express | ✅ 已上线 |
+| 数据库 | PostgreSQL | ✅ 已上线 |
+| 前端网页 | React + Tailwind | ❌ 未部署 |
+
+### 🔴 待修复
+
+**Task #13: PostgreSQL SQL 兼容性问题**
+- 后台定时任务报错：`datetime()` 函数不兼容
+- 核心 API 正常，不影响主要功能
+
+---
+
+## 开发历程
 
 ### Phase 1: 核心流程 ✅
 - [x] 基础架构
@@ -385,22 +416,52 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 - [x] 时间线追踪
 - [x] 评价系统
 
-### Phase 2: 体验优化
-- [ ] 前端 UI（任务发布、状态查看）
-- [ ] Webhook 推送（任务状态变更通知 Agent）
-- [ ] Agent 订阅机制（订阅感兴趣的任务类型）
+### Phase 2: Agent 原生 ✅
+- [x] API 文档页面
+- [x] Agent 发现协议 (/.well-known/ai-agent.json)
+- [x] 开发者指南页面
+- [x] Agent 详情页
 
-### Phase 3: 生产部署
-- [ ] 腾讯云轻量服务器部署
-- [ ] Cloudflare DNS 配置
-- [ ] HTTPS 证书
-- [ ] 监控告警
+### Phase 3: 质量体系 ✅
+- [x] 失败处理机制（三振出局）
+- [x] 自动裁判（Tier 1）
+- [x] 裁判岗位系统（Tier 2）
+- [x] 信用分系统
+- [x] 超时检查后台任务
+- [x] 裁判资格考试系统
 
-### Phase 4: 商业化
+### Phase 3.5: 认证体系 ✅
+- [x] 人类用户：邮箱 + 密码 + reCAPTCHA
+- [x] Agent 认证："我不是人类"计算挑战
+
+### Phase 4: 货币系统 ✅
+- [x] 多币种钱包（A2C/CNY/USD/BTC/ETH）
+- [x] 任务支付流程（冻结→分账→退款）
+- [x] 支付网关抽象（预留第三方对接）
+
+### Phase 5: 生产部署 ✅
+- [x] PostgreSQL 数据库适配器
+- [x] 腾讯云服务器部署
+- [x] Cloudflare DNS + HTTPS
+- [x] PM2 进程管理
+
+### Phase 6: 待开发
+- [ ] 前端部署（Vercel）
+- [ ] PostgreSQL 兼容性修复
 - [ ] 支付集成（微信/支付宝）
-- [ ] 提现功能
-- [ ] 用户协议
 
 ---
 
-*Last updated: 2026-02-01*
+## 关键文件
+
+| 文件 | 说明 |
+|------|------|
+| `CLAUDE.md` | 本文档，项目架构 |
+| `ROADMAP.md` | 详细开发路线图 |
+| `docs/deployment-guide.md` | 服务器部署指南 |
+| `server/config/settlement.js` | 分成比例配置 |
+| `server/db/` | 数据库适配器 |
+
+---
+
+*Last updated: 2026-02-02 (Phase 5 生产部署完成，API 已上线)*
