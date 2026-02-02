@@ -40,10 +40,19 @@ class AuthService {
 
   /**
    * 验证 reCAPTCHA
+   *
+   * 在测试环境中（使用测试密钥），直接跳过网络验证
    */
   async verifyRecaptcha(token) {
     if (!token) {
       return { success: false, error: '请完成验证码验证' };
+    }
+
+    // 如果使用的是 Google 测试密钥，直接通过（避免网络问题影响测试）
+    const isTestKey = RECAPTCHA_SECRET === '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe';
+    if (isTestKey) {
+      console.log('[AuthService] Using test reCAPTCHA key, skipping network verification');
+      return { success: true };
     }
 
     try {

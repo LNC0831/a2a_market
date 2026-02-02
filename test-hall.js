@@ -11,19 +11,75 @@
  * 7. 结算
  */
 
+const http = require('http');
+const crypto = require('crypto');
+
 const BASE_URL = 'http://localhost:3001';
 
-async function request(method, path, body = null, headers = {}) {
-  const url = `${BASE_URL}${path}`;
-  const options = {
-    method,
-    headers: { 'Content-Type': 'application/json', ...headers }
-  };
-  if (body) options.body = JSON.stringify(body);
+// 使用原生 http 模块绕过代理
+function request(method, path, body = null, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(`${BASE_URL}${path}`);
+    const options = {
+      hostname: url.hostname,
+      port: url.port,
+      path: url.pathname + url.search,
+      method: method,
+      headers: { 'Content-Type': 'application/json', ...headers }
+    };
 
-  const response = await fetch(url, options);
-  const data = await response.json();
-  return { status: response.status, data };
+    const req = http.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          resolve({ status: res.statusCode, data: JSON.parse(data) });
+        } catch (e) {
+          reject(new Error(`Invalid JSON: ${data.slice(0, 100)}`));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    if (body) req.write(JSON.stringify(body));
+    req.end();
+  });
+}
+
+// Agent 挑战解答器
+function solveChallenge(questions) {
+  const answers = [];
+  for (const q of questions) {
+    let answer;
+    switch (q.type) {
+      case 'sha256':
+        answer = crypto.createHash('sha256').update(q.input).digest('hex');
+        break;
+      case 'base64_decode':
+        answer = Buffer.from(q.input, 'base64').toString('utf-8');
+        break;
+      case 'math':
+        if (q.input.operation === 'add') answer = String(q.input.a + q.input.b);
+        else if (q.input.operation === 'multiply') answer = String(q.input.a * q.input.b);
+        else if (q.input.operation === 'power') answer = String(Math.pow(q.input.base, q.input.exponent));
+        else if (q.input.operation === 'factorial') {
+          let f = 1; for (let i = 2; i <= q.input.n; i++) f *= i;
+          answer = String(f);
+        }
+        break;
+      case 'timestamp':
+        answer = String(Math.floor(new Date(q.input).getTime() / 1000));
+        break;
+      case 'string':
+        if (q.input.operation === 'reverse') answer = q.input.string.split('').reverse().join('');
+        else if (q.input.operation === 'count_char') answer = String((q.input.string.match(new RegExp(q.input.char, 'g')) || []).length);
+        else if (q.input.operation === 'length') answer = String(q.input.string.length);
+        else if (q.input.operation === 'uppercase') answer = q.input.string.toUpperCase();
+        break;
+    }
+    answers.push(answer);
+  }
+  return answers;
 }
 
 function sleep(ms) {
@@ -71,10 +127,16 @@ async function runTest() {
     console.log(`❌ 发布失败: ${err.message}`);
   }
 
-  // 3. Agent 注册
-  console.log('\n[3/8] Agent 注册...');
+  // 3. Agent 注册 (需要通过挑战)
+  console.log('\n[3/8] Agent 注册 (通过挑战)...');
   try {
+    // 获取挑战
+    const { data: challenge } = await request('GET', '/api/hall/register/challenge');
+    const answers = solveChallenge(challenge.questions);
+
     const { status, data } = await request('POST', '/api/hall/register', {
+      challenge_id: challenge.challenge_id,
+      answers: answers,
       name: '写作专家 Agent',
       skills: ['writing', 'translation'],
       description: '专业文章写作，5年经验',
@@ -86,6 +148,7 @@ async function runTest() {
       console.log(`✅ Agent 注册成功`);
       console.log(`   Agent ID: ${data.agent_id}`);
       console.log(`   API Key: ${agentKey.substring(0, 20)}...`);
+      console.log(`   挑战完成时间: ${data.verification?.completion_time_ms}ms`);
     } else {
       console.log(`❌ 注册失败: ${JSON.stringify(data)}`);
     }
@@ -190,7 +253,7 @@ async function runTest() {
     console.log('⚠️ 跳过');
   } else {
     // 先查看结果
-    const { data: statusData } = await request('GET', `/api/hall/status/${taskId}`);
+    const { data: statusData } = await request('GET', `/api/hall/track/${taskId}`);
     console.log(`   任务状态: ${statusData.status}`);
     if (statusData.result) {
       console.log(`   结果预览: ${statusData.result.substring(0, 100)}...`);

@@ -10,19 +10,89 @@
  * - 裁判统计
  */
 
+const http = require('http');
+const crypto = require('crypto');
+
 const BASE_URL = 'http://localhost:3001';
 
-async function request(method, path, body = null, headers = {}) {
-  const url = `${BASE_URL}${path}`;
-  const options = {
-    method,
-    headers: { 'Content-Type': 'application/json', ...headers }
-  };
-  if (body) options.body = JSON.stringify(body);
+// 使用原生 http 模块绕过代理
+function request(method, path, body = null, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(`${BASE_URL}${path}`);
+    const options = {
+      hostname: url.hostname,
+      port: url.port,
+      path: url.pathname + url.search,
+      method: method,
+      headers: { 'Content-Type': 'application/json', ...headers }
+    };
 
-  const response = await fetch(url, options);
-  const data = await response.json();
-  return { status: response.status, data };
+    const req = http.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          resolve({ status: res.statusCode, data: JSON.parse(data) });
+        } catch (e) {
+          reject(new Error(`Invalid JSON: ${data.slice(0, 100)}`));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    if (body) req.write(JSON.stringify(body));
+    req.end();
+  });
+}
+
+// Agent 挑战解答器
+function solveChallenge(questions) {
+  const answers = [];
+  for (const q of questions) {
+    let answer;
+    switch (q.type) {
+      case 'sha256':
+        answer = crypto.createHash('sha256').update(q.input).digest('hex');
+        break;
+      case 'base64_decode':
+        answer = Buffer.from(q.input, 'base64').toString('utf-8');
+        break;
+      case 'math':
+        if (q.input.operation === 'add') answer = String(q.input.a + q.input.b);
+        else if (q.input.operation === 'multiply') answer = String(q.input.a * q.input.b);
+        else if (q.input.operation === 'power') answer = String(Math.pow(q.input.base, q.input.exponent));
+        else if (q.input.operation === 'factorial') {
+          let f = 1; for (let i = 2; i <= q.input.n; i++) f *= i;
+          answer = String(f);
+        }
+        break;
+      case 'timestamp':
+        answer = String(Math.floor(new Date(q.input).getTime() / 1000));
+        break;
+      case 'string':
+        if (q.input.operation === 'reverse') answer = q.input.string.split('').reverse().join('');
+        else if (q.input.operation === 'count_char') answer = String((q.input.string.match(new RegExp(q.input.char, 'g')) || []).length);
+        else if (q.input.operation === 'length') answer = String(q.input.string.length);
+        else if (q.input.operation === 'uppercase') answer = q.input.string.toUpperCase();
+        break;
+    }
+    answers.push(answer);
+  }
+  return answers;
+}
+
+// 辅助函数：注册 Agent
+async function registerAgent(name, skills, description) {
+  const { data: challenge } = await request('GET', '/api/hall/register/challenge');
+  const answers = solveChallenge(challenge.questions);
+  const { data } = await request('POST', '/api/hall/register', {
+    challenge_id: challenge.challenge_id,
+    answers: answers,
+    name: name,
+    skills: skills,
+    description: description
+  });
+  return data;
 }
 
 async function runTest() {
@@ -61,7 +131,9 @@ async function runTest() {
   try {
     const { data } = await request('POST', '/api/hall/client/register', {
       name: '裁判测试客户',
-      email: `judge-test-client-${Date.now()}@example.com`
+      email: `judge-test-client-${Date.now()}@example.com`,
+      password: 'TestPass123',
+      recaptchaToken: 'test-token'
     });
     if (data.success) {
       clientKey = data.api_key;
@@ -76,18 +148,18 @@ async function runTest() {
   // 3. 注册普通 Agent (不满足裁判资格)
   console.log('\n[3/15] 注册普通 Agent (不满足裁判资格)...');
   try {
-    const { data } = await request('POST', '/api/hall/register', {
-      name: '普通测试 Agent',
-      skills: ['writing'],
-      description: '普通 Agent，不满足裁判资格'
-    });
+    const data = await registerAgent(
+      '普通测试 Agent',
+      ['writing'],
+      '普通 Agent，不满足裁判资格'
+    );
     if (data.success) {
       agentKey = data.api_key;
       console.log(`✅ Agent 注册成功`);
       passed++;
     }
   } catch (err) {
-    console.log(`❌ 注册失败`);
+    console.log(`❌ 注册失败: ${err.message}`);
     failed++;
   }
 
@@ -145,12 +217,12 @@ async function runTest() {
   // 6. 创建一个"合格"的 Agent（直接修改数据库模拟）
   console.log('\n[6/15] 创建合格裁判 Agent (模拟满足资格)...');
   try {
-    // 先注册新 Agent
-    const { data: regData } = await request('POST', '/api/hall/register', {
-      name: '资深专家 Agent',
-      skills: ['writing', 'coding', 'translation'],
-      description: '模拟资深 Agent'
-    });
+    // 先注册新 Agent (使用挑战)
+    const regData = await registerAgent(
+      '资深专家 Agent',
+      ['writing', 'coding', 'translation'],
+      '模拟资深 Agent'
+    );
     if (regData.success) {
       qualifiedAgentKey = regData.api_key;
       qualifiedAgentId = regData.agent_id;

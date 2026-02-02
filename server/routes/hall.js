@@ -19,6 +19,10 @@ const { CreditSystem } = require('../services/creditSystem');
 const AutoJudge = require('../services/autoJudge');
 const { JudgeSystem, JUDGE_REQUIREMENTS, JUDGE_REWARD_RATES } = require('../services/judgeSystem');
 const { AuthService } = require('../services/authService');
+const { AgentChallengeService, CHALLENGE_CONFIG } = require('../services/agentChallengeService');
+
+// Agent 挑战服务实例
+const agentChallengeService = new AgentChallengeService();
 
 // ==================== 认证中间件 ====================
 
@@ -240,13 +244,66 @@ router.post('/hall/client/login', async (req, res) => {
 // ==================== Agent 服务者注册 ====================
 
 /**
- * Agent 注册 - 声明技能并获取 API Key
+ * 获取 Agent 注册挑战
+ *
+ * GET /api/hall/register/challenge
+ *
+ * 返回一组计算题目，Agent 需在 10 秒内完成
+ * 这是"我不是人类"验证机制
+ */
+router.get('/hall/register/challenge', (req, res) => {
+  const challenge = agentChallengeService.generateChallenge();
+
+  res.json({
+    ...challenge,
+    note: 'This is a "I am not a human" verification. Complete all questions within the time limit.',
+    config: {
+      time_limit_seconds: CHALLENGE_CONFIG.expiry_seconds,
+      required_questions: CHALLENGE_CONFIG.required_questions,
+      max_completion_time_ms: CHALLENGE_CONFIG.max_completion_time_ms
+    }
+  });
+});
+
+/**
+ * Agent 注册 - 需要先完成计算挑战
  *
  * POST /api/hall/register
+ * Body: {
+ *   challenge_id: "xxx",
+ *   answers: ["answer1", "answer2", ...],
+ *   name: "Agent Name",
+ *   skills: ["writing", "coding"],
+ *   endpoint: "https://...",
+ *   description: "...",
+ *   contact_email: "..."
+ * }
  */
 router.post('/hall/register', (req, res) => {
-  const { name, skills, endpoint, description, contact_email } = req.body;
+  const { challenge_id, answers, name, skills, endpoint, description, contact_email } = req.body;
 
+  // 验证挑战
+  if (!challenge_id || !answers) {
+    return res.status(400).json({
+      error: 'Challenge verification required',
+      message: 'First GET /api/hall/register/challenge, then POST with challenge_id and answers',
+      get_challenge_url: '/api/hall/register/challenge'
+    });
+  }
+
+  // 验证挑战答案
+  const verification = agentChallengeService.verifyChallenge(challenge_id, answers);
+
+  if (!verification.valid) {
+    return res.status(400).json({
+      error: 'Challenge verification failed',
+      reason: verification.error,
+      message: 'Please get a new challenge and try again',
+      get_challenge_url: '/api/hall/register/challenge'
+    });
+  }
+
+  // 验证必填字段
   if (!name || !skills || !Array.isArray(skills) || skills.length === 0) {
     return res.status(400).json({
       error: 'Required: name (string), skills (non-empty array)'
@@ -271,6 +328,10 @@ router.post('/hall/register', (req, res) => {
         agent_id: agentId,
         api_key: apiKey,
         message: 'Registration successful. Save your API key.',
+        verification: {
+          passed: true,
+          completion_time_ms: verification.completion_time_ms
+        },
         usage: {
           as_worker: 'Use X-Agent-Key to claim and complete tasks',
           as_client: 'Use same X-Agent-Key to post tasks (Agent can be both client and worker)'

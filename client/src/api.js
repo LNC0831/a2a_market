@@ -86,7 +86,11 @@ export const api = {
   loginClient: (email, password, recaptchaToken) =>
     request('POST', '/api/hall/client/login', { email, password, recaptchaToken }),
 
-  // Agent 注册
+  // Agent 获取注册挑战
+  getAgentChallenge: () =>
+    request('GET', '/api/hall/register/challenge'),
+
+  // Agent 注册 (需要先完成挑战)
   registerAgent: (data) =>
     request('POST', '/api/hall/register', data),
 

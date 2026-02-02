@@ -8,19 +8,89 @@
  * - 三类用户
  */
 
+const http = require('http');
+const crypto = require('crypto');
+
 const BASE_URL = 'http://localhost:3001';
 
-async function request(method, path, body = null, headers = {}) {
-  const url = `${BASE_URL}${path}`;
-  const options = {
-    method,
-    headers: { 'Content-Type': 'application/json', ...headers }
-  };
-  if (body) options.body = JSON.stringify(body);
+// 使用原生 http 模块绕过代理
+function request(method, path, body = null, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(`${BASE_URL}${path}`);
+    const options = {
+      hostname: url.hostname,
+      port: url.port,
+      path: url.pathname + url.search,
+      method: method,
+      headers: { 'Content-Type': 'application/json', ...headers }
+    };
 
-  const response = await fetch(url, options);
-  const data = await response.json();
-  return { status: response.status, data };
+    const req = http.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          resolve({ status: res.statusCode, data: JSON.parse(data) });
+        } catch (e) {
+          reject(new Error(`Invalid JSON: ${data.slice(0, 100)}`));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    if (body) req.write(JSON.stringify(body));
+    req.end();
+  });
+}
+
+// Agent 挑战解答器
+function solveChallenge(questions) {
+  const answers = [];
+  for (const q of questions) {
+    let answer;
+    switch (q.type) {
+      case 'sha256':
+        answer = crypto.createHash('sha256').update(q.input).digest('hex');
+        break;
+      case 'base64_decode':
+        answer = Buffer.from(q.input, 'base64').toString('utf-8');
+        break;
+      case 'math':
+        if (q.input.operation === 'add') answer = String(q.input.a + q.input.b);
+        else if (q.input.operation === 'multiply') answer = String(q.input.a * q.input.b);
+        else if (q.input.operation === 'power') answer = String(Math.pow(q.input.base, q.input.exponent));
+        else if (q.input.operation === 'factorial') {
+          let f = 1; for (let i = 2; i <= q.input.n; i++) f *= i;
+          answer = String(f);
+        }
+        break;
+      case 'timestamp':
+        answer = String(Math.floor(new Date(q.input).getTime() / 1000));
+        break;
+      case 'string':
+        if (q.input.operation === 'reverse') answer = q.input.string.split('').reverse().join('');
+        else if (q.input.operation === 'count_char') answer = String((q.input.string.match(new RegExp(q.input.char, 'g')) || []).length);
+        else if (q.input.operation === 'length') answer = String(q.input.string.length);
+        else if (q.input.operation === 'uppercase') answer = q.input.string.toUpperCase();
+        break;
+    }
+    answers.push(answer);
+  }
+  return answers;
+}
+
+// 辅助函数：注册 Agent
+async function registerAgent(name, skills, description) {
+  const { data: challenge } = await request('GET', '/api/hall/register/challenge');
+  const answers = solveChallenge(challenge.questions);
+  const { data } = await request('POST', '/api/hall/register', {
+    challenge_id: challenge.challenge_id,
+    answers: answers,
+    name: name,
+    skills: skills,
+    description: description
+  });
+  return data;
 }
 
 async function runTest() {
@@ -48,7 +118,9 @@ async function runTest() {
   try {
     const { data } = await request('POST', '/api/hall/client/register', {
       name: '张三',
-      email: `human-${Date.now()}@example.com`
+      email: `human-${Date.now()}@example.com`,
+      password: 'TestPass123',
+      recaptchaToken: 'test-token'
     });
     if (data.success) {
       clientKey = data.api_key;
@@ -62,33 +134,33 @@ async function runTest() {
   // 3. Agent 1 注册（写作专家）
   console.log('\n[3/12] Agent 1 注册（写作专家）...');
   try {
-    const { data } = await request('POST', '/api/hall/register', {
-      name: '写作专家 Alpha',
-      skills: ['writing', 'translation'],
-      description: '专业文章写作'
-    });
+    const data = await registerAgent(
+      '写作专家 Alpha',
+      ['writing', 'translation'],
+      '专业文章写作'
+    );
     if (data.success) {
       agentKey1 = data.api_key;
       console.log(`✅ Agent 1 注册成功`);
     }
   } catch (err) {
-    console.log(`❌ 注册失败`);
+    console.log(`❌ 注册失败: ${err.message}`);
   }
 
   // 4. Agent 2 注册（也是写作）
   console.log('\n[4/12] Agent 2 注册（竞争者）...');
   try {
-    const { data } = await request('POST', '/api/hall/register', {
-      name: '写作专家 Beta',
-      skills: ['writing'],
-      description: '另一个写作 Agent'
-    });
+    const data = await registerAgent(
+      '写作专家 Beta',
+      ['writing'],
+      '另一个写作 Agent'
+    );
     if (data.success) {
       agentKey2 = data.api_key;
       console.log(`✅ Agent 2 注册成功`);
     }
   } catch (err) {
-    console.log(`❌ 注册失败`);
+    console.log(`❌ 注册失败: ${err.message}`);
   }
 
   // 5. 人类客户发布任务

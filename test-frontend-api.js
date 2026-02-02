@@ -14,6 +14,9 @@
  * 10. 查看收益统计
  */
 
+const http = require('http');
+const crypto = require('crypto');
+
 const API_URL = 'http://localhost:3001';
 
 // 存储测试中获取的数据
@@ -21,24 +24,77 @@ let clientKey = null;
 let agentKey = null;
 let taskId = null;
 
-// 请求工具函数
-async function request(method, path, body = null, headers = {}) {
-  const url = `${API_URL}${path}`;
-  const options = {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers
+// 使用原生 http 模块绕过代理
+function request(method, path, body = null, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(`${API_URL}${path}`);
+    const options = {
+      hostname: url.hostname,
+      port: url.port,
+      path: url.pathname + url.search,
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers
+      }
+    };
+
+    const req = http.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          resolve({ status: res.statusCode, data: json, ok: res.statusCode >= 200 && res.statusCode < 300 });
+        } catch (e) {
+          reject(new Error(`Invalid JSON: ${data.slice(0, 100)}`));
+        }
+      });
+    });
+
+    req.on('error', reject);
+
+    if (body) {
+      req.write(JSON.stringify(body));
     }
-  };
-  if (body) {
-    options.body = JSON.stringify(body);
+    req.end();
+  });
+}
+
+// Agent 挑战解答器
+function solveChallenge(questions) {
+  const answers = [];
+  for (const q of questions) {
+    let answer;
+    switch (q.type) {
+      case 'sha256':
+        answer = crypto.createHash('sha256').update(q.input).digest('hex');
+        break;
+      case 'base64_decode':
+        answer = Buffer.from(q.input, 'base64').toString('utf-8');
+        break;
+      case 'math':
+        if (q.input.operation === 'add') answer = String(q.input.a + q.input.b);
+        else if (q.input.operation === 'multiply') answer = String(q.input.a * q.input.b);
+        else if (q.input.operation === 'power') answer = String(Math.pow(q.input.base, q.input.exponent));
+        else if (q.input.operation === 'factorial') {
+          let f = 1; for (let i = 2; i <= q.input.n; i++) f *= i;
+          answer = String(f);
+        }
+        break;
+      case 'timestamp':
+        answer = String(Math.floor(new Date(q.input).getTime() / 1000));
+        break;
+      case 'string':
+        if (q.input.operation === 'reverse') answer = q.input.string.split('').reverse().join('');
+        else if (q.input.operation === 'count_char') answer = String((q.input.string.match(new RegExp(q.input.char, 'g')) || []).length);
+        else if (q.input.operation === 'length') answer = String(q.input.string.length);
+        else if (q.input.operation === 'uppercase') answer = q.input.string.toUpperCase();
+        break;
+    }
+    answers.push(answer);
   }
-
-  const response = await fetch(url, options);
-  const data = await response.json();
-
-  return { status: response.status, data, ok: response.ok };
+  return answers;
 }
 
 // 测试结果统计
@@ -75,11 +131,13 @@ async function testStats() {
 async function testClientRegister() {
   console.log('\n📋 测试客户注册...');
 
-  // 正常注册
+  // 正常注册 (需要密码和 reCAPTCHA token，测试环境使用测试密钥)
   const email = `test_client_${Date.now()}@test.com`;
   const res = await request('POST', '/api/hall/client/register', {
     name: '测试客户',
-    email: email
+    email: email,
+    password: 'TestPass123',
+    recaptchaToken: 'test-token'  // 测试环境使用 Google 测试密钥，任何 token 都能通过
   });
 
   test('客户注册成功', res.ok && res.data.api_key, JSON.stringify(res.data));
@@ -92,15 +150,28 @@ async function testClientRegister() {
   // 重复注册应该失败
   const res2 = await request('POST', '/api/hall/client/register', {
     name: '测试客户2',
-    email: email
+    email: email,
+    password: 'TestPass123',
+    recaptchaToken: 'test-token'
   });
   test('重复邮箱注册被拒绝', !res2.ok && res2.status === 400, res2.data.error);
 }
 
 async function testAgentRegister() {
-  console.log('\n📋 测试 Agent 注册...');
+  console.log('\n📋 测试 Agent 注册 (需要通过"我不是人类"挑战)...');
 
+  // 第一步：获取挑战
+  const challengeRes = await request('GET', '/api/hall/register/challenge');
+  test('获取注册挑战', challengeRes.ok && challengeRes.data.challenge_id, `问题数: ${challengeRes.data.questions?.length}`);
+
+  // 第二步：解答挑战
+  const answers = solveChallenge(challengeRes.data.questions);
+  console.log(`   挑战解答完成，耗时 < 1ms`);
+
+  // 第三步：提交注册（带挑战答案）
   const res = await request('POST', '/api/hall/register', {
+    challenge_id: challengeRes.data.challenge_id,
+    answers: answers,
     name: '测试写作Agent',
     skills: ['writing', 'translation'],
     description: '专业写作和翻译服务',
@@ -112,14 +183,15 @@ async function testAgentRegister() {
   if (res.ok) {
     agentKey = res.data.api_key;
     console.log(`   Agent Key: ${agentKey.substring(0, 20)}...`);
+    console.log(`   验证完成时间: ${res.data.verification?.completion_time_ms}ms`);
   }
 
-  // 缺少必填字段应该失败
+  // 不带挑战注册应该失败
   const res2 = await request('POST', '/api/hall/register', {
-    name: '不完整Agent'
-    // 缺少 skills
+    name: '无挑战Agent',
+    skills: ['test']
   });
-  test('缺少技能注册被拒绝', !res2.ok, res2.data.error);
+  test('无挑战注册被拒绝', !res2.ok, res2.data.error);
 }
 
 async function testPostTask() {
