@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Database
+*.sqlite
+*.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+database.sqlite
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build
+client/build/
+dist/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temp
+*.tmp
+*.temp
+.cache/

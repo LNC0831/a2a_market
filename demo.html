@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Task Market - 演示版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .loading { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <span class="text-3xl">🤖</span>
+                    <div>
+                        <h1 class="text-2xl font-bold">AI Task Market</h1>
+                        <p class="text-sm text-blue-100">智能任务市场 · 全自动交付 (演示版)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8" id="app">
+        <!-- 动态内容将插入这里 -->
+    </main>
+
+    <script>
+        const API_URL = 'http://localhost:3001/api';
+        let currentView = 'home';
+        let selectedTaskType = null;
+        let currentTask = null;
+
+        // 首页 - 任务类型列表
+        function renderHome() {
+            fetch(`${API_URL}/task-types`)
+                .then(res => res.json())
+                .then(types => {
+                    const app = document.getElementById('app');
+                    app.innerHTML = `
+                        <div class="text-center mb-12 py-12">
+                            <h2 class="text-4xl font-bold text-gray-800 mb-4">提交任务，AI自动完成</h2>
+                            <p class="text-xl text-gray-600 mb-8">选择任务类型，5分钟内获得专业级交付结果</p>
+                            <div class="flex justify-center space-x-8 text-gray-500">
+                                <div class="flex items-center"><span class="text-2xl mr-2">⚡</span><span>快速交付</span></div>
+                                <div class="flex items-center"><span class="text-2xl mr-2">🎯</span><span>质量保证</span></div>
+                                <div class="flex items-center"><span class="text-2xl mr-2">🔒</span><span>安全支付</span></div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            ${types.map(type => `
+                                <div class="bg-white rounded-xl shadow-md hover:shadow-xl transition p-6 cursor-pointer border-2 border-transparent hover:border-blue-500"
+                                     onclick="selectTaskType(${JSON.stringify(type).replace(/"/g, '&quot;')})">
+                                    <div class="text-5xl mb-4">${type.icon}</div>
+                                    <h3 class="text-xl font-bold text-gray-800 mb-2">${type.name}</h3>
+                                    <p class="text-gray-600 mb-4">${type.description}</p>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-2xl font-bold text-blue-600">¥${type.base_price}</span>
+                                        <span class="text-sm text-gray-500">约${type.estimated_minutes}分钟交付</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                });
+        }
+
+        // 选择任务类型
+        function selectTaskType(type) {
+            selectedTaskType = type;
+            renderTaskForm();
+        }
+
+        // 任务表单
+        function renderTaskForm() {
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <button onclick="renderHome()" class="mb-6 text-blue-600 hover:underline">← 返回任务列表</button>
+                    <div class="bg-white rounded-xl shadow-lg p-8">
+                        <div class="flex items-center mb-6">
+                            <span class="text-4xl mr-4">${selectedTaskType.icon}</span>
+                            <div>
+                                <h2 class="text-2xl font-bold">${selectedTaskType.name}</h2>
+                                <p class="text-gray-600">${selectedTaskType.description}</p>
+                            </div>
+                        </div>
+                        <form onsubmit="submitTask(event)">
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">任务标题 *</label>
+                                <input type="text" name="title" required
+                                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="例如：写一篇关于AI的博客文章">
+                            </div>
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">详细需求 *</label>
+                                <textarea name="description" required rows="5"
+                                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="请详细描述您的需求..."></textarea>
+                            </div>
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">联系邮箱 *</label>
+                                <input type="email" name="email" required
+                                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="your@email.com">
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg mb-6">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">服务费用</span>
+                                    <span class="text-2xl font-bold text-blue-600">¥${selectedTaskType.base_price}</span>
+                                </div>
+                            </div>
+                            <button type="submit" id="submitBtn"
+                                class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition">
+                                立即支付并提交任务
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 提交任务
+        function submitTask(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.innerHTML = '处理中...';
+            btn.disabled = true;
+
+            const formData = {
+                title: e.target.title.value,
+                description: e.target.description.value,
+                user_email: e.target.email.value,
+                type: selectedTaskType.id,
+                price: selectedTaskType.base_price
+            };
+
+            fetch(`${API_URL}/tasks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            })
+            .then(res => res.json())
+            .then(data => {
+                currentTask = { ...data, ...formData, taskTypeName: selectedTaskType.name };
+                renderTaskStatus();
+            });
+        }
+
+        // 任务状态页面
+        function renderTaskStatus() {
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <button onclick="renderHome()" class="mb-6 text-blue-600 hover:underline">← 返回首页</button>
+                    <div class="bg-white rounded-xl shadow-lg p-8">
+                        <div class="text-center mb-8">
+                            <div class="text-6xl mb-4" id="statusIcon">⏳</div>
+                            <h2 class="text-2xl font-bold mb-2">${currentTask.title}</h2>
+                            <div class="inline-flex items-center px-4 py-2 rounded-full bg-yellow-100 text-yellow-800" id="statusBadge">
+                                等待处理
+                            </div>
+                        </div>
+                        <div class="mb-8" id="progressSection">
+                            <div class="flex justify-between text-sm text-gray-600 mb-2">
+                                <span>AI正在处理您的任务...</span>
+                                <span>请稍候</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full loading" style="width: 60%"></div>
+                            </div>
+                        </div>
+                        <div id="resultSection" class="hidden">
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-6">
+                                <h3 class="font-bold text-green-800 mb-4">🎉 任务完成！</h3>
+                                <div class="bg-white p-4 rounded-lg">
+                                    <pre id="resultContent" class="whitespace-pre-wrap text-gray-800 text-sm"></pre>
+                                </div>
+                                <button onclick="downloadResult()" class="mt-4 w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">
+                                    下载结果
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 轮询状态
+            pollTaskStatus(currentTask.id);
+        }
+
+        // 轮询任务状态
+        function pollTaskStatus(taskId) {
+            const interval = setInterval(() => {
+                fetch(`${API_URL}/tasks/${taskId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        updateStatusUI(data);
+                        if (data.status === 'completed') {
+                            clearInterval(interval);
+                        }
+                    });
+            }, 2000);
+        }
+
+        // 更新状态UI
+        function updateStatusUI(data) {
+            const statusMap = {
+                'pending': { text: '等待处理', color: 'bg-yellow-100 text-yellow-800', icon: '⏳' },
+                'processing': { text: 'AI处理中', color: 'bg-blue-100 text-blue-800', icon: '⚙️' },
+                'completed': { text: '已完成', color: 'bg-green-100 text-green-800', icon: '✅' }
+            };
+            const status = statusMap[data.status];
+            
+            document.getElementById('statusIcon').textContent = status.icon;
+            const badge = document.getElementById('statusBadge');
+            badge.className = `inline-flex items-center px-4 py-2 rounded-full ${status.color}`;
+            badge.textContent = status.text;
+
+            if (data.status === 'completed') {
+                document.getElementById('progressSection').classList.add('hidden');
+                document.getElementById('resultSection').classList.remove('hidden');
+                document.getElementById('resultContent').textContent = data.result;
+                currentTask.result = data.result;
+            }
+        }
+
+        // 下载结果
+        function downloadResult() {
+            const blob = new Blob([currentTask.result], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `result-${currentTask.id}.txt`;
+            a.click();
+        }
+
+        // 初始化
+        renderHome();
+    </script>
+</body>
+</html>
