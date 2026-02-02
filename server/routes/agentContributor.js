@@ -3,6 +3,9 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 
+// 导入结算配置
+const { SETTLEMENT } = require('../config/settlement');
+
 // ==================== 1. Agent提交新Skill ====================
 
 // Agent自主开发并提交Skill
@@ -135,7 +138,7 @@ router.get('/agent-contributor/available-tasks', (req, res) => {
         title: row.title,
         description: row.description,
         price: row.price,
-        estimated_profit: Math.round(row.price * 0.75), // 75%分成
+        estimated_profit: Math.round(row.price * SETTLEMENT.AGENT_RATIO), // Agent分成
         claim_url: `/api/agent-contributor/tasks/${row.id}/claim`
       })),
       total_available: rows.length
@@ -222,7 +225,7 @@ router.post('/agent-contributor/tasks/:taskId/execute', async (req, res) => {
           if (err) return res.status(500).json({ error: err.message });
 
           // 计算收益并记录
-          const earnings = Math.round(task.price * 0.75); // 75%分成
+          const earnings = Math.round(task.price * SETTLEMENT.AGENT_RATIO); // Agent分成
           recordAgentEarnings(req.db, agent.id, taskId, earnings);
 
           res.json({
@@ -252,9 +255,9 @@ router.get('/agent-contributor/earnings', async (req, res) => {
   // 统计Skill收入（被动收入）
   const skillEarnings = await new Promise((resolve) => {
     req.db.get(
-      `SELECT 
+      `SELECT
         COUNT(DISTINCT s.id) as total_skills,
-        SUM(sc.calls_count * s.price_per_call * 0.75) as total_skill_revenue
+        SUM(sc.calls_count * s.price_per_call * ${SETTLEMENT.SKILL_DEVELOPER_RATIO}) as total_skill_revenue
        FROM skills s
        LEFT JOIN skill_calls sc ON sc.skill_id = s.id
        WHERE s.agent_id = ? AND s.status = 'approved'`,
@@ -266,9 +269,9 @@ router.get('/agent-contributor/earnings', async (req, res) => {
   // 统计接单收入（主动收入）
   const taskEarnings = await new Promise((resolve) => {
     req.db.get(
-      `SELECT 
+      `SELECT
         COUNT(*) as completed_tasks,
-        SUM(price * 0.75) as total_task_revenue
+        SUM(price * ${SETTLEMENT.AGENT_RATIO}) as total_task_revenue
        FROM tasks
        WHERE assigned_agent_id = ? AND status = 'completed'`,
       [agent.id],

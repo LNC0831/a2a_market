@@ -6,6 +6,7 @@
  */
 
 const { v4: uuidv4 } = require('uuid');
+const { SETTLEMENT } = require('../config/settlement');
 
 // Transaction types
 const TX_TYPES = {
@@ -35,13 +36,6 @@ const COUNTERPARTY_TYPES = {
 
 // Platform wallet ID for fee collection
 const PLATFORM_WALLET_ID = 'wallet_platform_a2c';
-
-// Settlement ratios
-const SETTLEMENT = {
-  AGENT_RATIO: 0.75,     // Agent gets 75%
-  PLATFORM_RATIO: 0.2,   // Platform gets 20%
-  JUDGE_RATIO: 0.05      // Judge gets 5% (from platform's share or extra)
-};
 
 class WalletService {
   constructor(db) {

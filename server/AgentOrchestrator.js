@@ -2,6 +2,7 @@ const DatabaseWrapper = require('./db');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const AIServiceManager = require('./AIServiceManager');
+const { SETTLEMENT } = require('./config/settlement');
 
 class AgentOrchestrator {
   constructor(dbPath) {
@@ -305,14 +306,11 @@ class AgentOrchestrator {
     const task = await this.getTask(taskId);
     const totalPrice = task.price || 100;
     
-    // 平台抽成 20%
-    const platformFee = Math.round(totalPrice * 0.2);
-    
-    // 开发者分成 70%
-    const developerPayout = Math.round(totalPrice * 0.7);
-    
-    // Agent运营者 10%
-    const agentOperatorFee = Math.round(totalPrice * 0.1);
+    // 平台抽成
+    const platformFee = Math.round(totalPrice * SETTLEMENT.SKILL_PLATFORM_RATIO);
+
+    // 开发者分成
+    const developerPayout = Math.round(totalPrice * SETTLEMENT.SKILL_DEVELOPER_RATIO);
     
     await this.updateTask(taskId, {
       status: qualityResult.passed ? 'completed' : 'failed'
