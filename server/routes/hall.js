@@ -21,6 +21,9 @@ const { JudgeSystem, JUDGE_REQUIREMENTS, JUDGE_REWARD_RATES } = require('../serv
 const { AuthService } = require('../services/authService');
 const { AgentChallengeService, CHALLENGE_CONFIG } = require('../services/agentChallengeService');
 
+// 导入钱包服务
+const WalletService = require('../services/walletService');
+
 // Agent 挑战服务实例
 const agentChallengeService = new AgentChallengeService();
 
@@ -348,9 +351,13 @@ router.post('/hall/register', (req, res) => {
  *
  * POST /api/hall/post
  * Headers: X-Client-Key 或 X-Agent-Key
+ *
+ * 钱包集成:
+ * - 如果客户已登录，检查余额并冻结 budget 金额
+ * - 匿名发布不检查余额（向后兼容）
  */
-router.post('/hall/post', optionalAuth, (req, res) => {
-  const { title, description, category, budget, contact_email, deadline_hours } = req.body;
+router.post('/hall/post', optionalAuth, async (req, res) => {
+  const { title, description, category, budget, contact_email, deadline_hours, skip_payment } = req.body;
 
   if (!title || !description || !budget) {
     return res.status(400).json({ error: 'Required: title, description, budget' });
@@ -364,21 +371,79 @@ router.post('/hall/post', optionalAuth, (req, res) => {
   // 计算截止时间
   const deadlineHours = deadline_hours || 24;
 
+  // 钱包处理：如果客户已登录且未跳过支付，检查并冻结余额
+  let paymentStatus = 'pending';  // 默认支付状态
+  let walletFrozen = false;
+
+  if (clientId && !skip_payment) {
+    try {
+      const walletService = new WalletService(req.db);
+      const ownerType = clientType === 'agent' ? 'agent' : 'client';
+
+      // 获取或创建钱包
+      const wallet = await walletService.getOrCreateWallet(clientId, ownerType, 'A2C');
+
+      // 检查余额
+      if (wallet.balance < budget) {
+        return res.status(400).json({
+          error: 'Insufficient balance',
+          required: budget,
+          available: wallet.balance,
+          message: 'Please deposit more A2C coins to post this task',
+          deposit_url: '/api/wallet/A2C/deposit'
+        });
+      }
+
+      // 冻结余额
+      await walletService.freezeBalance(wallet.id, budget, taskId, `Frozen for task ${taskId}`);
+      paymentStatus = 'frozen';
+      walletFrozen = true;
+
+    } catch (walletErr) {
+      console.error('Wallet operation failed:', walletErr);
+      return res.status(500).json({
+        error: 'Failed to process payment',
+        message: walletErr.message
+      });
+    }
+  }
+
   req.db.run(
-    `INSERT INTO tasks (id, title, description, category, budget, status, user_email, client_id, client_type, deadline, created_at)
-     VALUES (?, ?, ?, ?, ?, 'open', ?, ?, ?, datetime('now', '+${deadlineHours} hours'), datetime('now'))`,
-    [taskId, title, description, category || 'general', budget, email, clientId, clientType],
+    `INSERT INTO tasks (id, title, description, category, budget, status, user_email, client_id, client_type, deadline, payment_status, created_at)
+     VALUES (?, ?, ?, ?, ?, 'open', ?, ?, ?, datetime('now', '+${deadlineHours} hours'), ?, datetime('now'))`,
+    [taskId, title, description, category || 'general', budget, email, clientId, clientType, paymentStatus],
     function(err) {
-      if (err) return res.status(500).json({ error: err.message });
+      if (err) {
+        // 如果任务创建失败，需要解冻余额
+        if (walletFrozen && clientId) {
+          const walletService = new WalletService(req.db);
+          const ownerType = clientType === 'agent' ? 'agent' : 'client';
+          walletService.getWallet(clientId, 'A2C')
+            .then(wallet => {
+              if (wallet) {
+                return walletService.unfreezeBalance(wallet.id, budget, taskId, 'Task creation failed - refund');
+              }
+            })
+            .catch(e => console.error('Failed to unfreeze balance:', e));
+        }
+        return res.status(500).json({ error: err.message });
+      }
 
       // 记录事件
-      logTaskEvent(req.db, taskId, 'created', clientId || 'anonymous', clientType, { title, budget });
+      logTaskEvent(req.db, taskId, 'created', clientId || 'anonymous', clientType, {
+        title,
+        budget,
+        payment_status: paymentStatus
+      });
 
       res.json({
         success: true,
         task_id: taskId,
         status: 'open',
-        message: 'Task posted to the hall. Agents can now claim it.',
+        payment_status: paymentStatus,
+        message: walletFrozen
+          ? 'Task posted. Payment frozen until task completion.'
+          : 'Task posted to the hall. Agents can now claim it.',
         track_url: `/api/hall/track/${taskId}`,
         deadline_hours: deadlineHours
       });
@@ -880,14 +945,18 @@ router.get('/hall/my-orders', authenticateClient, (req, res) => {
 });
 
 /**
- * 验收通过 - 奖励信用分
+ * 验收通过 - 奖励信用分 + 钱包结算
  *
  * POST /api/hall/tasks/:id/accept
+ *
+ * 钱包集成:
+ * - 消费客户冻结余额
+ * - 分配给 Agent (70%), 平台 (30%), 裁判 (5% 如有)
  */
-router.post('/hall/tasks/:id/accept', (req, res) => {
+router.post('/hall/tasks/:id/accept', async (req, res) => {
   const { id } = req.params;
 
-  req.db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
+  req.db.get('SELECT * FROM tasks WHERE id = ?', [id], async (err, task) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!task) return res.status(404).json({ error: 'Task not found' });
     if (task.status !== 'submitted') {
@@ -895,22 +964,49 @@ router.post('/hall/tasks/:id/accept', (req, res) => {
     }
 
     const creditSystem = new CreditSystem(req.db);
+    const walletService = new WalletService(req.db);
+
     const agentEarnings = Math.round(task.budget * 0.7);
     const platformFee = Math.round(task.budget * 0.3);
 
+    // 钱包结算：如果支付状态为 frozen，使用钱包系统处理
+    let walletSettlement = null;
+    if (task.payment_status === 'frozen' && task.client_id) {
+      try {
+        // 获取裁判 ID（如果有）
+        const judgeId = task.judge_id || null;
+
+        // 处理钱包支付
+        walletSettlement = await walletService.processTaskPayment(
+          task.client_id,
+          task.agent_id,
+          id,
+          task.budget,
+          judgeId,
+          'A2C'
+        );
+      } catch (walletErr) {
+        console.error('Wallet settlement failed:', walletErr);
+        return res.status(500).json({
+          error: 'Payment settlement failed',
+          message: walletErr.message
+        });
+      }
+    }
+
     req.db.run(
-      `UPDATE tasks SET status = 'completed', completed_at = datetime('now') WHERE id = ?`,
+      `UPDATE tasks SET status = 'completed', payment_status = 'completed', completed_at = datetime('now') WHERE id = ?`,
       [id],
       function(err) {
         if (err) return res.status(500).json({ error: err.message });
 
-        // 更新 Agent 统计
+        // 更新 Agent 统计（保持向后兼容）
         req.db.run(
           `UPDATE agents SET total_tasks = total_tasks + 1, total_earnings = total_earnings + ? WHERE id = ?`,
           [agentEarnings, task.agent_id]
         );
 
-        // 记录交易
+        // 记录交易（旧系统，保持兼容）
         req.db.run(
           `INSERT INTO transactions (id, task_id, type, amount, from_party, to_party, status, created_at)
            VALUES (?, ?, 'payout', ?, 'platform', 'agent', 'completed', datetime('now'))`,
@@ -919,13 +1015,14 @@ router.post('/hall/tasks/:id/accept', (req, res) => {
 
         // 记录事件
         logTaskEvent(req.db, id, 'accepted', task.client_id || 'client', task.client_type || 'human', {
-          agent_earnings: agentEarnings
+          agent_earnings: agentEarnings,
+          wallet_settlement: walletSettlement ? true : false
         });
 
         // 奖励信用分 (+5)
         creditSystem.rewardTaskCompletion(task.agent_id, id)
           .then(creditResult => {
-            res.json({
+            const response = {
               success: true,
               task_id: id,
               status: 'completed',
@@ -940,11 +1037,21 @@ router.post('/hall/tasks/:id/accept', (req, res) => {
               },
               message: 'Task completed. Agent has been paid.',
               rate_url: `/api/hall/tasks/${id}/rate`
-            });
+            };
+
+            // 添加钱包结算详情
+            if (walletSettlement) {
+              response.wallet_settlement = {
+                processed: true,
+                distributions: walletSettlement.distributions
+              };
+            }
+
+            res.json(response);
           })
           .catch(err => {
             console.error('Failed to reward credit:', err);
-            res.json({
+            const response = {
               success: true,
               task_id: id,
               status: 'completed',
@@ -955,7 +1062,16 @@ router.post('/hall/tasks/:id/accept', (req, res) => {
               },
               message: 'Task completed. Agent has been paid.',
               rate_url: `/api/hall/tasks/${id}/rate`
-            });
+            };
+
+            if (walletSettlement) {
+              response.wallet_settlement = {
+                processed: true,
+                distributions: walletSettlement.distributions
+              };
+            }
+
+            res.json(response);
           });
       }
     );
@@ -1170,30 +1286,56 @@ router.post('/hall/tasks/:id/rate', (req, res) => {
  * 取消任务（仅 open 状态可取消）
  *
  * POST /api/hall/tasks/:id/cancel
+ *
+ * 钱包集成:
+ * - 如果余额已冻结，解冻返还给客户
  */
-router.post('/hall/tasks/:id/cancel', (req, res) => {
+router.post('/hall/tasks/:id/cancel', async (req, res) => {
   const { id } = req.params;
 
-  req.db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
+  req.db.get('SELECT * FROM tasks WHERE id = ?', [id], async (err, task) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!task) return res.status(404).json({ error: 'Task not found' });
     if (task.status !== 'open') {
       return res.status(400).json({ error: 'Can only cancel open tasks' });
     }
 
+    // 钱包处理：如果余额已冻结，需要解冻返还
+    let refundResult = null;
+    if (task.payment_status === 'frozen' && task.client_id) {
+      try {
+        const walletService = new WalletService(req.db);
+        refundResult = await walletService.refundTask(task.client_id, id, task.budget, 'A2C');
+      } catch (walletErr) {
+        console.error('Failed to refund frozen balance:', walletErr);
+        // 继续取消任务，但记录错误
+      }
+    }
+
     req.db.run(
-      `UPDATE tasks SET status = 'cancelled' WHERE id = ?`,
+      `UPDATE tasks SET status = 'cancelled', payment_status = 'refunded' WHERE id = ?`,
       [id],
       function(err) {
         if (err) return res.status(500).json({ error: err.message });
 
-        logTaskEvent(req.db, id, 'cancelled', task.client_id || 'client', task.client_type || 'human', {});
+        logTaskEvent(req.db, id, 'cancelled', task.client_id || 'client', task.client_type || 'human', {
+          refunded: refundResult ? true : false
+        });
 
-        res.json({
+        const response = {
           success: true,
           task_id: id,
           status: 'cancelled'
-        });
+        };
+
+        if (refundResult) {
+          response.refund = {
+            amount: task.budget,
+            message: 'Frozen balance has been released back to your wallet'
+          };
+        }
+
+        res.json(response);
       }
     );
   });

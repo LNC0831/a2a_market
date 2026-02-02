@@ -8,6 +8,7 @@ require('dotenv').config();
 
 const AgentOrchestrator = require('./AgentOrchestrator');
 const hallRoutes = require('./routes/hall');  // 新架构：任务大厅
+const walletRoutes = require('./routes/wallet');  // 钱包系统
 const developerRoutes = require('./routes/developers');
 const agentDeveloperRoutes = require('./routes/agentDeveloper');
 const agentAccessRoutes = require('./routes/agentAccess');
@@ -48,14 +49,16 @@ db.serialize(() => {
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    version: '2.1.0-agent-taobao',
+    version: '2.2.0-agent-taobao',
     features: [
       'multi-agent',
       'skill-store',
       'dynamic-pricing',
       'credit-system',
       'auto-judge',
-      'timeout-checker'
+      'timeout-checker',
+      'multi-currency-wallet',
+      'payment-gateway'
     ],
     quality_system: {
       credit_rules: {
@@ -70,6 +73,20 @@ app.get('/api/health', (req, res) => {
         warning: 30,
         danger: 10,
         permanent_ban: 0
+      }
+    },
+    wallet_system: {
+      currencies: ['A2C (active)', 'CNY (reserved)', 'USD (reserved)', 'BTC (reserved)'],
+      settlement: {
+        agent_share: '70%',
+        platform_fee: '30%',
+        judge_reward: '5%'
+      },
+      endpoints: {
+        wallets: '/api/wallet',
+        currencies: '/api/currencies',
+        deposit: '/api/wallet/:currency/deposit',
+        withdraw: '/api/wallet/:currency/withdraw'
       }
     },
     timestamp: new Date().toISOString()
@@ -420,6 +437,12 @@ app.use('/api', (req, res, next) => {
   next();
 }, hallRoutes);
 
+// 钱包系统路由
+app.use('/api', (req, res, next) => {
+  req.db = db;
+  next();
+}, walletRoutes);
+
 // 开发者路由
 app.use('/api', (req, res, next) => {
   req.db = db;
@@ -509,7 +532,7 @@ const timeoutChecker = new TimeoutChecker(db);
 // 启动服务器
 app.listen(PORT, () => {
   console.log(`\n🚀 Agent淘宝平台已启动！`);
-  console.log(`   版本: 2.1.0 (Multi-Agent + 质量体系)`);
+  console.log(`   版本: 2.2.0 (Multi-Agent + 质量体系 + 钱包系统)`);
   console.log(`   API地址: http://localhost:${PORT}/api`);
   console.log(`\n📊 核心功能:`);
   console.log(`   ✓ Multi-Agent协作 (调度/执行/审核)`);
@@ -519,6 +542,8 @@ app.listen(PORT, () => {
   console.log(`   ✓ 信用分系统 (奖惩机制)`);
   console.log(`   ✓ 超时检查 (自动释放)`);
   console.log(`   ✓ 自动裁判 (质量检查)`);
+  console.log(`   ✓ 多币种钱包 (A2C/CNY/USD/BTC)`);
+  console.log(`   ✓ 支付网关 (手动/预留第三方)`);
   console.log(`\n🔗 访问地址:`);
   console.log(`   前端: http://localhost:3000`);
   console.log(`   API文档: http://localhost:${PORT}/api/health\n`);
