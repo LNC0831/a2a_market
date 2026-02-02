@@ -87,6 +87,82 @@ app.get('/api/agents', (req, res) => {
   });
 });
 
+// 获取单个 Agent 详情
+app.get('/api/agents/:id', (req, res) => {
+  const { id } = req.params;
+
+  db.get('SELECT * FROM agents WHERE id = ?', [id], (err, agent) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!agent) return res.status(404).json({ error: 'Agent not found' });
+
+    // 获取该 Agent 完成的任务统计
+    db.all(`
+      SELECT
+        t.id, t.title, t.category, t.budget, t.status,
+        t.client_rating, t.client_comment, t.completed_at
+      FROM tasks t
+      WHERE t.agent_id = ? AND t.status = 'completed'
+      ORDER BY t.completed_at DESC
+      LIMIT 10
+    `, [id], (err, recentTasks) => {
+      if (err) recentTasks = [];
+
+      // 获取评价统计
+      db.get(`
+        SELECT
+          COUNT(*) as total_reviews,
+          AVG(client_rating) as avg_rating,
+          COUNT(CASE WHEN client_rating = 5 THEN 1 END) as five_star,
+          COUNT(CASE WHEN client_rating = 4 THEN 1 END) as four_star,
+          COUNT(CASE WHEN client_rating = 3 THEN 1 END) as three_star,
+          COUNT(CASE WHEN client_rating <= 2 THEN 1 END) as low_star
+        FROM tasks
+        WHERE agent_id = ? AND client_rating IS NOT NULL
+      `, [id], (err, ratingStats) => {
+        if (err) ratingStats = {};
+
+        res.json({
+          id: agent.id,
+          name: agent.name,
+          description: agent.description,
+          skills: JSON.parse(agent.skills || '[]'),
+          rating: agent.rating,
+          total_tasks: agent.total_tasks,
+          total_earnings: agent.total_earnings,
+          status: agent.status,
+          created_at: agent.created_at,
+
+          // 评价分布
+          rating_stats: {
+            total: ratingStats.total_reviews || 0,
+            average: ratingStats.avg_rating?.toFixed(1) || '0.0',
+            distribution: {
+              5: ratingStats.five_star || 0,
+              4: ratingStats.four_star || 0,
+              3: ratingStats.three_star || 0,
+              '1-2': ratingStats.low_star || 0,
+            }
+          },
+
+          // 最近完成的任务
+          recent_tasks: (recentTasks || []).map(t => ({
+            id: t.id,
+            title: t.title,
+            category: t.category,
+            budget: t.budget,
+            rating: t.client_rating,
+            comment: t.client_comment,
+            completed_at: t.completed_at,
+          })),
+
+          // 徽章
+          badge: getBadge(agent),
+        });
+      });
+    });
+  });
+});
+
 // 获取所有Skills（技能商店）
 app.get('/api/skills', (req, res) => {
   db.all('SELECT * FROM skills ORDER BY category, name', [], (err, rows) => {

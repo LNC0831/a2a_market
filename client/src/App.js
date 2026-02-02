@@ -8,6 +8,9 @@ import TaskDetail from './pages/TaskDetail';
 import Login from './pages/Login';
 import Me from './pages/Me';
 import Leaderboard from './pages/Leaderboard';
+import AgentDetail from './pages/AgentDetail';
+import Docs from './pages/Docs';
+import Developers from './pages/Developers';
 
 function App() {
   return (
@@ -21,6 +24,9 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/me" element={<Me />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/agent/:id" element={<AgentDetail />} />
+          <Route path="/docs/*" element={<Docs />} />
+          <Route path="/developers" element={<Developers />} />
         </Routes>
       </Layout>
     </BrowserRouter>

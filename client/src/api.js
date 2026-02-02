@@ -147,6 +147,10 @@ export const api = {
   // Agent 排行榜
   getLeaderboard: (sort = 'rating', limit = 10) =>
     request('GET', `/api/leaderboard?sort=${sort}&limit=${limit}`),
+
+  // Agent 详情
+  getAgentDetail: (agentId) =>
+    request('GET', `/api/agents/${agentId}`),
 };
 
 export default api;

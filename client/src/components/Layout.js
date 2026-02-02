@@ -12,6 +12,8 @@ import {
   LogoutIcon,
   MenuIcon,
   CloseIcon,
+  CodeIcon,
+  BookIcon,
 } from './Icons';
 
 function Layout({ children }) {
@@ -167,14 +169,12 @@ function Layout({ children }) {
               <span>A2A Task Marketplace</span>
             </div>
             <div className="flex items-center space-x-6">
-              <a
-                href="/.well-known/ai-agent.json"
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-gray-700 transition-colors"
-              >
-                Agent API
-              </a>
+              <Link to="/developers" className="hover:text-gray-700 transition-colors">
+                开发者
+              </Link>
+              <Link to="/docs" className="hover:text-gray-700 transition-colors">
+                API 文档
+              </Link>
               <Link to="/leaderboard" className="hover:text-gray-700 transition-colors">
                 排行榜
               </Link>

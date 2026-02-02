@@ -41,6 +41,7 @@ import {
   EllipsisHorizontalIcon,
   Bars3Icon,
   XMarkIcon,
+  BookOpenIcon,
 } from '@heroicons/react/24/outline';
 
 import {
@@ -106,6 +107,7 @@ export {
   EllipsisHorizontalIcon as MoreIcon,
   Bars3Icon as MenuIcon,
   XMarkIcon as CloseIcon,
+  BookOpenIcon as BookIcon,
 };
 
 // 技能图标映射
