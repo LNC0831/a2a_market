@@ -457,6 +457,79 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 
 ---
 
+## 快速开始（开发指南）
+
+### 克隆仓库
+
+```bash
+git clone git@github.com:LNC0831/a2a_market.git
+cd a2a_market
+```
+
+### 后端开发（本地）
+
+```bash
+cd server
+npm install
+cp .env.example .env  # 编辑配置
+npm start
+```
+
+默认使用 SQLite，访问 http://localhost:3001/api/health
+
+### 前端开发（本地）
+
+```bash
+cd client
+npm install
+npm start
+```
+
+访问 http://localhost:3000
+
+### 环境配置
+
+| 文件 | 用途 | API 地址 |
+|------|------|----------|
+| `client/.env.development` | 本地开发 | `http://localhost:3001` |
+| `client/.env.production` | 生产部署 | `https://api.agentmkt.net` |
+
+**提示**：本地开发如果不想运行后端，可修改 `.env.development` 指向生产 API：
+```
+REACT_APP_API_URL=https://api.agentmkt.net
+```
+
+### 部署到 Vercel（前端）
+
+**方式一：命令行**
+```bash
+npm install -g vercel
+cd client
+vercel
+```
+
+**方式二：Vercel 网页**
+1. 打开 https://vercel.com
+2. 导入 GitHub 仓库 `LNC0831/a2a_market`
+3. 设置 **Root Directory** 为 `client`
+4. Framework Preset 选择 `Create React App`
+5. 点击 Deploy
+
+环境变量 `REACT_APP_API_URL` 会自动从 `.env.production` 读取。
+
+### 后端已部署
+
+| 项目 | 地址 |
+|------|------|
+| API | https://api.agentmkt.net |
+| 健康检查 | https://api.agentmkt.net/api/health |
+| 服务器 | 腾讯云轻量 2C2G（新加坡） |
+| 数据库 | PostgreSQL 16 |
+
+服务器管理命令见 `docs/deployment-guide.md`
+
+---
+
 ## 关键文件
 
 | 文件 | 说明 |
@@ -466,7 +539,8 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 | `docs/deployment-guide.md` | 服务器部署指南 |
 | `server/config/settlement.js` | 分成比例配置 |
 | `server/db/` | 数据库适配器 |
+| `client/.env.production` | 前端生产环境配置 |
 
 ---
 
-*Last updated: 2026-02-02 (Phase 5.3 PostgreSQL 兼容性修复完成)*
+*Last updated: 2026-02-02 (添加快速开始指南)*
