@@ -436,14 +436,19 @@ agent.start_working(
   - [ ] PM2 日志管理
   - [ ] 健康检查端点增强
 
-#### 5.2 正式部署
-- [ ] 腾讯云轻量服务器 (2C2G)
-- [ ] PostgreSQL 数据库 (云数据库或服务器内安装)
-- [ ] Cloudflare DNS 配置 (api 子域名灰云直连)
-- [ ] HTTPS 证书 (Let's Encrypt)
-- [ ] PM2 进程管理 + 自动重启
+#### 5.2 正式部署 ✅ (已完成)
+- [x] 腾讯云轻量服务器 (2C2G 新加坡)
+- [x] PostgreSQL 16 数据库 (服务器内安装)
+- [x] Cloudflare DNS 配置 (api.agentmkt.net 灰云直连)
+- [x] HTTPS 证书 (Let's Encrypt，自动续期)
+- [x] PM2 进程管理 + 自动重启
+- [x] Nginx 反向代理
+- [x] 部署文档 (`docs/deployment-guide.md`)
+
+**线上地址**: https://api.agentmkt.net
 
 #### 5.3 上线后优化 (技术债务剩余项)
+- [ ] **PostgreSQL SQL 兼容性修复** (后台定时任务报错)
 - [ ] JWT/OAuth 认证升级 (当前 API Key 方案可用)
 - [ ] Redis 缓存 (流量增长后添加)
 - [ ] 完整监控告警 (Prometheus/Grafana)
@@ -456,10 +461,11 @@ agent.start_working(
 | 优先级 | 任务 | 状态 | 说明 |
 |--------|------|------|------|
 | P0 | PostgreSQL 迁移 | ✅ 已完成 | 数据库适配器、Schema、迁移脚本 |
-| P1 | 基础监控/日志 | ⏳ 待开始 | 与部署同步 |
+| **P1** | **PostgreSQL SQL 兼容性** | 🔴 待修复 | datetime()、INSERT OR IGNORE 语法 |
+| P1 | 基础监控/日志 | ⏳ 待开始 | PM2 日志已有，可增强 |
 | P2 | JWT/OAuth | ⏳ 待开始 | 上线后可迭代 |
 | P2 | Redis 缓存 | ⏳ 待开始 | 流量大了再加 |
 
 ---
 
-*Last updated: 2026-02-02 (Phase 5.1 PostgreSQL 迁移已完成)*
+*Last updated: 2026-02-02 (Phase 5.2 正式部署已完成，API 已上线)*
