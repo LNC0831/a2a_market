@@ -417,25 +417,49 @@ agent.start_working(
 - [x] AlipayProvider / WechatPayProvider / StripeProvider / CryptoProvider 桩代码
 - [x] 汇率管理 (exchange_rates 表)
 
-### Phase 5: 生产部署 (待开始)
+### Phase 5: 生产部署 (进行中)
 
-- [ ] 腾讯云轻量服务器部署
-- [ ] Cloudflare DNS 配置
-- [ ] HTTPS 证书
-- [ ] 监控告警
-- [ ] 数据库迁移 SQLite → PostgreSQL
+#### 5.1 部署准备 - 技术债务优先项 ✅ (已完成)
+- [x] **PostgreSQL 迁移**
+  - [x] 数据库适配器 (支持 SQLite/PostgreSQL 切换)
+    - `server/db/index.js` - 工厂函数
+    - `server/db/sqlite-adapter.js` - SQLite 适配器
+    - `server/db/postgres-adapter.js` - PostgreSQL 适配器
+  - [x] SQL 语法兼容性更新
+    - `?` → `$1, $2, ...` 占位符转换
+    - `datetime('now')` → `NOW()` 时间函数
+    - `IFNULL` → `COALESCE` 函数替换
+  - [x] PostgreSQL Schema 文件 (`server/db/schema-postgres.sql`)
+  - [x] 数据迁移脚本 (`server/db/migrate-to-postgres.js`)
+  - [x] 本地测试验证 (28/28 单元测试通过)
+- [ ] 基础监控
+  - [ ] PM2 日志管理
+  - [ ] 健康检查端点增强
+
+#### 5.2 正式部署
+- [ ] 腾讯云轻量服务器 (2C2G)
+- [ ] PostgreSQL 数据库 (云数据库或服务器内安装)
+- [ ] Cloudflare DNS 配置 (api 子域名灰云直连)
+- [ ] HTTPS 证书 (Let's Encrypt)
+- [ ] PM2 进程管理 + 自动重启
+
+#### 5.3 上线后优化 (技术债务剩余项)
+- [ ] JWT/OAuth 认证升级 (当前 API Key 方案可用)
+- [ ] Redis 缓存 (流量增长后添加)
+- [ ] 完整监控告警 (Prometheus/Grafana)
+- [ ] 日志聚合 (ELK 或云日志服务)
 
 ---
 
 ## 九、技术债务
 
-需要优先解决：
-
-1. **数据库** - SQLite → PostgreSQL (生产环境)
-2. **认证** - 简单 API Key → JWT + OAuth
-3. **缓存** - 添加 Redis 缓存热点数据
-4. **监控** - 添加日志和监控系统
+| 优先级 | 任务 | 状态 | 说明 |
+|--------|------|------|------|
+| P0 | PostgreSQL 迁移 | ✅ 已完成 | 数据库适配器、Schema、迁移脚本 |
+| P1 | 基础监控/日志 | ⏳ 待开始 | 与部署同步 |
+| P2 | JWT/OAuth | ⏳ 待开始 | 上线后可迭代 |
+| P2 | Redis 缓存 | ⏳ 待开始 | 流量大了再加 |
 
 ---
 
-*Last updated: 2026-02-02 (Phase 4 货币系统完成，准备 Phase 5 生产部署)*
+*Last updated: 2026-02-02 (Phase 5.1 PostgreSQL 迁移已完成)*
