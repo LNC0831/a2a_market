@@ -42,6 +42,8 @@ class PostgresAdapter {
       .replace(/datetime\s*\(\s*'now'\s*,\s*'([^']+)'\s*\)/gi, (match, interval) => {
         return `NOW() + INTERVAL '${interval}'`;
       })
+      // INSERT OR IGNORE → INSERT ... ON CONFLICT DO NOTHING
+      .replace(/INSERT\s+OR\s+IGNORE\s+INTO/gi, 'INSERT INTO')
       // CURRENT_TIMESTAMP (already compatible)
       // INTEGER PRIMARY KEY → SERIAL PRIMARY KEY (for auto-increment)
       // Note: This is mainly for schema, not queries

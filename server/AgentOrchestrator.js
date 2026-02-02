@@ -327,9 +327,8 @@ class AgentOrchestrator {
     });
     
     console.log(`  💰 总收入: ¥${totalPrice}`);
-    console.log(`     → Skill开发者: ¥${developerPayout} (70%)`);
-    console.log(`     → 平台抽成: ¥${platformFee} (20%)`);
-    console.log(`     → Agent运营: ¥${agentOperatorFee} (10%)`);
+    console.log(`     → Skill开发者: ¥${developerPayout} (${SETTLEMENT.SKILL_DEVELOPER_RATIO * 100}%)`);
+    console.log(`     → 平台抽成: ¥${platformFee} (${SETTLEMENT.SKILL_PLATFORM_RATIO * 100}%)`);
     
     // 更新skill调用统计
     await this.incrementSkillStats(developerPayout);

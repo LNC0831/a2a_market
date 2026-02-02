@@ -109,13 +109,13 @@ router.post('/admin/agent-skills/:id/publish', (req, res) => {
 // 获取Agent开发者统计
 router.get('/agent-developer/stats', (req, res) => {
   req.db.get(
-    `SELECT 
+    `SELECT
       COUNT(*) as total_skills,
       COUNT(CASE WHEN status = 'approved' THEN 1 END) as published_skills,
-      COUNT(CASE WHEN created_at > datetime('now', '-7 days') THEN 1 END) as recent_skills,
-      AVG(CASE WHEN test_results IS NOT NULL THEN 
+      COUNT(CASE WHEN created_at > NOW() - INTERVAL '7 days' THEN 1 END) as recent_skills,
+      AVG(CASE WHEN test_results IS NOT NULL THEN
         json_extract(test_results, '$.pass_rate') END) as avg_pass_rate
-     FROM skills 
+     FROM skills
      WHERE created_by_agent = 1`,
     [],
     (err, row) => {

@@ -86,7 +86,7 @@ class TimeoutChecker {
         `SELECT id, agent_id, title FROM tasks
          WHERE status = 'claimed'
          AND deadline IS NOT NULL
-         AND datetime(deadline) < datetime('now')`,
+         AND deadline < NOW()`,
         [],
         async (err, tasks) => {
           if (err) {
@@ -137,7 +137,7 @@ class TimeoutChecker {
           const eventId = uuidv4();
           this.db.run(
             `INSERT INTO task_events (id, task_id, event, actor_id, actor_type, details, created_at)
-             VALUES (?, ?, 'timeout', 'system', 'system', ?, datetime('now'))`,
+             VALUES (?, ?, 'timeout', 'system', 'system', ?, NOW())`,
             [eventId, task.id, JSON.stringify({ reason: 'Task deadline exceeded' })]
           );
 
@@ -172,7 +172,7 @@ class TimeoutChecker {
         `SELECT id, agent_id, title FROM tasks
          WHERE status = 'rejected'
          AND resubmit_deadline IS NOT NULL
-         AND datetime(resubmit_deadline) < datetime('now')`,
+         AND resubmit_deadline < NOW()`,
         [],
         async (err, tasks) => {
           if (err) {
@@ -222,7 +222,7 @@ class TimeoutChecker {
           const eventId = uuidv4();
           this.db.run(
             `INSERT INTO task_events (id, task_id, event, actor_id, actor_type, details, created_at)
-             VALUES (?, ?, 'resubmit_expired', 'system', 'system', ?, datetime('now'))`,
+             VALUES (?, ?, 'resubmit_expired', 'system', 'system', ?, NOW())`,
             [eventId, task.id, JSON.stringify({ reason: 'Resubmit deadline exceeded' })]
           );
 
@@ -242,7 +242,7 @@ class TimeoutChecker {
         `SELECT id, name FROM agents
          WHERE status = 'suspended'
          AND suspension_until IS NOT NULL
-         AND datetime(suspension_until) < datetime('now')`,
+         AND suspension_until < NOW()`,
         [],
         async (err, agents) => {
           if (err) {

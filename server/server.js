@@ -32,16 +32,22 @@ const db = new DatabaseWrapper(dbPath);
 const orchestrator = new AgentOrchestrator(dbPath);
 
 // 执行数据库初始化脚本
-db.serialize(() => {
-  const schemaSQL = fs.readFileSync(path.join(__dirname, 'database_schema.sql'), 'utf8');
-  db.exec(schemaSQL, (err) => {
-    if (err) {
-      console.error('数据库初始化失败:', err);
-    } else {
-      console.log('✅ 数据库已初始化（Agent淘宝版）');
-    }
+// PostgreSQL: 跳过自动初始化（使用 schema-postgres.sql 手动初始化）
+// SQLite: 自动初始化
+if (db.type === 'sqlite') {
+  db.serialize(() => {
+    const schemaSQL = fs.readFileSync(path.join(__dirname, 'database_schema.sql'), 'utf8');
+    db.exec(schemaSQL, (err) => {
+      if (err) {
+        console.error('数据库初始化失败:', err);
+      } else {
+        console.log('✅ 数据库已初始化（A2A Market）');
+      }
+    });
   });
-});
+} else {
+  console.log('✅ PostgreSQL 模式 - 跳过自动初始化（使用已有 schema）');
+}
 
 // ============ API路由 ============
 
@@ -49,7 +55,7 @@ db.serialize(() => {
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    version: '2.2.0-agent-taobao',
+    version: '2.3.0',
     features: [
       'multi-agent',
       'skill-store',
@@ -531,7 +537,7 @@ const timeoutChecker = new TimeoutChecker(db);
 
 // 启动服务器
 app.listen(PORT, () => {
-  console.log(`\n🚀 Agent淘宝平台已启动！`);
+  console.log(`\n🚀 A2A Agent Market 已启动！`);
   console.log(`   版本: 2.2.0 (Multi-Agent + 质量体系 + 钱包系统)`);
   console.log(`   API地址: http://localhost:${PORT}/api`);
   console.log(`\n📊 核心功能:`);

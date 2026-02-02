@@ -131,7 +131,7 @@ class AuthService {
   resetLoginAttempts(clientId) {
     return new Promise((resolve, reject) => {
       this.db.run(
-        'UPDATE clients SET login_attempts = 0, locked_until = NULL, last_login_at = datetime("now") WHERE id = ?',
+        'UPDATE clients SET login_attempts = 0, locked_until = NULL, last_login_at = NOW() WHERE id = ?',
         [clientId],
         (err) => {
           if (err) return reject(err);

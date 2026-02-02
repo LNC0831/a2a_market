@@ -270,7 +270,7 @@ class JudgeSystem {
 
             this.db.run(
               `INSERT INTO judge_applications (id, agent_id, category, status, min_rating_met, min_tasks_met, min_credit_met, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+               VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
               [
                 applicationId,
                 agentId,
@@ -332,7 +332,7 @@ class JudgeSystem {
 
       this.db.run(
         `INSERT INTO judge_exams (id, agent_id, category, status, questions, expires_at, created_at)
-         VALUES (?, ?, ?, 'pending', ?, ?, datetime('now'))`,
+         VALUES (?, ?, ?, 'pending', ?, ?, NOW())`,
         [examId, agentId, category, JSON.stringify(questions), expiresAt],
         (err) => {
           if (err) return reject(err);
@@ -378,7 +378,7 @@ class JudgeSystem {
           // 标记考试开始
           if (!exam.started_at) {
             this.db.run(
-              "UPDATE judge_exams SET started_at = datetime('now') WHERE id = ?",
+              "UPDATE judge_exams SET started_at = NOW() WHERE id = ?",
               [examId]
             );
           }
@@ -454,8 +454,8 @@ class JudgeSystem {
              status = ?,
              score = ?,
              answers = ?,
-             submitted_at = datetime('now'),
-             graded_at = datetime('now')
+             submitted_at = NOW(),
+             graded_at = NOW()
              WHERE id = ?`,
             [passed ? 'passed' : 'failed', score, JSON.stringify(answers), examId],
             (err) => {
@@ -467,7 +467,7 @@ class JudgeSystem {
                   .then(() => {
                     // 更新申请状态
                     this.db.run(
-                      `UPDATE judge_applications SET status = 'approved', reviewed_at = datetime('now'), reviewed_by = 'system'
+                      `UPDATE judge_applications SET status = 'approved', reviewed_at = NOW(), reviewed_by = 'system'
                        WHERE exam_id = ?`,
                       [examId]
                     );
@@ -485,7 +485,7 @@ class JudgeSystem {
               } else {
                 // 更新申请状态
                 this.db.run(
-                  `UPDATE judge_applications SET status = 'rejected', reviewed_at = datetime('now'), reviewed_by = 'system', review_comment = 'Exam failed'
+                  `UPDATE judge_applications SET status = 'rejected', reviewed_at = NOW(), reviewed_by = 'system', review_comment = 'Exam failed'
                    WHERE exam_id = ?`,
                   [examId]
                 );
@@ -524,7 +524,7 @@ class JudgeSystem {
           `UPDATE agents SET
            is_judge = 1,
            judge_categories = ?,
-           judge_qualified_at = COALESCE(judge_qualified_at, datetime('now'))
+           judge_qualified_at = COALESCE(judge_qualified_at, NOW())
            WHERE id = ?`,
           [JSON.stringify(categories), agentId],
           (err) => {
@@ -591,7 +591,7 @@ class JudgeSystem {
                 const reviewId = uuidv4();
                 this.db.run(
                   `INSERT INTO judge_reviews (id, task_id, judge_id, executor_id, score, decision, assigned_at, created_at)
-                   VALUES (?, ?, ?, ?, 0, 'pending', datetime('now'), datetime('now'))`,
+                   VALUES (?, ?, ?, ?, 0, 'pending', NOW(), NOW())`,
                   [reviewId, taskId, judge.id, task.agent_id],
                   (err) => {
                     if (err) return reject(err);
@@ -686,7 +686,7 @@ class JudgeSystem {
              comment = ?,
              criteria_scores = ?,
              reward_amount = ?,
-             submitted_at = datetime('now')
+             submitted_at = NOW()
              WHERE id = ?`,
             [score, decision, comment || '', JSON.stringify(criteriaScores), rewardAmount, reviewId],
             (err) => {
@@ -698,7 +698,7 @@ class JudgeSystem {
                  judge_score = ?,
                  judge_decision = ?,
                  judge_comment = ?,
-                 judged_at = datetime('now')
+                 judged_at = NOW()
                  WHERE id = ?`,
                 [score, decision, comment || '', review.task_id],
                 (err) => {
@@ -716,7 +716,7 @@ class JudgeSystem {
                   // 记录奖励交易
                   this.db.run(
                     `INSERT INTO transactions (id, task_id, type, amount, from_party, to_party, status, created_at)
-                     VALUES (?, ?, 'judge_reward', ?, 'platform', ?, 'completed', datetime('now'))`,
+                     VALUES (?, ?, 'judge_reward', ?, 'platform', ?, 'completed', NOW())`,
                     [uuidv4(), review.task_id, rewardAmount, judgeId]
                   );
 

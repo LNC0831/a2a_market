@@ -319,7 +319,7 @@ https://api.agentmkt.net/api/health
 ```json
 {
   "status": "ok",
-  "version": "2.2.0-agent-taobao",
+  "version": "2.3.0",
   "features": [...],
   ...
 }
@@ -402,16 +402,24 @@ PostgreSQL (监听 5432)
 
 ---
 
-## 已知问题
+## 更新历史
 
-### Task #13: PostgreSQL SQL 兼容性问题
+### 2026-02-02: PostgreSQL SQL 兼容性修复
 
-后台定时任务（超时检查）存在 SQL 兼容性问题：
-- `datetime()` 函数在 PostgreSQL 中不存在
-- `INSERT OR IGNORE` 语法需要改为 `INSERT ... ON CONFLICT DO NOTHING`
+已修复所有 SQLite 特有语法：
+- `datetime('now')` → `NOW()`
+- `datetime('now', '+X hours')` → `NOW() + INTERVAL 'X hours'`
+- `datetime(column) < datetime('now')` → `column < NOW()`
 
-核心 API 不受影响，待后续修复。
+受影响文件已全部更新：
+- `server/jobs/timeoutChecker.js`
+- `server/services/authService.js`
+- `server/services/creditSystem.js`
+- `server/services/judgeSystem.js`
+- `server/routes/hall.js`
+- `server/routes/agentDeveloper.js`
 
 ---
 
 *文档创建日期: 2026-02-02*
+*最后更新: 2026-02-02 (PostgreSQL 兼容性修复)*

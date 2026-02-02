@@ -70,7 +70,7 @@ class CreditSystem {
             const historyId = uuidv4();
             this.db.run(
               `INSERT INTO agent_credit_history (id, agent_id, change_amount, reason, task_id, balance_after, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
+               VALUES (?, ?, ?, ?, ?, ?, NOW())`,
               [historyId, agentId, amount, reason, taskId, newBalance],
               (err) => {
                 if (err) console.error('Failed to record credit history:', err);
@@ -130,7 +130,7 @@ class CreditSystem {
         this.db.run(
           `UPDATE agents SET
            status = 'suspended',
-           suspension_until = datetime('now', '+${suspensionDays} days'),
+           suspension_until = NOW() + INTERVAL '${suspensionDays} days',
            suspension_reason = ?
            WHERE id = ?`,
           [reason, agentId],
@@ -221,7 +221,7 @@ class CreditSystem {
       this.db.run(
         `UPDATE agents SET
          status = 'suspended',
-         suspension_until = datetime('now', '+${days} days'),
+         suspension_until = NOW() + INTERVAL '${days} days',
          suspension_reason = ?
          WHERE id = ?`,
         [reason, agentId],

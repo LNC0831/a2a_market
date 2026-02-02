@@ -102,7 +102,7 @@ function logTaskEvent(db, taskId, event, actor, actorType, details = {}) {
   const eventId = uuidv4();
   db.run(
     `INSERT INTO task_events (id, task_id, event, actor_id, actor_type, details, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
+     VALUES (?, ?, ?, ?, ?, ?, NOW())`,
     [eventId, taskId, event, actor, actorType, JSON.stringify(details)]
   );
 }
@@ -149,7 +149,7 @@ router.post('/hall/client/register', async (req, res) => {
 
     req.db.run(
       `INSERT INTO clients (id, name, email, password_hash, api_key, created_at)
-       VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+       VALUES (?, ?, ?, ?, ?, NOW())`,
       [clientId, name || '', email, passwordHash, apiKey],
       function(err) {
         if (err) {
@@ -413,7 +413,7 @@ router.post('/hall/post', optionalAuth, async (req, res) => {
 
   req.db.run(
     `INSERT INTO tasks (id, title, description, category, budget, status, user_email, client_id, client_type, deadline, payment_status, created_at)
-     VALUES (?, ?, ?, ?, ?, 'open', ?, ?, ?, datetime('now', '+${deadlineHours} hours'), ?, datetime('now'))`,
+     VALUES (?, ?, ?, ?, ?, 'open', ?, ?, ?, NOW() + INTERVAL '${deadlineHours} hours', ?, NOW())`,
     [taskId, title, description, category || 'general', budget, email, clientId, clientType, paymentStatus],
     function(err) {
       if (err) {
@@ -634,7 +634,7 @@ router.post('/hall/tasks/:id/claim', authenticateAgent, (req, res) => {
       // 使用 UPDATE ... WHERE status = 'open' 实现乐观锁
       req.db.run(
         `UPDATE tasks
-         SET status = 'claimed', agent_id = ?, claimed_at = datetime('now')
+         SET status = 'claimed', agent_id = ?, claimed_at = NOW()
          WHERE id = ? AND status = 'open'`,
         [agentId, id],
         function(err) {
@@ -736,7 +736,7 @@ router.post('/hall/tasks/:id/submit', authenticateAgent, (req, res) => {
         }
 
         req.db.run(
-          `UPDATE tasks SET status = 'submitted', result = ?, metadata = ?, submitted_at = datetime('now') WHERE id = ?`,
+          `UPDATE tasks SET status = 'submitted', result = ?, metadata = ?, submitted_at = NOW() WHERE id = ?`,
           [result, JSON.stringify(metadata || {}), id],
           function(err) {
             if (err) return res.status(500).json({ error: err.message });
@@ -998,7 +998,7 @@ router.post('/hall/tasks/:id/accept', async (req, res) => {
     }
 
     req.db.run(
-      `UPDATE tasks SET status = 'completed', payment_status = 'completed', completed_at = datetime('now') WHERE id = ?`,
+      `UPDATE tasks SET status = 'completed', payment_status = 'completed', completed_at = NOW() WHERE id = ?`,
       [id],
       function(err) {
         if (err) return res.status(500).json({ error: err.message });
@@ -1012,7 +1012,7 @@ router.post('/hall/tasks/:id/accept', async (req, res) => {
         // 记录交易（旧系统，保持兼容）
         req.db.run(
           `INSERT INTO transactions (id, task_id, type, amount, from_party, to_party, status, created_at)
-           VALUES (?, ?, 'payout', ?, 'platform', 'agent', 'completed', datetime('now'))`,
+           VALUES (?, ?, 'payout', ?, 'platform', 'agent', 'completed', NOW())`,
           [uuidv4(), id, agentEarnings]
         );
 
@@ -1116,7 +1116,7 @@ router.post('/hall/tasks/:id/reject', (req, res) => {
       // 第1次拒绝: 允许24h内重新提交
       newStatus = 'rejected';
       newAgentId = agentId; // 保留 agent_id
-      resubmitDeadline = `datetime('now', '+24 hours')`;
+      resubmitDeadline = `NOW() + INTERVAL '24 hours'`;
       responseMessage = 'Task rejected (1st time). Agent can resubmit within 24 hours.';
     } else if (currentRejectionCount === 2) {
       // 第2次拒绝: 释放回任务池

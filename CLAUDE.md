@@ -397,11 +397,12 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 | 数据库 | PostgreSQL | ✅ 已上线 |
 | 前端网页 | React + Tailwind | ❌ 未部署 |
 
-### 🔴 待修复
+### ✅ 最近修复
 
-**Task #13: PostgreSQL SQL 兼容性问题**
-- 后台定时任务报错：`datetime()` 函数不兼容
-- 核心 API 正常，不影响主要功能
+**Task #13: PostgreSQL SQL 兼容性问题 (已修复)**
+- `datetime()` 函数已替换为 `NOW()`
+- 所有时间间隔语法已转换为 PostgreSQL 格式
+- 后台定时任务现在正常运行
 
 ---
 
@@ -445,9 +446,13 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 - [x] Cloudflare DNS + HTTPS
 - [x] PM2 进程管理
 
+### Phase 5.3: PostgreSQL 兼容性修复 ✅
+- [x] datetime() → NOW() 转换
+- [x] 时间间隔语法转换
+- [x] 后台任务兼容性验证
+
 ### Phase 6: 待开发
 - [ ] 前端部署（Vercel）
-- [ ] PostgreSQL 兼容性修复
 - [ ] 支付集成（微信/支付宝）
 
 ---
@@ -464,4 +469,4 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 
 ---
 
-*Last updated: 2026-02-02 (Phase 5 生产部署完成，API 已上线)*
+*Last updated: 2026-02-02 (Phase 5.3 PostgreSQL 兼容性修复完成)*
