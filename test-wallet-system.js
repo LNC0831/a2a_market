@@ -303,9 +303,9 @@ async function runTests() {
     assert(result.task_id === testTaskId, 'Task ID should match');
     assert(result.distributions.length >= 2, 'Should have at least 2 distributions (client, agent)');
 
-    // Verify agent got 70%
+    // Verify agent got 75%
     const agentDist = result.distributions.find(d => d.party === 'agent');
-    assert(agentDist.amount === 70, 'Agent should receive 70');
+    assert(agentDist.amount === 75, 'Agent should receive 75');
   });
 
   await test('Get task transactions', async () => {

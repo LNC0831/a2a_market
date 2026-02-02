@@ -592,7 +592,7 @@ router.get('/hall/tasks', optionalAuth, (req, res) => {
     const enrichedTasks = tasks.map(task => ({
       ...task,
       skill_match: agentSkills.includes(task.category),
-      expected_earnings: Math.round(task.budget * 0.7),
+      expected_earnings: Math.round(task.budget * 0.75),
       claim_url: `/api/hall/tasks/${task.id}/claim`
     }));
 
@@ -669,7 +669,7 @@ router.post('/hall/tasks/:id/claim', authenticateAgent, (req, res) => {
                 budget: task.budget,
                 deadline: task.deadline
               },
-              expected_earnings: Math.round(task.budget * 0.7)
+              expected_earnings: Math.round(task.budget * 0.75)
             });
           });
         }
@@ -758,7 +758,7 @@ router.post('/hall/tasks/:id/submit', authenticateAgent, (req, res) => {
                         task_id: id,
                         status: 'submitted',
                         message: 'Result submitted. Assigned to Tier 2 judge for review.',
-                        expected_earnings: Math.round(task.budget * 0.7),
+                        expected_earnings: Math.round(task.budget * 0.75),
                         track_url: `/api/hall/track/${id}`,
                         auto_judge: {
                           score: judgeResult.score,
@@ -781,7 +781,7 @@ router.post('/hall/tasks/:id/submit', authenticateAgent, (req, res) => {
                         task_id: id,
                         status: 'submitted',
                         message: 'Result submitted. Waiting for client acceptance.',
-                        expected_earnings: Math.round(task.budget * 0.7),
+                        expected_earnings: Math.round(task.budget * 0.75),
                         track_url: `/api/hall/track/${id}`,
                         auto_judge: {
                           score: judgeResult.score,
@@ -802,7 +802,7 @@ router.post('/hall/tasks/:id/submit', authenticateAgent, (req, res) => {
                     task_id: id,
                     status: 'submitted',
                     message: 'Result submitted. Waiting for client acceptance.',
-                    expected_earnings: Math.round(task.budget * 0.7),
+                    expected_earnings: Math.round(task.budget * 0.75),
                     track_url: `/api/hall/track/${id}`,
                     auto_judge: {
                       score: judgeResult.score,
@@ -820,7 +820,7 @@ router.post('/hall/tasks/:id/submit', authenticateAgent, (req, res) => {
                   task_id: id,
                   status: 'submitted',
                   message: 'Result submitted. Waiting for client acceptance.',
-                  expected_earnings: Math.round(task.budget * 0.7),
+                  expected_earnings: Math.round(task.budget * 0.75),
                   track_url: `/api/hall/track/${id}`,
                   auto_judge: null
                 });
@@ -862,7 +862,7 @@ router.get('/hall/my-tasks', authenticateAgent, (req, res) => {
 
     const enriched = tasks.map(t => ({
       ...t,
-      earnings: t.status === 'completed' ? Math.round(t.budget * 0.7) : 0,
+      earnings: t.status === 'completed' ? Math.round(t.budget * 0.75) : 0,
       track_url: `/api/hall/track/${t.id}`
     }));
 
@@ -881,7 +881,7 @@ router.get('/hall/earnings', authenticateAgent, (req, res) => {
   req.db.get(
     `SELECT
        COUNT(*) as total_tasks,
-       SUM(CASE WHEN status = 'completed' THEN budget * 0.7 ELSE 0 END) as total_earnings,
+       SUM(CASE WHEN status = 'completed' THEN budget * 0.75 ELSE 0 END) as total_earnings,
        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_tasks,
        AVG(CASE WHEN status = 'completed' AND client_rating IS NOT NULL THEN client_rating ELSE NULL END) as avg_rating
      FROM tasks WHERE agent_id = ?`,
@@ -966,8 +966,8 @@ router.post('/hall/tasks/:id/accept', async (req, res) => {
     const creditSystem = new CreditSystem(req.db);
     const walletService = new WalletService(req.db);
 
-    const agentEarnings = Math.round(task.budget * 0.7);
-    const platformFee = Math.round(task.budget * 0.3);
+    const agentEarnings = Math.round(task.budget * 0.75);
+    const platformFee = Math.round(task.budget * 0.2);
 
     // 钱包结算：如果支付状态为 frozen，使用钱包系统处理
     let walletSettlement = null;
