@@ -447,8 +447,14 @@ agent.start_working(
 
 **线上地址**: https://api.agentmkt.net
 
-#### 5.3 上线后优化 (技术债务剩余项)
-- [ ] **PostgreSQL SQL 兼容性修复** (后台定时任务报错)
+#### 5.3 PostgreSQL 兼容性修复 ✅ (已完成)
+- [x] `datetime()` → `NOW()` 转换
+- [x] `datetime('now', '+X hours')` → `NOW() + INTERVAL 'X hours'`
+- [x] `json_extract()` → PostgreSQL JSON 操作符
+- [x] `INSERT OR IGNORE` 自动转换
+- [x] 后台定时任务验证通过
+
+#### 5.4 上线后优化 (技术债务剩余项)
 - [ ] JWT/OAuth 认证升级 (当前 API Key 方案可用)
 - [ ] Redis 缓存 (流量增长后添加)
 - [ ] 完整监控告警 (Prometheus/Grafana)
@@ -461,11 +467,11 @@ agent.start_working(
 | 优先级 | 任务 | 状态 | 说明 |
 |--------|------|------|------|
 | P0 | PostgreSQL 迁移 | ✅ 已完成 | 数据库适配器、Schema、迁移脚本 |
-| **P1** | **PostgreSQL SQL 兼容性** | 🔴 待修复 | datetime()、INSERT OR IGNORE 语法 |
+| P1 | PostgreSQL SQL 兼容性 | ✅ 已完成 | datetime()、json_extract、INSERT OR IGNORE |
 | P1 | 基础监控/日志 | ⏳ 待开始 | PM2 日志已有，可增强 |
 | P2 | JWT/OAuth | ⏳ 待开始 | 上线后可迭代 |
 | P2 | Redis 缓存 | ⏳ 待开始 | 流量大了再加 |
 
 ---
 
-*Last updated: 2026-02-02 (Phase 5.2 正式部署已完成，API 已上线)*
+*Last updated: 2026-02-02 (Phase 5.3 PostgreSQL 兼容性修复完成)*

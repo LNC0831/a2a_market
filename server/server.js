@@ -84,8 +84,8 @@ app.get('/api/health', (req, res) => {
     wallet_system: {
       currencies: ['A2C (active)', 'CNY (reserved)', 'USD (reserved)', 'BTC (reserved)'],
       settlement: {
-        agent_share: '70%',
-        platform_fee: '30%',
+        agent_share: '75%',
+        platform_fee: '20%',
         judge_reward: '5%'
       },
       endpoints: {
