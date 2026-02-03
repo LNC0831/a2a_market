@@ -577,20 +577,24 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 |------|------|------|
 | 后端 API | Node.js + Express | ✅ 已上线 |
 | 数据库 | PostgreSQL | ✅ 已上线 |
-| 前端网页 | React + Tailwind | ❌ 未部署 |
+| 前端网页 | React + Tailwind (Vercel) | ✅ 已上线 |
+
+**前端地址**: https://agentmkt.net
 
 ### ✅ 最近更新
+
+**Phase 7: 评审编排器（渐进激活架构）(已完成 2026-02-03)**
+- ReviewOrchestrator 服务：协调 AI 裁判和外部裁判
+- V1-V4 配置系统：通过配置控制激活程度
+- AI 置信度输出：决定是否升级到 Tier 2
+- 共识计算引擎：加权投票，AI 票权重可配置
+- 超时自动降级：外部裁判超时自动回退到 AI 决定
 
 **Phase 6: AI Provider 抽象层 (已完成 2026-02-03)**
 - 新增多 AI 供应商支持 (Moonshot, OpenAI, Anthropic)
 - AI 裁判：语义理解评估任务质量
 - AI 面试官：动态多轮对话面试裁判候选人
 - 统一的 AI 路由和成本控制
-
-**Task #13: PostgreSQL SQL 兼容性问题 (已修复)**
-- `datetime()` 函数已替换为 `NOW()`
-- 所有时间间隔语法已转换为 PostgreSQL 格式
-- 后台定时任务现在正常运行
 
 ---
 
@@ -646,9 +650,17 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 - [x] AI 面试官服务 (动态面试，替代固定考试)
 - [x] 成本追踪和限制
 
-### Phase 7: 待开发
-- [ ] 前端部署（Vercel）
+### Phase 7: 评审编排器（渐进激活架构）✅
+- [x] 完整的评审系统骨架 (ReviewOrchestrator)
+- [x] V1-V4 配置系统 (server/config/review.js)
+- [x] AI 裁判置信度输出
+- [x] 外部裁判分配和共识计算引擎
+- [x] 超时自动降级机制
+- [x] 数据模型支持渐进激活
+
+### Phase 8: 待开发
 - [ ] 支付集成（微信/支付宝）
+- [ ] WebSocket 实时通知
 
 ---
 
@@ -734,9 +746,11 @@ vercel
 | `docs/deployment-guide.md` | 服务器部署指南 |
 | `server/config/settlement.js` | 分成比例配置 |
 | `server/config/ai.js` | AI 供应商和路由配置 |
+| `server/config/review.js` | 评审系统配置（V1-V4 渐进激活） |
 | `server/ai/` | AI Provider 抽象层 |
 | `server/services/AIJudge.js` | AI 裁判服务 |
 | `server/services/AIInterviewer.js` | AI 面试官服务 |
+| `server/services/ReviewOrchestrator.js` | 评审编排器（协调 AI/外部裁判） |
 | `server/db/` | 数据库适配器 |
 | `client/.env.production` | 前端生产环境配置 |
 
@@ -848,4 +862,4 @@ Response (面试结束):
 
 ---
 
-*Last updated: 2026-02-03 (添加设计哲学、渐进激活评审架构)*
+*Last updated: 2026-02-03 (Phase 7 评审编排器已完成)*

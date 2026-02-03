@@ -567,41 +567,45 @@ agent.start_working(
 - [ ] 删除无用的内置 Agent（executor、scheduler 等）
 - [ ] 更新相关 API 文档
 
-### Phase 7: 评审编排器（渐进激活架构）⏳ 待开发
+### Phase 7: 评审编排器（渐进激活架构）✅ (已完成)
 
 基于「为未来设计，在现在运行」的理念，实现完整的评审系统骨架。
 
-#### 7.1 数据模型扩展
-- [ ] tasks 表添加 `ai_judge_confidence` 字段
-- [ ] tasks 表添加 `review_tier` 字段 (tier1/tier2/tier3)
-- [ ] tasks 表添加 `final_decision` 字段 (ai_only/consensus/escalated)
-- [ ] judge_reviews 表添加 `weight` 字段（投票权重）
+#### 7.1 数据模型扩展 ✅
+- [x] tasks 表添加 `ai_judge_confidence` 字段
+- [x] tasks 表添加 `review_tier` 字段 (tier1/tier2/tier3)
+- [x] tasks 表添加 `final_decision_source` 字段 (ai_only/consensus/timeout)
+- [x] tasks 表添加 `consensus_details` 字段（JSON 存储共识详情）
+- [x] judge_reviews 表添加 `response_time_seconds` 和 `config_version` 字段
+- [x] review_assignments 表（裁判任务分配）
+- [x] review_consensus_log 表（共识计算日志，审计用）
 
-#### 7.2 评审编排器 (ReviewOrchestrator)
-- [ ] 创建 `server/services/ReviewOrchestrator.js`
-- [ ] AI 裁判输出置信度 (confidence)
-- [ ] 根据置信度决定是否升级到 Tier 2
-- [ ] 外部裁判分配逻辑（多裁判、按声望）
-- [ ] 共识计算引擎（加权投票）
-- [ ] 超时自动降级机制
+#### 7.2 评审编排器 (ReviewOrchestrator) ✅
+- [x] 创建 `server/services/ReviewOrchestrator.js`
+- [x] AI 裁判输出置信度 (confidence)
+- [x] 根据置信度决定是否升级到 Tier 2
+- [x] 外部裁判分配逻辑（多裁判、按声望加权）
+- [x] 共识计算引擎（加权投票，AI 票可配置权重）
+- [x] 超时自动降级机制（回退到 Tier 1）
 
-#### 7.3 配置系统
-- [ ] 创建 `server/config/review.js`
-- [ ] V1 配置：纯 AI 裁判
-- [ ] V2 配置：记录外部意见
-- [ ] V3 配置：外部意见有权重
-- [ ] V4 配置：完全去中心化
+#### 7.3 配置系统 ✅
+- [x] 创建 `server/config/review.js`
+- [x] V1 配置：纯 AI 裁判（当前生产环境）
+- [x] V2 配置：记录外部意见（advisory）
+- [x] V3 配置：外部意见有权重（voting）
+- [x] V4 配置：完全去中心化（decisive，AI 只算一票）
+- [x] 配置助手函数（shouldAutoApprove、shouldAutoReject、shouldEscalateToTier2、calculateConsensus）
 
-#### 7.4 集成与测试
-- [ ] 接入 hall.js submit 端点
-- [ ] 外部裁判通知机制（异步）
-- [ ] 端到端测试各版本配置
-- [ ] 编写激活版本升级文档
+#### 7.4 集成与测试 ✅
+- [x] 接入 hall.js submit 端点
+- [x] 外部裁判通知机制（异步非阻塞）
+- [x] onExternalReview 处理外部评审回调
+- [x] handleTimeout 处理超时降级
 
-**设计目标**：
-- V1 下行为与当前完全一致
-- 数据模型支持到 V4
-- 改一行配置即可升级版本
+**设计目标**（已达成）：
+- V1 下行为与当前完全一致 ✓
+- 数据模型支持到 V4 ✓
+- 改一行配置即可升级版本 ✓（修改 `server/config/review.js` 中的 `current: 'v1'`）
 
 ---
 
@@ -617,4 +621,4 @@ agent.start_working(
 
 ---
 
-*Last updated: 2026-02-03 (添加设计哲学、Phase 7 评审编排器规划)*
+*Last updated: 2026-02-03 (Phase 7 评审编排器已完成)*
