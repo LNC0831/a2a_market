@@ -19,6 +19,7 @@ const { CreditSystem } = require('../services/creditSystem');
 const AutoJudge = require('../services/autoJudge');
 const AIJudge = require('../services/AIJudge');
 const AIInterviewer = require('../services/AIInterviewer');
+const ReviewOrchestrator = require('../services/ReviewOrchestrator');
 const { JudgeSystem, JUDGE_REQUIREMENTS, JUDGE_REWARD_RATES } = require('../services/judgeSystem');
 const { AuthService } = require('../services/authService');
 const { AgentChallengeService, CHALLENGE_CONFIG } = require('../services/agentChallengeService');
@@ -701,7 +702,7 @@ router.post('/hall/tasks/:id/submit', authenticateAgent, (req, res) => {
   }
 
   const creditSystem = new CreditSystem(req.db);
-  const aiJudge = new AIJudge(req.db);
+  const reviewOrchestrator = new ReviewOrchestrator(req.db);
 
   // 检查 Agent 是否被停权
   creditSystem.checkAgentSuspension(agentId)
@@ -748,78 +749,45 @@ router.post('/hall/tasks/:id/submit', authenticateAgent, (req, res) => {
               metadata: metadata
             });
 
-            // 运行 AI 裁判 (带规则裁判后备)
-            aiJudge.judge(id)
-              .then(judgeResult => {
-                const judgeSystem = new JudgeSystem(req.db);
+            // 运行评审编排器 (Progressive Activation Architecture)
+            // V1: 纯 AI 裁判
+            // V2+: 可能触发外部裁判评审
+            reviewOrchestrator.processSubmission(id, result)
+              .then(reviewResult => {
+                const response = {
+                  success: true,
+                  task_id: id,
+                  status: 'submitted',
+                  message: reviewResult.review_tier === 'tier2'
+                    ? 'Result submitted. Assigned to external judges for review.'
+                    : 'Result submitted. Waiting for client acceptance.',
+                  expected_earnings: Math.round(task.budget * SETTLEMENT.AGENT_RATIO),
+                  track_url: `/api/hall/track/${id}`,
+                  auto_judge: reviewResult.ai_judge ? {
+                    score: reviewResult.ai_judge.score,
+                    passed: reviewResult.ai_judge.passed,
+                    confidence: reviewResult.ai_judge.confidence,
+                    source: reviewResult.ai_judge.source,
+                    details: reviewResult.ai_judge.details
+                  } : null,
+                  review: {
+                    tier: reviewResult.review_tier,
+                    decision: reviewResult.decision,
+                    decision_source: reviewResult.source,
+                    config_version: reviewOrchestrator.getConfigVersion()
+                  }
+                };
 
-                // 检查是否需要 Tier 2 裁判评审 (分数在 50-75 之间)
-                if (judgeSystem.shouldTriggerTier2Review(judgeResult.score)) {
-                  // 分配裁判
-                  judgeSystem.assignJudge(id)
-                    .then(assignResult => {
-                      res.json({
-                        success: true,
-                        task_id: id,
-                        status: 'submitted',
-                        message: 'Result submitted. Assigned to Tier 2 judge for review.',
-                        expected_earnings: Math.round(task.budget * SETTLEMENT.AGENT_RATIO),
-                        track_url: `/api/hall/track/${id}`,
-                        auto_judge: {
-                          score: judgeResult.score,
-                          passed: judgeResult.passed,
-                          details: judgeResult.details,
-                          tier2_triggered: true
-                        },
-                        judge_review: {
-                          assigned: assignResult.success,
-                          judge_id: assignResult.judgeId,
-                          message: assignResult.message
-                        }
-                      });
-                    })
-                    .catch(assignErr => {
-                      console.error('Failed to assign judge:', assignErr);
-                      // 即使分配裁判失败，提交仍然成功
-                      res.json({
-                        success: true,
-                        task_id: id,
-                        status: 'submitted',
-                        message: 'Result submitted. Waiting for client acceptance.',
-                        expected_earnings: Math.round(task.budget * SETTLEMENT.AGENT_RATIO),
-                        track_url: `/api/hall/track/${id}`,
-                        auto_judge: {
-                          score: judgeResult.score,
-                          passed: judgeResult.passed,
-                          details: judgeResult.details,
-                          tier2_triggered: true
-                        },
-                        judge_review: {
-                          assigned: false,
-                          message: 'No qualified judge available'
-                        }
-                      });
-                    });
-                } else {
-                  // 不需要 Tier 2 评审，直接返回
-                  res.json({
-                    success: true,
-                    task_id: id,
-                    status: 'submitted',
-                    message: 'Result submitted. Waiting for client acceptance.',
-                    expected_earnings: Math.round(task.budget * SETTLEMENT.AGENT_RATIO),
-                    track_url: `/api/hall/track/${id}`,
-                    auto_judge: {
-                      score: judgeResult.score,
-                      passed: judgeResult.passed,
-                      details: judgeResult.details
-                    }
-                  });
+                // Include consensus details if available (V3+)
+                if (reviewResult.consensus_details) {
+                  response.review.consensus = reviewResult.consensus_details;
                 }
+
+                res.json(response);
               })
-              .catch(judgeErr => {
-                console.error('Auto judge failed:', judgeErr);
-                // 即使自动裁判失败，提交仍然成功
+              .catch(reviewErr => {
+                console.error('Review orchestrator failed:', reviewErr);
+                // 即使评审失败，提交仍然成功
                 res.json({
                   success: true,
                   task_id: id,
@@ -827,7 +795,10 @@ router.post('/hall/tasks/:id/submit', authenticateAgent, (req, res) => {
                   message: 'Result submitted. Waiting for client acceptance.',
                   expected_earnings: Math.round(task.budget * SETTLEMENT.AGENT_RATIO),
                   track_url: `/api/hall/track/${id}`,
-                  auto_judge: null
+                  auto_judge: null,
+                  review: {
+                    error: reviewErr.message
+                  }
                 });
               });
           }
