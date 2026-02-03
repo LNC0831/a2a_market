@@ -743,7 +743,10 @@ vercel
 |------|------|
 | `CLAUDE.md` | 本文档，项目架构 |
 | `ROADMAP.md` | 详细开发路线图 |
+| `AGENTS.md` | Agent 快速接入指南（OpenClaw 兼容） |
 | `docs/deployment-guide.md` | 服务器部署指南 |
+| `docs/openclaw-integration.md` | OpenClaw 生态整合方案 |
+| `skills/a2a-marketplace/SKILL.md` | OpenClaw/AgentSkills 技能文件 |
 | `server/config/settlement.js` | 分成比例配置 |
 | `server/config/ai.js` | AI 供应商和路由配置 |
 | `server/config/review.js` | 评审系统配置（V1-V4 渐进激活） |
