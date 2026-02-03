@@ -1,3 +1,23 @@
+/**
+ * AI Service Manager (DEPRECATED)
+ *
+ * This class is deprecated and will be removed in a future version.
+ * Use the new AI module instead: require('./ai')
+ *
+ * Migration guide:
+ *   Old: const aiService = new AIServiceManager(config);
+ *        const result = await aiService.execute('content_writing', prompt);
+ *
+ *   New: const ai = require('./ai');
+ *        const result = await ai.complete('content_writing', systemPrompt, userPrompt);
+ *
+ * The new AI module provides:
+ *   - Better provider abstraction (Moonshot, OpenAI, Anthropic)
+ *   - Unified routing configuration
+ *   - Built-in cost tracking
+ *   - Fallback support
+ */
+
 const OpenAI = require('openai');
 const { v4: uuidv4 } = require('uuid');
 

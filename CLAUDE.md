@@ -395,7 +395,7 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 
 ---
 
-## 当前状态（2026-02-02）
+## 当前状态（2026-02-03）
 
 ### 🚀 已上线
 
@@ -415,7 +415,13 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 | 数据库 | PostgreSQL | ✅ 已上线 |
 | 前端网页 | React + Tailwind | ❌ 未部署 |
 
-### ✅ 最近修复
+### ✅ 最近更新
+
+**Phase 6: AI Provider 抽象层 (已完成 2026-02-03)**
+- 新增多 AI 供应商支持 (Moonshot, OpenAI, Anthropic)
+- AI 裁判：语义理解评估任务质量
+- AI 面试官：动态多轮对话面试裁判候选人
+- 统一的 AI 路由和成本控制
 
 **Task #13: PostgreSQL SQL 兼容性问题 (已修复)**
 - `datetime()` 函数已替换为 `NOW()`
@@ -469,7 +475,14 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 - [x] 时间间隔语法转换
 - [x] 后台任务兼容性验证
 
-### Phase 6: 待开发
+### Phase 6: AI Provider 抽象层 ✅
+- [x] 多供应商支持 (Moonshot, OpenAI, Anthropic)
+- [x] 统一路由配置
+- [x] AI 裁判服务 (语义理解，替代规则裁判)
+- [x] AI 面试官服务 (动态面试，替代固定考试)
+- [x] 成本追踪和限制
+
+### Phase 7: 待开发
 - [ ] 前端部署（Vercel）
 - [ ] 支付集成（微信/支付宝）
 
@@ -556,9 +569,119 @@ vercel
 | `ROADMAP.md` | 详细开发路线图 |
 | `docs/deployment-guide.md` | 服务器部署指南 |
 | `server/config/settlement.js` | 分成比例配置 |
+| `server/config/ai.js` | AI 供应商和路由配置 |
+| `server/ai/` | AI Provider 抽象层 |
+| `server/services/AIJudge.js` | AI 裁判服务 |
+| `server/services/AIInterviewer.js` | AI 面试官服务 |
 | `server/db/` | 数据库适配器 |
 | `client/.env.production` | 前端生产环境配置 |
 
 ---
 
-*Last updated: 2026-02-03 (明确平台内置 AI 功能：面试官、裁判)*
+## AI 系统架构
+
+### AI Provider 抽象层
+
+```
+server/ai/
+├── index.js              # 入口点 (导出 call, complete 等方法)
+├── BaseProvider.js       # Provider 基类
+├── AIRouter.js           # 路由管理 (根据功能选择供应商)
+└── providers/
+    ├── MoonshotProvider.js
+    ├── OpenAIProvider.js
+    └── AnthropicProvider.js
+```
+
+### 使用方式
+
+```javascript
+const ai = require('./ai');
+
+// 简单调用
+const result = await ai.complete('ai_judge', systemPrompt, userPrompt);
+
+// 完整控制
+const result = await ai.call('ai_judge', messages, {
+  temperature: 0.3,
+  max_tokens: 2000
+});
+
+// 检查供应商状态
+const status = ai.getProviderStatus();
+
+// 获取用量统计
+const stats = ai.getUsageStats();
+```
+
+### 路由配置 (`server/config/ai.js`)
+
+| 功能 | 供应商 | 模型 | 说明 |
+|------|--------|------|------|
+| ai_judge | Moonshot | moonshot-v1-8k | 任务质量评估 |
+| ai_interviewer | Moonshot | moonshot-v1-8k | 裁判资格面试 |
+| content_writing | Moonshot | moonshot-v1-8k | 内容创作 |
+| code_review | OpenAI | gpt-4o-mini | 代码审查 |
+| default | Moonshot | moonshot-v1-8k | 默认回退 |
+
+### AI 裁判 API
+
+任务提交时自动触发 AI 评估：
+
+```
+POST /api/hall/tasks/:id/submit
+
+Response:
+{
+  "auto_judge": {
+    "score": 85,
+    "passed": true,
+    "source": "ai_judge",
+    "details": {
+      "scores": { "relevance": 90, "completeness": 85, ... },
+      "comment": "评语...",
+      "strengths": ["...", "..."],
+      "improvements": ["...", "..."]
+    }
+  }
+}
+```
+
+### AI 面试官 API
+
+```
+# 1. 申请成为裁判 (启动面试)
+POST /api/hall/judge/apply
+Body: { "category": "writing" }
+
+Response:
+{
+  "interview_id": "xxx",
+  "question": "第一个面试问题...",
+  "current_round": 1,
+  "max_rounds": 5
+}
+
+# 2. 回答面试问题
+POST /api/hall/judge/interview/:id/answer
+Body: { "answer": "你的回答..." }
+
+Response (继续面试):
+{
+  "finished": false,
+  "question": "下一个问题...",
+  "current_round": 2
+}
+
+Response (面试结束):
+{
+  "finished": true,
+  "passed": true,
+  "score": 85,
+  "assessment": "最终评估..."
+}
+```
+
+---
+
+*Last updated: 2026-02-03 (Phase 6: AI Provider 抽象层完成)*

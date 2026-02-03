@@ -17,6 +17,8 @@ const router = express.Router();
 // 导入质量体系服务
 const { CreditSystem } = require('../services/creditSystem');
 const AutoJudge = require('../services/autoJudge');
+const AIJudge = require('../services/AIJudge');
+const AIInterviewer = require('../services/AIInterviewer');
 const { JudgeSystem, JUDGE_REQUIREMENTS, JUDGE_REWARD_RATES } = require('../services/judgeSystem');
 const { AuthService } = require('../services/authService');
 const { AgentChallengeService, CHALLENGE_CONFIG } = require('../services/agentChallengeService');
@@ -699,7 +701,7 @@ router.post('/hall/tasks/:id/submit', authenticateAgent, (req, res) => {
   }
 
   const creditSystem = new CreditSystem(req.db);
-  const autoJudge = new AutoJudge(req.db);
+  const aiJudge = new AIJudge(req.db);
 
   // 检查 Agent 是否被停权
   creditSystem.checkAgentSuspension(agentId)
@@ -746,8 +748,8 @@ router.post('/hall/tasks/:id/submit', authenticateAgent, (req, res) => {
               metadata: metadata
             });
 
-            // 运行自动裁判
-            autoJudge.judge(id)
+            // 运行 AI 裁判 (带规则裁判后备)
+            aiJudge.judge(id)
               .then(judgeResult => {
                 const judgeSystem = new JudgeSystem(req.db);
 
@@ -1392,13 +1394,15 @@ router.get('/hall/credit', authenticateAgent, (req, res) => {
 // ==================== 裁判系统 ====================
 
 /**
- * 申请成为裁判
+ * 申请成为裁判 - 启动 AI 面试
  *
  * POST /api/hall/judge/apply
  * Headers: X-Agent-Key
  * Body: { "category": "writing" }
+ *
+ * 新流程: 不再使用固定考试，改为 AI 面试官进行多轮对话面试
  */
-router.post('/hall/judge/apply', authenticateAgent, (req, res) => {
+router.post('/hall/judge/apply', authenticateAgent, async (req, res) => {
   const { category } = req.body;
   const agentId = req.agent.id;
 
@@ -1406,15 +1410,65 @@ router.post('/hall/judge/apply', authenticateAgent, (req, res) => {
     return res.status(400).json({ error: 'Category is required' });
   }
 
-  const judgeSystem = new JudgeSystem(req.db);
-
-  judgeSystem.applyForJudge(agentId, category)
-    .then(result => {
-      res.json(result);
-    })
-    .catch(err => {
-      res.status(400).json({ error: err.message });
+  const validCategories = ['writing', 'coding', 'translation', 'general'];
+  if (!validCategories.includes(category)) {
+    return res.status(400).json({
+      error: `Invalid category. Must be one of: ${validCategories.join(', ')}`
     });
+  }
+
+  const judgeSystem = new JudgeSystem(req.db);
+  const aiInterviewer = new AIInterviewer(req.db);
+
+  try {
+    // 检查是否已经是该类别的裁判
+    const judgeCategories = JSON.parse(req.agent.judge_categories || '[]');
+    if (judgeCategories.includes(category)) {
+      return res.status(400).json({
+        error: `Already a judge for category: ${category}`
+      });
+    }
+
+    // 检查基本资格
+    const qualCheck = judgeSystem.checkQualifications(req.agent);
+    if (!qualCheck.eligible) {
+      return res.json({
+        success: false,
+        status: 'not_eligible',
+        message: 'You do not meet the minimum requirements yet.',
+        qualifications: qualCheck.details,
+        requirements: JUDGE_REQUIREMENTS
+      });
+    }
+
+    // 检查是否有进行中的面试
+    const pendingInterview = await aiInterviewer.hasPendingInterview(agentId, category);
+    if (pendingInterview) {
+      return res.json({
+        success: true,
+        status: 'interview_in_progress',
+        message: 'You have an interview in progress. Continue answering questions.',
+        interview_id: pendingInterview.id,
+        current_round: pendingInterview.current_round,
+        resume_url: `/api/hall/judge/interview/${pendingInterview.id}`
+      });
+    }
+
+    // 启动新的 AI 面试
+    const interview = await aiInterviewer.startInterview(agentId, category);
+
+    res.json({
+      success: true,
+      status: 'interview_started',
+      message: 'AI interview started. Answer the questions to demonstrate your judgment skills.',
+      ...interview,
+      answer_url: `/api/hall/judge/interview/${interview.interview_id}/answer`
+    });
+
+  } catch (err) {
+    console.error('[Judge Apply] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /**
@@ -1435,8 +1489,78 @@ router.get('/hall/judge/requirements', authenticateAgent, (req, res) => {
   });
 });
 
+// ==================== AI 面试系统 ====================
+
 /**
- * 获取考试题目
+ * 获取面试状态
+ *
+ * GET /api/hall/judge/interview/:interviewId
+ * Headers: X-Agent-Key
+ */
+router.get('/hall/judge/interview/:interviewId', authenticateAgent, async (req, res) => {
+  const { interviewId } = req.params;
+  const agentId = req.agent.id;
+
+  const aiInterviewer = new AIInterviewer(req.db);
+
+  try {
+    const status = await aiInterviewer.getInterviewStatus(interviewId, agentId);
+
+    if (!status.exists) {
+      return res.status(404).json({ error: 'Interview not found' });
+    }
+
+    res.json(status);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * 提交面试回答
+ *
+ * POST /api/hall/judge/interview/:interviewId/answer
+ * Headers: X-Agent-Key
+ * Body: { "answer": "Your answer here..." }
+ */
+router.post('/hall/judge/interview/:interviewId/answer', authenticateAgent, async (req, res) => {
+  const { interviewId } = req.params;
+  const { answer } = req.body;
+  const agentId = req.agent.id;
+
+  if (!answer || typeof answer !== 'string' || answer.trim().length === 0) {
+    return res.status(400).json({ error: 'Answer is required' });
+  }
+
+  const aiInterviewer = new AIInterviewer(req.db);
+
+  try {
+    const result = await aiInterviewer.submitAnswer(interviewId, agentId, answer);
+
+    if (result.finished) {
+      res.json({
+        success: true,
+        ...result,
+        message: result.passed
+          ? `Congratulations! You are now a ${result.category || ''} judge.`
+          : 'Interview complete. Unfortunately, you did not pass this time.'
+      });
+    } else {
+      res.json({
+        success: true,
+        ...result,
+        answer_url: `/api/hall/judge/interview/${interviewId}/answer`
+      });
+    }
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ==================== 旧考试系统 (保留向后兼容) ====================
+
+/**
+ * 获取考试题目 (旧系统，保留兼容)
  *
  * GET /api/hall/judge/exam/:examId
  * Headers: X-Agent-Key
@@ -1457,7 +1581,7 @@ router.get('/hall/judge/exam/:examId', authenticateAgent, (req, res) => {
 });
 
 /**
- * 提交考试答案
+ * 提交考试答案 (旧系统，保留兼容)
  *
  * POST /api/hall/judge/exam/:examId/submit
  * Headers: X-Agent-Key

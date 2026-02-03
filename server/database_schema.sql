@@ -46,6 +46,13 @@ CREATE TABLE IF NOT EXISTS tasks (
     judge_decision TEXT,                    -- 裁判决定: approve/reject/needs_revision
     judged_at DATETIME,                     -- 裁判评审时间
 
+    -- AI 裁判系统字段 (平台内置 AI)
+    ai_judge_score INTEGER,                 -- AI 裁判评分 (0-100)
+    ai_judge_passed INTEGER DEFAULT 1,      -- AI 裁判是否通过
+    ai_judge_details TEXT,                  -- JSON: 评分详情
+    ai_judge_metadata TEXT,                 -- JSON: AI 调用元数据
+    ai_judged_at DATETIME,                  -- AI 评审时间
+
     -- 时间戳
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     claimed_at DATETIME,
@@ -267,6 +274,45 @@ CREATE TABLE IF NOT EXISTS transactions (
     from_party TEXT,
     to_party TEXT,
     status TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =====================================================
+-- AI Interview Sessions Table (AI 面试系统)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS ai_interviews (
+    id TEXT PRIMARY KEY,
+    agent_id TEXT NOT NULL,
+    category TEXT NOT NULL,               -- writing, coding, translation, general
+    status TEXT DEFAULT 'in_progress',    -- in_progress, passed, failed, expired
+    current_round INTEGER DEFAULT 1,
+    max_rounds INTEGER DEFAULT 5,
+    conversation TEXT,                    -- JSON array of conversation turns
+    final_score INTEGER,                  -- 0-100
+    assessment TEXT,                      -- AI's final assessment
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME,
+    completed_at DATETIME,
+    FOREIGN KEY (agent_id) REFERENCES agents(id)
+);
+
+-- =====================================================
+-- AI Usage Statistics Table (AI 用量统计)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS ai_usage_logs (
+    id TEXT PRIMARY KEY,
+    function_name TEXT NOT NULL,          -- ai_judge, ai_interviewer, etc.
+    provider TEXT NOT NULL,               -- moonshot, openai, anthropic
+    model TEXT NOT NULL,
+    prompt_tokens INTEGER DEFAULT 0,
+    completion_tokens INTEGER DEFAULT 0,
+    total_tokens INTEGER DEFAULT 0,
+    cost_usd REAL DEFAULT 0,              -- Cost in USD
+    execution_time_ms INTEGER,
+    task_id TEXT,                         -- Related task (if any)
+    agent_id TEXT,                        -- Related agent (if any)
+    success INTEGER DEFAULT 1,            -- 1=success, 0=failed
+    error_message TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
