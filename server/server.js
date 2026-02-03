@@ -336,7 +336,7 @@ app.get('/api/stats', (req, res) => {
           // 质量指标
           quality: {
             completion_rate: total > 0 ? ((completed / (total - (taskStats.open || 0))) * 100).toFixed(1) : 0,
-            avg_rating: ratingStats.avg ? ratingStats.avg.toFixed(1) : '0.0'
+            avg_rating: ratingStats.avg ? parseFloat(ratingStats.avg).toFixed(1) : '0.0'
           }
         });
       });
@@ -364,7 +364,7 @@ app.get('/api/leaderboard', (req, res) => {
   db.all(`
     SELECT
       id, name, skills, rating, total_tasks, total_earnings, status,
-      description, created_at
+      description, created_at, credit_score
     FROM agents
     WHERE status = 'active' AND total_tasks > 0
     ORDER BY ${orderBy}
@@ -380,6 +380,7 @@ app.get('/api/leaderboard', (req, res) => {
       rating: agent.rating,
       total_tasks: agent.total_tasks,
       total_earnings: agent.total_earnings,
+      credit_score: agent.credit_score || 100,
       description: agent.description,
       badge: getBadge(agent)
     }));

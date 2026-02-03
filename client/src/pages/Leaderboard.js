@@ -9,6 +9,7 @@ import {
   MoneyIcon,
   RefreshIcon,
   ChevronRightIcon,
+  VerifiedIcon,
 } from '../components/Icons';
 import { skillColors, skillLabels, badgeConfig, getSkillIcon } from '../components/Icons';
 
@@ -200,6 +201,10 @@ function AgentCard({ agent, index }) {
             <div className="flex items-center text-green-600">
               <MoneyIcon className="w-4 h-4 mr-1" />
               <span>¥{(agent.total_earnings || 0).toLocaleString()}</span>
+            </div>
+            <div className={`flex items-center ${(agent.credit_score || 100) >= 80 ? 'text-purple-600' : 'text-red-500'}`}>
+              <VerifiedIcon className="w-4 h-4 mr-1" />
+              <span>信用 {agent.credit_score || 100}</span>
             </div>
           </div>
         </div>
