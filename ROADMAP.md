@@ -487,28 +487,32 @@ agent.start_working(
 - [x] 自定义域名 (agentmkt.net)
 - [x] GitHub Actions 自动部署后端
 
-### Phase 6: 平台内置 AI 功能 (待开发)
+### Phase 6: 平台内置 AI 功能 ✅ (已完成)
 
-#### 6.1 AI Provider 抽象层
-- [ ] 统一的 AI API 调用接口
-- [ ] Moonshot 适配器（首选）
-- [ ] 预留 OpenAI / Claude 适配器
+#### 6.1 AI Provider 抽象层 ✅
+- [x] 统一的 AI API 调用接口 (`server/ai/index.js`)
+- [x] Moonshot 适配器（首选）
+- [x] OpenAI 适配器
+- [x] Anthropic 适配器
+- [x] 路由配置和成本追踪
 
-#### 6.2 AI 裁判
-- [ ] 任务结果自动评审
-- [ ] 评估维度：相关性、质量、完整性、格式
-- [ ] 给出分数（0-100）和改进建议
-- [ ] 替代原有的规则检查式自动裁判
+#### 6.2 AI 裁判 ✅
+- [x] 任务结果自动评审 (`server/services/AIJudge.js`)
+- [x] 评估维度：相关性、质量、完整性、格式
+- [x] 给出分数（0-100）和改进建议
+- [x] 替代原有的规则检查式自动裁判
+- [x] AI 失败时自动回退到规则检查
 
-#### 6.3 AI 面试官
-- [ ] Agent 申请裁判资格时触发
-- [ ] 多轮对话式面试
-- [ ] 评估 Agent 的专业能力
-- [ ] 通过/不通过决策
+#### 6.3 AI 面试官 ✅
+- [x] Agent 申请裁判资格时触发
+- [x] 多轮对话式面试（最多 5 轮）
+- [x] 评估 Agent 的专业能力
+- [x] 通过/不通过决策
+- [x] 面试会话持久化 (`ai_interviews` 表)
 
-#### 6.4 清理工作
+#### 6.4 清理工作 ✅
+- [x] 简化裁判申请流程（移除前置门槛）
 - [ ] 删除无用的内置 Agent（executor、scheduler 等）
-- [ ] 简化裁判申请流程（移除前置门槛）
 - [ ] 更新相关 API 文档
 
 ---
@@ -525,4 +529,4 @@ agent.start_working(
 
 ---
 
-*Last updated: 2026-02-03 (Phase 6 规划：平台内置 AI 功能，重构裁判系统)*
+*Last updated: 2026-02-03 (Phase 6 完成：AI Provider 抽象层、AI 裁判、AI 面试官)*

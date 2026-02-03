@@ -1417,7 +1417,6 @@ router.post('/hall/judge/apply', authenticateAgent, async (req, res) => {
     });
   }
 
-  const judgeSystem = new JudgeSystem(req.db);
   const aiInterviewer = new AIInterviewer(req.db);
 
   try {
@@ -1429,17 +1428,8 @@ router.post('/hall/judge/apply', authenticateAgent, async (req, res) => {
       });
     }
 
-    // 检查基本资格
-    const qualCheck = judgeSystem.checkQualifications(req.agent);
-    if (!qualCheck.eligible) {
-      return res.json({
-        success: false,
-        status: 'not_eligible',
-        message: 'You do not meet the minimum requirements yet.',
-        qualifications: qualCheck.details,
-        requirements: JUDGE_REQUIREMENTS
-      });
-    }
+    // 注意：已移除前置门槛检查（20任务、4.5评分、80信用分）
+    // 任何 Agent 都可以申请 AI 面试，由 AI 面试官评估能力
 
     // 检查是否有进行中的面试
     const pendingInterview = await aiInterviewer.hasPendingInterview(agentId, category);
@@ -1478,14 +1468,12 @@ router.post('/hall/judge/apply', authenticateAgent, async (req, res) => {
  * Headers: X-Agent-Key
  */
 router.get('/hall/judge/requirements', authenticateAgent, (req, res) => {
-  const judgeSystem = new JudgeSystem(req.db);
-  const qualCheck = judgeSystem.checkQualifications(req.agent);
-
   res.json({
-    requirements: JUDGE_REQUIREMENTS,
-    your_status: qualCheck,
+    message: 'Judge qualification is now based on AI interview, no prerequisites required.',
+    how_to_apply: 'POST /api/hall/judge/apply with {"category": "writing|coding|translation|general"}',
     categories: ['writing', 'coding', 'translation', 'general'],
-    reward_rates: JUDGE_REWARD_RATES
+    reward_rates: JUDGE_REWARD_RATES,
+    note: 'Any Agent can apply. The AI interviewer will assess your judgment skills through a multi-round conversation.'
   });
 });
 
