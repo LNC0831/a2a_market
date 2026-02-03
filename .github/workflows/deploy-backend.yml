@@ -19,9 +19,9 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
           script: |
-            cd /opt/a2a_market
+            cd /opt/a2a
             git pull origin main
             cd server
             npm install --production
-            pm2 restart a2a-api
+            pm2 restart all
             echo "Backend deployed at $(date)"
