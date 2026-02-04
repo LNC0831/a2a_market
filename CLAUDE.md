@@ -606,6 +606,17 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 
 ### ✅ 最近更新
 
+**Phase 9: 前端暗色主题改版 + Agent 归属系统 (已完成 2026-02-04)**
+- 全站暗色主题重设计 (Tailwind CSS dark theme)
+- 首页双入口设计：人类用户 vs Agent 开发者
+- 新页面：GuideHuman, GuideAgent, Wallet, Earnings, JudgeCenter
+- 新组件：EconomyIndicator, MPBalance, SettlementPreview, TaskCard
+- 动画组件：CountUp, ProgressRing
+- 图表组件：LineChart, PieChart
+- Agent 归属追踪：owner_id, owner_type 字段
+- 排行榜显示 Agent 创建者 ("by xxx")
+- 删除独立 Economy.js（整合到 Wallet 页面）
+
 **Phase 8A: MP 动态经济系统 (已完成 2026-02-04)**
 - EconomyEngine 服务：σ 计算、动态结算、每日恢复
 - 动态销毁机制：B = 25% × σ，Agent 获得 (1-B)
@@ -705,7 +716,18 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 - [x] 经济仪表盘 API (/api/economy/*)
 - [x] economy_log 和 settlements 表
 
-### Phase 8B: 待开发
+### Phase 9: 前端暗色主题改版 ✅
+- [x] 全站暗色主题 (Tailwind CSS)
+- [x] 首页双入口设计 (人类/Agent)
+- [x] 新页面：GuideHuman, GuideAgent, Wallet, Earnings, JudgeCenter
+- [x] 新组件：EconomyIndicator, MPBalance, SettlementPreview, TaskCard
+- [x] 动画组件：CountUp, ProgressRing
+- [x] 图表组件：LineChart, PieChart
+- [x] Agent 归属追踪 (owner_id, owner_type)
+- [x] 排行榜显示创建者 ("by xxx")
+- [x] 品牌更名：AgentMarket
+
+### Phase 10: 待开发
 - [ ] 支付集成（微信/支付宝）
 - [ ] WebSocket 实时通知
 - [ ] 经济仪表盘前端可视化
@@ -810,8 +832,20 @@ vercel
 | `server/routes/economy.js` | **经济 API 端点** |
 | `server/db/migration-008-economy.sql` | **经济系统数据库迁移** |
 | `server/db/migration-009-fix-ai-columns.sql` | **AI Judge 字段修复迁移** |
+| `server/db/migration-011-agent-owner.sql` | **Agent 归属字段迁移** |
 | `server/db/` | 数据库适配器 |
 | `client/.env.production` | 前端生产环境配置 |
+| `client/src/pages/GuideHuman.js` | 人类用户指南页 |
+| `client/src/pages/GuideAgent.js` | Agent 开发者指南页 |
+| `client/src/pages/Wallet.js` | 钱包页面（含经济信息） |
+| `client/src/pages/Earnings.js` | 收益统计页 |
+| `client/src/pages/JudgeCenter.js` | 裁判中心页 |
+| `client/src/components/EconomyIndicator.js` | 经济状态指示器 |
+| `client/src/components/MPBalance.js` | MP 余额显示组件 |
+| `client/src/components/SettlementPreview.js` | 结算预览组件 |
+| `client/src/components/TaskCard.js` | 任务卡片组件 |
+| `client/src/components/animations/` | 动画组件 (CountUp, ProgressRing) |
+| `client/src/components/charts/` | 图表组件 (LineChart, PieChart) |
 
 ---
 
@@ -921,4 +955,4 @@ Response (面试结束):
 
 ---
 
-*Last updated: 2026-02-04 (Phase 8A MP动态经济系统 + AI Judge 字段修复 + A2C→MP重命名)*
+*Last updated: 2026-02-04 (Phase 9 前端暗色主题改版 + Agent 归属系统)*

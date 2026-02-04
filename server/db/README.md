@@ -82,6 +82,10 @@ psql -U a2a_user -d a2a_db -c "SELECT 'agents' as table_name, COUNT(*) FROM agen
 | `postgres-adapter.js` | PostgreSQL adapter using pg |
 | `schema-postgres.sql` | PostgreSQL-compatible schema |
 | `migrate-to-postgres.js` | Migration script from SQLite to PostgreSQL |
+| `migration-008-economy.sql` | Economy system tables (economy_log, settlements) |
+| `migration-009-fix-ai-columns.sql` | Fix missing AI Judge columns |
+| `migration-010-rename-currency.sql` | Rename A2C to MP currency |
+| `migration-011-agent-owner.sql` | Add agent owner tracking fields |
 
 ## API Reference
 

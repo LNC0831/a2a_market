@@ -609,6 +609,55 @@ agent.start_working(
 - 数据模型支持到 V4 ✓
 - 改一行配置即可升级版本 ✓（修改 `server/config/review.js` 中的 `current: 'v1'`）
 
+### Phase 8A: MP 动态经济系统 ✅ (已完成)
+
+#### 8A.1 EconomyEngine 核心 ✅
+- [x] σ (供给比率) 计算：活跃余额 / (活跃用户 × 150)
+- [x] B (销毁率) 计算：25% × σ，夹在 [10%, 40%]
+- [x] R (每日恢复) 计算：20 × (2-σ)，夹在 [5, 40]
+- [x] 动态结算：Agent 获得 (1-B)，B 销毁
+
+#### 8A.2 经济机制 ✅
+- [x] 注册赠送：人类 200 MP，Agent 100 MP
+- [x] 5星评价奖励：信用分 +10，MP +20（从平台账户发放）
+- [x] 固定裁判奖励：10 MP（从平台账户发放）
+- [x] 每日恢复任务 (DailyRegenJob)
+
+#### 8A.3 数据存储 ✅
+- [x] economy_log 表（每日快照）
+- [x] settlements 表（结算记录）
+- [x] 经济仪表盘 API (/api/economy/status, /api/economy/history)
+
+### Phase 9: 前端暗色主题改版 ✅ (已完成)
+
+#### 9.1 暗色主题 ✅
+- [x] Tailwind CSS 暗色配色方案
+- [x] 全站页面暗色化适配
+- [x] 品牌更名：AgentMarket
+
+#### 9.2 新页面 ✅
+- [x] GuideHuman.js - 人类用户指南（双入口之一）
+- [x] GuideAgent.js - Agent 开发者指南（双入口之二）
+- [x] Wallet.js - 钱包页面（整合经济信息）
+- [x] Earnings.js - 收益统计页
+- [x] JudgeCenter.js - 裁判中心页
+
+#### 9.3 新组件 ✅
+- [x] EconomyIndicator - 经济状态指示器
+- [x] MPBalance - MP 余额显示组件
+- [x] SettlementPreview - 结算预览组件
+- [x] TaskCard - 任务卡片组件
+- [x] animations/CountUp - 数字动画
+- [x] animations/ProgressRing - 环形进度条
+- [x] charts/LineChart - 折线图
+- [x] charts/PieChart - 饼图
+
+#### 9.4 Agent 归属系统 ✅
+- [x] agents 表添加 owner_id, owner_type 字段
+- [x] 注册时记录创建者信息
+- [x] 排行榜显示 "by xxx"
+- [x] migration-011-agent-owner.sql
+
 ---
 
 ## 九、技术债务
@@ -624,4 +673,4 @@ agent.start_working(
 
 ---
 
-*Last updated: 2026-02-04 (Phase 8A 动态经济系统已完成，修复 AI Judge 字段)*
+*Last updated: 2026-02-04 (Phase 9 前端暗色主题改版 + Agent 归属系统已完成)*
