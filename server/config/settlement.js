@@ -1,56 +1,79 @@
 /**
  * 结算配置 - Settlement Configuration
  *
- * 集中管理平台分成比例，方便调整。
+ * 此文件保留向后兼容，实际任务结算现在使用动态经济系统。
  *
- * 使用方法：
- *   const { SETTLEMENT } = require('../config/settlement');
- *   const agentEarnings = amount * SETTLEMENT.AGENT_RATIO;
+ * 新的结算逻辑 (Phase 8A):
+ *   - Agent 获得: taskPrice × (1 - B)，B 为动态销毁率
+ *   - 销毁 (Burn): taskPrice × B (不归任何人)
+ *   - 裁判奖励: 固定 10 A2C (从平台账户发放，不从任务扣)
+ *   - 平台收入: 通过法币充值入口盈利 (未来实现)
+ *
+ * 旧的固定比例保留用于:
+ *   - Skill 开发者收益分成
+ *   - 向后兼容的统计计算
+ *   - 预估收益显示
  */
 
 const SETTLEMENT = {
-  // 任务结算分成
-  AGENT_RATIO: 0.75,      // Agent 获得 75%
-  PLATFORM_RATIO: 0.20,   // 平台获得 20%
-  JUDGE_RATIO: 0.05,      // 裁判获得 5% (从平台份额中扣除)
+  // 旧的任务结算分成 (仅用于向后兼容和预估显示)
+  // 实际结算使用 EconomyEngine.calcSettlement()
+  AGENT_RATIO: 0.75,      // 预估: Agent 获得 75% (实际为 1-B, B 在 10%-40% 之间)
+  PLATFORM_RATIO: 0.00,   // 平台不再从任务中抽成
+  JUDGE_RATIO: 0.00,      // 裁判奖励改为固定 10 A2C
 
-  // 技能调用分成 (Skill 开发者收益)
+  // Skill 调用分成 (仍使用固定比例)
   SKILL_DEVELOPER_RATIO: 0.75,  // Skill 开发者获得 75%
   SKILL_PLATFORM_RATIO: 0.25,   // 平台获得 25%
+
+  // 动态经济标记
+  DYNAMIC_ECONOMY_ENABLED: true,
+
+  // 默认销毁率 (σ=1.0 时)
+  DEFAULT_BURN_RATE: 0.25,
 };
 
-// 验证比例总和
-// 注意：AGENT + PLATFORM = 95%, 剩余 5% 预留给裁判
-// 无裁判时: Agent 75%, Platform 20%, 剩余 5% 归平台
-// 有裁判时: Agent 75%, Platform 15%, Judge 5%
-const taskTotal = SETTLEMENT.AGENT_RATIO + SETTLEMENT.PLATFORM_RATIO + SETTLEMENT.JUDGE_RATIO;
-if (Math.abs(taskTotal - 1.0) > 0.001) {
-  console.warn(`[Config] Warning: Task settlement ratios sum to ${taskTotal}, expected 1.0`);
-}
-
-// 导出便捷函数
+/**
+ * 旧的结算计算函数 (保留向后兼容)
+ *
+ * 注意: 实际任务结算应使用 EconomyEngine.calcSettlement()
+ *
+ * @param {number} amount - 任务金额
+ * @param {boolean} hasJudge - 是否有裁判 (已弃用)
+ * @returns {Object} - 结算分配
+ */
 const calculateSettlement = (amount, hasJudge = false) => {
-  const agentAmount = Math.round(amount * SETTLEMENT.AGENT_RATIO * 100) / 100;
-  let judgeAmount = 0;
-  let platformAmount;
-
-  if (hasJudge) {
-    judgeAmount = Math.round(amount * SETTLEMENT.JUDGE_RATIO * 100) / 100;
-    platformAmount = Math.round(amount * SETTLEMENT.PLATFORM_RATIO * 100) / 100;
-  } else {
-    // 无裁判时，裁判份额归平台
-    platformAmount = Math.round(amount * (SETTLEMENT.PLATFORM_RATIO + SETTLEMENT.JUDGE_RATIO) * 100) / 100;
-  }
+  // 使用默认销毁率进行预估
+  const burnRate = SETTLEMENT.DEFAULT_BURN_RATE;
+  const burned = Math.round(amount * burnRate * 100) / 100;
+  const agentAmount = Math.round((amount - burned) * 100) / 100;
 
   return {
     agent: agentAmount,
-    platform: platformAmount,
-    judge: judgeAmount,
-    total: amount
+    platform: 0,  // 平台不再从任务中抽成
+    judge: 0,     // 裁判奖励改为固定值
+    burned: burned,
+    burn_rate: burnRate,
+    total: amount,
+    note: 'This is an estimate. Actual settlement uses dynamic burn rate based on current σ.'
   };
+};
+
+/**
+ * 计算预估收益 (用于任务列表显示)
+ *
+ * 使用默认销毁率进行预估
+ *
+ * @param {number} amount - 任务金额
+ * @returns {number} - 预估 Agent 收益
+ */
+const estimateAgentEarnings = (amount) => {
+  const burnRate = SETTLEMENT.DEFAULT_BURN_RATE;
+  return Math.round(amount * (1 - burnRate) * 100) / 100;
 };
 
 module.exports = {
   SETTLEMENT,
-  calculateSettlement
+  calculateSettlement,
+  estimateAgentEarnings
 };

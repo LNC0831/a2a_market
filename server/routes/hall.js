@@ -30,6 +30,10 @@ const WalletService = require('../services/walletService');
 // 导入结算配置
 const { SETTLEMENT } = require('../config/settlement');
 
+// 导入经济系统配置
+const { ECONOMY } = require('../config/economy');
+const EconomyEngine = require('../services/EconomyEngine');
+
 // Agent 挑战服务实例
 const agentChallengeService = new AgentChallengeService();
 
@@ -151,10 +155,10 @@ router.post('/hall/client/register', async (req, res) => {
     const apiKey = 'client_' + crypto.randomBytes(32).toString('hex');
 
     req.db.run(
-      `INSERT INTO clients (id, name, email, password_hash, api_key, created_at)
-       VALUES (?, ?, ?, ?, ?, NOW())`,
+      `INSERT INTO clients (id, name, email, password_hash, api_key, registration_bonus_granted, created_at)
+       VALUES (?, ?, ?, ?, ?, 0, NOW())`,
       [clientId, name || '', email, passwordHash, apiKey],
-      function(err) {
+      async function(err) {
         if (err) {
           if (err.message.includes('UNIQUE')) {
             return res.status(400).json({ error: '该邮箱已注册' });
@@ -162,11 +166,40 @@ router.post('/hall/client/register', async (req, res) => {
           return res.status(500).json({ error: err.message });
         }
 
+        // Grant registration bonus
+        let bonusGranted = false;
+        try {
+          const walletService = new WalletService(req.db);
+          const wallet = await walletService.getOrCreateWallet(clientId, 'client', 'A2C');
+          await walletService.addBalance(
+            wallet.id,
+            ECONOMY.HUMAN_REGISTRATION_BONUS,
+            'bonus',
+            'Registration bonus - Welcome to A2A Market!',
+            { source: 'registration_bonus' }
+          );
+
+          // Mark bonus as granted
+          req.db.run(
+            'UPDATE clients SET registration_bonus_granted = 1 WHERE id = ?',
+            [clientId]
+          );
+          bonusGranted = true;
+        } catch (bonusErr) {
+          console.error('[Registration] Failed to grant bonus:', bonusErr);
+          // Continue with registration success even if bonus fails
+        }
+
         res.json({
           success: true,
           client_id: clientId,
           api_key: apiKey,
-          message: '注册成功'
+          message: '注册成功',
+          bonus: bonusGranted ? {
+            granted: true,
+            amount: ECONOMY.HUMAN_REGISTRATION_BONUS,
+            currency: 'A2C'
+          } : null
         });
       }
     );
@@ -323,13 +356,37 @@ router.post('/hall/register', (req, res) => {
   const apiKey = 'agent_' + crypto.randomBytes(32).toString('hex');
 
   req.db.run(
-    `INSERT INTO agents (id, name, skills, endpoint, description, email, api_key, type, status, rating, total_tasks, total_earnings)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO agents (id, name, skills, endpoint, description, email, api_key, type, status, rating, total_tasks, total_earnings, registration_bonus_granted)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
     [agentId, name, JSON.stringify(skills), endpoint || null, description || '',
      contact_email || '', apiKey, 'external', 'active', 5.0, 0, 0],
-    function(err) {
+    async function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
+      }
+
+      // Grant registration bonus
+      let bonusGranted = false;
+      try {
+        const walletService = new WalletService(req.db);
+        const wallet = await walletService.getOrCreateWallet(agentId, 'agent', 'A2C');
+        await walletService.addBalance(
+          wallet.id,
+          ECONOMY.AGENT_REGISTRATION_BONUS,
+          'bonus',
+          'Agent registration bonus - Welcome to A2A Market!',
+          { source: 'registration_bonus' }
+        );
+
+        // Mark bonus as granted
+        req.db.run(
+          'UPDATE agents SET registration_bonus_granted = 1 WHERE id = ?',
+          [agentId]
+        );
+        bonusGranted = true;
+      } catch (bonusErr) {
+        console.error('[Agent Registration] Failed to grant bonus:', bonusErr);
+        // Continue with registration success even if bonus fails
       }
 
       res.json({
@@ -341,6 +398,11 @@ router.post('/hall/register', (req, res) => {
           passed: true,
           completion_time_ms: verification.completion_time_ms
         },
+        bonus: bonusGranted ? {
+          granted: true,
+          amount: ECONOMY.AGENT_REGISTRATION_BONUS,
+          currency: 'A2C'
+        } : null,
         usage: {
           as_worker: 'Use X-Agent-Key to claim and complete tasks',
           as_client: 'Use same X-Agent-Key to post tasks (Agent can be both client and worker)'
@@ -358,12 +420,17 @@ router.post('/hall/register', (req, res) => {
  * POST /api/hall/post
  * Headers: X-Client-Key 或 X-Agent-Key
  *
+ * Body:
+ * - title, description, budget (required)
+ * - category, contact_email, deadline_hours (optional)
+ * - source: 'user' | 'platform' (optional, default: 'user')
+ *
  * 钱包集成:
  * - 如果客户已登录，检查余额并冻结 budget 金额
  * - 匿名发布不检查余额（向后兼容）
  */
 router.post('/hall/post', optionalAuth, async (req, res) => {
-  const { title, description, category, budget, contact_email, deadline_hours, skip_payment } = req.body;
+  const { title, description, category, budget, contact_email, deadline_hours, skip_payment, source } = req.body;
 
   if (!title || !description || !budget) {
     return res.status(400).json({ error: 'Required: title, description, budget' });
@@ -373,6 +440,7 @@ router.post('/hall/post', optionalAuth, async (req, res) => {
   const clientId = req.client?.id || null;
   const clientType = req.client?.type || 'anonymous';
   const email = contact_email || req.client?.email || '';
+  const taskSource = source || 'user';  // 'user' or 'platform'
 
   // 计算截止时间
   const deadlineHours = deadline_hours || 24;
@@ -415,9 +483,9 @@ router.post('/hall/post', optionalAuth, async (req, res) => {
   }
 
   req.db.run(
-    `INSERT INTO tasks (id, title, description, category, budget, status, user_email, client_id, client_type, deadline, payment_status, created_at)
-     VALUES (?, ?, ?, ?, ?, 'open', ?, ?, ?, NOW() + INTERVAL '${deadlineHours} hours', ?, NOW())`,
-    [taskId, title, description, category || 'general', budget, email, clientId, clientType, paymentStatus],
+    `INSERT INTO tasks (id, title, description, category, budget, status, user_email, client_id, client_type, deadline, payment_status, source, created_at)
+     VALUES (?, ?, ?, ?, ?, 'open', ?, ?, ?, NOW() + INTERVAL '${deadlineHours} hours', ?, ?, NOW())`,
+    [taskId, title, description, category || 'general', budget, email, clientId, clientType, paymentStatus, taskSource],
     function(err) {
       if (err) {
         // 如果任务创建失败，需要解冻余额
@@ -439,7 +507,8 @@ router.post('/hall/post', optionalAuth, async (req, res) => {
       logTaskEvent(req.db, taskId, 'created', clientId || 'anonymous', clientType, {
         title,
         budget,
-        payment_status: paymentStatus
+        payment_status: paymentStatus,
+        source: taskSource
       });
 
       res.json({
@@ -447,6 +516,7 @@ router.post('/hall/post', optionalAuth, async (req, res) => {
         task_id: taskId,
         status: 'open',
         payment_status: paymentStatus,
+        source: taskSource,
         message: walletFrozen
           ? 'Task posted. Payment frozen until task completion.'
           : 'Task posted to the hall. Agents can now claim it.',
@@ -567,12 +637,17 @@ function getAvailableActions(task) {
  * 获取可接任务列表（公开，无需登录）
  *
  * GET /api/hall/tasks
+ *
+ * Query params:
+ * - category: Filter by task category
+ * - min_budget, max_budget: Budget range filter
+ * - source: Filter by source ('user' | 'platform')
  */
 router.get('/hall/tasks', optionalAuth, (req, res) => {
-  const { category, min_budget, max_budget } = req.query;
+  const { category, min_budget, max_budget, source } = req.query;
   const agentSkills = req.client?.type === 'agent' ? JSON.parse(req.client.skills || '[]') : [];
 
-  let sql = `SELECT id, title, description, category, budget, status, created_at, deadline,
+  let sql = `SELECT id, title, description, category, budget, status, created_at, deadline, source,
                     (SELECT COUNT(*) FROM task_events WHERE task_id = tasks.id AND event = 'viewed') as view_count
              FROM tasks WHERE status = 'open'`;
   const params = [];
@@ -588,6 +663,10 @@ router.get('/hall/tasks', optionalAuth, (req, res) => {
   if (max_budget) {
     sql += ' AND budget <= ?';
     params.push(parseFloat(max_budget));
+  }
+  if (source) {
+    sql += ' AND source = ?';
+    params.push(source);
   }
 
   sql += ' ORDER BY budget DESC, created_at ASC';
@@ -921,13 +1000,14 @@ router.get('/hall/my-orders', authenticateClient, (req, res) => {
 });
 
 /**
- * 验收通过 - 奖励信用分 + 钱包结算
+ * 验收通过 - 动态经济结算 + 奖励信用分
  *
  * POST /api/hall/tasks/:id/accept
  *
- * 钱包集成:
- * - 消费客户冻结余额
- * - 分配给 Agent (70%), 平台 (30%), 裁判 (5% 如有)
+ * 动态经济系统:
+ * - Agent 获得 (1 - B) 比例，B 为当前销毁率
+ * - B 部分销毁（不归任何人）
+ * - 裁判奖励为固定 10 A2C（从平台账户发放，不从任务扣）
  */
 router.post('/hall/tasks/:id/accept', async (req, res) => {
   const { id } = req.params;
@@ -941,26 +1021,108 @@ router.post('/hall/tasks/:id/accept', async (req, res) => {
 
     const creditSystem = new CreditSystem(req.db);
     const walletService = new WalletService(req.db);
+    const economyEngine = new EconomyEngine(req.db);
 
-    const agentEarnings = Math.round(task.budget * SETTLEMENT.AGENT_RATIO);
-    const platformFee = Math.round(task.budget * SETTLEMENT.PLATFORM_RATIO);
+    // Get current economy parameters for dynamic settlement
+    let economyParams;
+    try {
+      economyParams = await economyEngine.getEconomyParams();
+    } catch (econErr) {
+      console.error('Failed to get economy params, using default:', econErr);
+      economyParams = { sigma: 1.0, burnRate: 0.25 };
+    }
 
-    // 钱包结算：如果支付状态为 frozen，使用钱包系统处理
-    let walletSettlement = null;
+    // Calculate dynamic settlement
+    const settlement = economyEngine.calcSettlement(task.budget, economyParams.sigma);
+    const agentEarnings = settlement.agentEarning;
+    const burnedAmount = settlement.burned;
+    const burnRate = settlement.burnRate;
+
+    // Process wallet settlement
+    let walletSettlementResult = null;
     if (task.payment_status === 'frozen' && task.client_id) {
       try {
-        // 获取裁判 ID（如果有）
-        const judgeId = task.judge_id || null;
+        // 1. Consume frozen balance from client
+        const clientWallet = await walletService.getWallet(task.client_id, 'A2C');
+        if (clientWallet) {
+          await walletService.consumeFrozenBalance(
+            clientWallet.id,
+            task.budget,
+            'task_payment',
+            `Payment for task ${id}`,
+            { task_id: id, counterparty_id: task.agent_id, counterparty_type: 'agent' }
+          );
+        }
 
-        // 处理钱包支付
-        walletSettlement = await walletService.processTaskPayment(
-          task.client_id,
-          task.agent_id,
+        // 2. Pay agent (1 - B)
+        const agentWallet = await walletService.getOrCreateWallet(task.agent_id, 'agent', 'A2C');
+        const agentResult = await walletService.addBalance(
+          agentWallet.id,
+          agentEarnings,
+          'task_earning',
+          `Earnings from task ${id} (σ=${economyParams.sigma.toFixed(2)}, B=${(burnRate*100).toFixed(1)}%)`,
+          { task_id: id, counterparty_id: task.client_id, counterparty_type: 'client' }
+        );
+
+        // 3. Burned amount is NOT transferred anywhere (it's destroyed)
+        // Record burn transaction for transparency
+        await walletService.addBalance(
+          'wallet_platform_a2c',
+          0,  // Platform receives nothing from burn
+          'platform_fee',
+          `Burn record for task ${id}: ${burnedAmount} A2C destroyed`,
+          { task_id: id, burned: burnedAmount, burn_rate: burnRate }
+        );
+
+        // 4. Judge reward (fixed 10 A2C from platform account, if judge exists)
+        let judgeRewardPaid = 0;
+        if (task.judge_id) {
+          try {
+            const judgeWallet = await walletService.getOrCreateWallet(task.judge_id, 'agent', 'A2C');
+            const platformWallet = await walletService.getWalletById('wallet_platform_a2c');
+
+            // Only pay if platform has sufficient balance
+            if (platformWallet && platformWallet.balance >= ECONOMY.JUDGE_REWARD) {
+              await walletService.deductBalance(
+                'wallet_platform_a2c',
+                ECONOMY.JUDGE_REWARD,
+                'judge_reward',
+                `Judge reward for task ${id}`,
+                { task_id: id }
+              );
+              await walletService.addBalance(
+                judgeWallet.id,
+                ECONOMY.JUDGE_REWARD,
+                'judge_reward',
+                `Judge reward for reviewing task ${id}`,
+                { task_id: id }
+              );
+              judgeRewardPaid = ECONOMY.JUDGE_REWARD;
+            }
+          } catch (judgeErr) {
+            console.error('Failed to pay judge reward:', judgeErr);
+          }
+        }
+
+        walletSettlementResult = {
+          processed: true,
+          agent_earning: agentEarnings,
+          burned: burnedAmount,
+          burn_rate: burnRate,
+          judge_reward: judgeRewardPaid
+        };
+
+        // Record settlement in economy system
+        await economyEngine.recordSettlement(
           id,
           task.budget,
-          judgeId,
-          'A2C'
+          agentEarnings,
+          burnedAmount,
+          burnRate,
+          economyParams.sigma,
+          judgeRewardPaid
         );
+
       } catch (walletErr) {
         console.error('Wallet settlement failed:', walletErr);
         return res.status(500).json({
@@ -992,7 +1154,10 @@ router.post('/hall/tasks/:id/accept', async (req, res) => {
         // 记录事件
         logTaskEvent(req.db, id, 'accepted', task.client_id || 'client', task.client_type || 'human', {
           agent_earnings: agentEarnings,
-          wallet_settlement: walletSettlement ? true : false
+          burned: burnedAmount,
+          burn_rate: burnRate,
+          sigma: economyParams.sigma,
+          wallet_settlement: walletSettlementResult ? true : false
         });
 
         // 奖励信用分 (+5)
@@ -1005,7 +1170,9 @@ router.post('/hall/tasks/:id/accept', async (req, res) => {
               settlement: {
                 total: task.budget,
                 agent_earnings: agentEarnings,
-                platform_fee: platformFee
+                burned: burnedAmount,
+                burn_rate: `${(burnRate * 100).toFixed(1)}%`,
+                sigma: economyParams.sigma.toFixed(3)
               },
               credit_impact: {
                 change: creditResult.change,
@@ -1016,11 +1183,8 @@ router.post('/hall/tasks/:id/accept', async (req, res) => {
             };
 
             // 添加钱包结算详情
-            if (walletSettlement) {
-              response.wallet_settlement = {
-                processed: true,
-                distributions: walletSettlement.distributions
-              };
+            if (walletSettlementResult) {
+              response.wallet_settlement = walletSettlementResult;
             }
 
             res.json(response);
@@ -1034,17 +1198,16 @@ router.post('/hall/tasks/:id/accept', async (req, res) => {
               settlement: {
                 total: task.budget,
                 agent_earnings: agentEarnings,
-                platform_fee: platformFee
+                burned: burnedAmount,
+                burn_rate: `${(burnRate * 100).toFixed(1)}%`,
+                sigma: economyParams.sigma.toFixed(3)
               },
               message: 'Task completed. Agent has been paid.',
               rate_url: `/api/hall/tasks/${id}/rate`
             };
 
-            if (walletSettlement) {
-              response.wallet_settlement = {
-                processed: true,
-                distributions: walletSettlement.distributions
-              };
+            if (walletSettlementResult) {
+              response.wallet_settlement = walletSettlementResult;
             }
 
             res.json(response);
@@ -1183,12 +1346,16 @@ router.post('/hall/tasks/:id/reject', (req, res) => {
 });
 
 /**
- * 评价 Agent - 5星评价奖励信用分
+ * 评价 Agent - 5星评价奖励信用分 + A2C奖励
  *
  * POST /api/hall/tasks/:id/rate
  * { "rating": 5, "comment": "非常满意" }
+ *
+ * 5星评价奖励:
+ * - 信用分 +10
+ * - A2C +20 (从平台账户发放)
  */
-router.post('/hall/tasks/:id/rate', (req, res) => {
+router.post('/hall/tasks/:id/rate', async (req, res) => {
   const { id } = req.params;
   const { rating, comment } = req.body;
 
@@ -1196,7 +1363,7 @@ router.post('/hall/tasks/:id/rate', (req, res) => {
     return res.status(400).json({ error: 'Rating must be between 1 and 5' });
   }
 
-  req.db.get('SELECT * FROM tasks WHERE id = ?', [id], (err, task) => {
+  req.db.get('SELECT * FROM tasks WHERE id = ?', [id], async (err, task) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!task) return res.status(404).json({ error: 'Task not found' });
     if (task.status !== 'completed') {
@@ -1207,11 +1374,12 @@ router.post('/hall/tasks/:id/rate', (req, res) => {
     }
 
     const creditSystem = new CreditSystem(req.db);
+    const walletService = new WalletService(req.db);
 
     req.db.run(
       `UPDATE tasks SET client_rating = ?, client_comment = ? WHERE id = ?`,
       [rating, comment || '', id],
-      function(err) {
+      async function(err) {
         if (err) return res.status(500).json({ error: err.message });
 
         // 更新 Agent 平均评分
@@ -1226,27 +1394,60 @@ router.post('/hall/tasks/:id/rate', (req, res) => {
           rating, comment
         });
 
-        // 5星评价奖励信用分 (+10)
+        // 5星评价奖励: 信用分 +10 和 A2C 奖励
         if (rating === 5) {
-          creditSystem.rewardFiveStarRating(task.agent_id, id)
-            .then(creditResult => {
-              res.json({
-                success: true,
-                message: 'Thank you for your rating!',
-                credit_bonus: {
-                  awarded: true,
-                  change: creditResult.change,
-                  reason: '5星好评奖励'
-                }
-              });
-            })
-            .catch(err => {
-              console.error('Failed to reward 5-star credit:', err);
-              res.json({
-                success: true,
-                message: 'Thank you for your rating!'
-              });
-            });
+          let creditResult = null;
+          let a2cBonusGranted = false;
+
+          // Credit bonus
+          try {
+            creditResult = await creditSystem.rewardFiveStarRating(task.agent_id, id);
+          } catch (creditErr) {
+            console.error('Failed to reward 5-star credit:', creditErr);
+          }
+
+          // A2C bonus (from platform account)
+          try {
+            const platformWallet = await walletService.getWalletById('wallet_platform_a2c');
+            if (platformWallet && platformWallet.balance >= ECONOMY.FIVE_STAR_BONUS) {
+              await walletService.deductBalance(
+                'wallet_platform_a2c',
+                ECONOMY.FIVE_STAR_BONUS,
+                'bonus',
+                `5-star bonus payout for task ${id}`,
+                { task_id: id }
+              );
+
+              const agentWallet = await walletService.getOrCreateWallet(task.agent_id, 'agent', 'A2C');
+              await walletService.addBalance(
+                agentWallet.id,
+                ECONOMY.FIVE_STAR_BONUS,
+                'bonus',
+                `5-star rating bonus for task ${id}`,
+                { task_id: id, source: 'five_star_bonus' }
+              );
+              a2cBonusGranted = true;
+            }
+          } catch (bonusErr) {
+            console.error('Failed to grant 5-star A2C bonus:', bonusErr);
+          }
+
+          res.json({
+            success: true,
+            message: 'Thank you for your rating!',
+            bonus: {
+              credit: creditResult ? {
+                awarded: true,
+                change: creditResult.change,
+                reason: '5星好评奖励'
+              } : null,
+              a2c: a2cBonusGranted ? {
+                awarded: true,
+                amount: ECONOMY.FIVE_STAR_BONUS,
+                reason: '5星好评 A2C 奖励'
+              } : null
+            }
+          });
         } else {
           res.json({
             success: true,

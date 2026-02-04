@@ -15,6 +15,8 @@ const agentAccessRoutes = require('./routes/agentAccess');
 const agentContributorRoutes = require('./routes/agentContributor');
 const mcpRoutes = require('./routes/mcp');
 const TimeoutChecker = require('./jobs/timeoutChecker');  // 超时检查后台任务
+const DailyRegenJob = require('./jobs/DailyRegenJob');    // 每日 A2C 恢复任务
+const economyRoutes = require('./routes/economy');         // 经济系统 API
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -55,7 +57,7 @@ if (db.type === 'sqlite') {
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    version: '2.3.0',
+    version: '2.4.0',
     features: [
       'multi-agent',
       'skill-store',
@@ -64,12 +66,13 @@ app.get('/api/health', (req, res) => {
       'auto-judge',
       'timeout-checker',
       'multi-currency-wallet',
-      'payment-gateway'
+      'payment-gateway',
+      'dynamic-economy'
     ],
     quality_system: {
       credit_rules: {
         task_completed: '+5',
-        five_star_rating: '+10',
+        five_star_rating: '+10 credit + 20 A2C',
         first_rejection: '-5',
         second_rejection: '-15',
         third_rejection: '-30',
@@ -81,12 +84,32 @@ app.get('/api/health', (req, res) => {
         permanent_ban: 0
       }
     },
+    economy_system: {
+      description: 'Dynamic A2C economy with self-regulating supply',
+      formula: {
+        sigma: 'σ = active_balance / (active_users × 150)',
+        daily_regen: 'R = 20 × (2 - σ), clamped [5, 40]',
+        burn_rate: 'B = 25% × σ, clamped [10%, 40%]'
+      },
+      rewards: {
+        human_registration: '200 A2C',
+        agent_registration: '100 A2C',
+        judge_reward: '10 A2C (fixed)',
+        five_star_bonus: '20 A2C'
+      },
+      endpoints: {
+        status: '/api/economy/status',
+        history: '/api/economy/history',
+        formula: '/api/economy/formula'
+      }
+    },
     wallet_system: {
       currencies: ['A2C (active)', 'CNY (reserved)', 'USD (reserved)', 'BTC (reserved)'],
       settlement: {
-        agent_share: '75%',
-        platform_fee: '20%',
-        judge_reward: '5%'
+        agent_share: '60%-90% (dynamic, based on σ)',
+        burn_rate: '10%-40% (dynamic, based on σ)',
+        platform_fee: '0% (from task)',
+        judge_reward: '10 A2C (fixed, from platform)'
       },
       endpoints: {
         wallets: '/api/wallet',
@@ -450,6 +473,12 @@ app.use('/api', (req, res, next) => {
   next();
 }, walletRoutes);
 
+// 经济系统路由
+app.use('/api', (req, res, next) => {
+  req.db = db;
+  next();
+}, economyRoutes);
+
 // 开发者路由
 app.use('/api', (req, res, next) => {
   req.db = db;
@@ -533,30 +562,40 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: '服务器内部错误' });
 });
 
-// 初始化超时检查后台任务
+// 初始化后台任务
 const timeoutChecker = new TimeoutChecker(db);
+const dailyRegenJob = new DailyRegenJob(db);
 
 // 启动服务器
 app.listen(PORT, () => {
   console.log(`\n🚀 A2A Agent Market 已启动！`);
-  console.log(`   版本: 2.2.0 (Multi-Agent + 质量体系 + 钱包系统)`);
+  console.log(`   版本: 2.4.0 (Multi-Agent + 质量体系 + 钱包系统 + 动态经济)`);
   console.log(`   API地址: http://localhost:${PORT}/api`);
   console.log(`\n📊 核心功能:`);
   console.log(`   ✓ Multi-Agent协作 (调度/执行/审核)`);
   console.log(`   ✓ 技能商店 (开发者生态)`);
   console.log(`   ✓ 动态定价 (AI报价)`);
-  console.log(`   ✓ 自动结算 (三方分成)`);
   console.log(`   ✓ 信用分系统 (奖惩机制)`);
   console.log(`   ✓ 超时检查 (自动释放)`);
   console.log(`   ✓ 自动裁判 (质量检查)`);
   console.log(`   ✓ 多币种钱包 (A2C/CNY/USD/BTC)`);
   console.log(`   ✓ 支付网关 (手动/预留第三方)`);
+  console.log(`   ✓ 动态经济系统 (自动调节供给)`);
+  console.log(`\n💰 动态经济系统:`);
+  console.log(`   σ = 活跃余额 / (活跃用户 × 150)`);
+  console.log(`   R = 20 × (2-σ) [5,40] 每日恢复`);
+  console.log(`   B = 25% × σ [10%,40%] 销毁比例`);
+  console.log(`   注册赠送: 人类 200 A2C, Agent 100 A2C`);
   console.log(`\n🔗 访问地址:`);
   console.log(`   前端: http://localhost:3000`);
-  console.log(`   API文档: http://localhost:${PORT}/api/health\n`);
+  console.log(`   API文档: http://localhost:${PORT}/api/health`);
+  console.log(`   经济状态: http://localhost:${PORT}/api/economy/status\n`);
 
   // 启动超时检查后台任务 (每分钟检查一次)
   timeoutChecker.start(60000);
+
+  // 启动每日 A2C 恢复任务 (每小时检查一次)
+  dailyRegenJob.start(3600000);
 });
 
 module.exports = app;
