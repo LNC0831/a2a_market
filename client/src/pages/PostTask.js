@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '../api';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import api, { getAuth } from '../api';
 import {
   TaskIcon,
   WriteIcon,
@@ -12,38 +12,46 @@ import {
   ClockIcon,
   AgentIcon,
   ChevronRightIcon,
+  BurnIcon,
+  LoginIcon,
 } from '../components/Icons';
+import SettlementPreview from '../components/SettlementPreview';
 
 function PostTask() {
   const navigate = useNavigate();
+  const auth = getAuth();
   const [loading, setLoading] = useState(false);
+  const [economy, setEconomy] = useState(null);
   const [form, setForm] = useState({
     title: '',
     description: '',
     category: 'general',
     budget: '',
     deadline_hours: 24,
-    contact_email: '',
   });
 
-  const categories = [
-    { value: 'writing', label: '写作', desc: '文章、文案、博客等', icon: WriteIcon, color: 'blue' },
-    { value: 'coding', label: '编程', desc: '代码审查、脚本编写等', icon: CodeIcon, color: 'green' },
-    { value: 'analysis', label: '分析', desc: '数据分析、市场研究等', icon: AnalysisIcon, color: 'orange' },
-    { value: 'translation', label: '翻译', desc: '文档翻译、本地化等', icon: TranslateIcon, color: 'purple' },
-    { value: 'general', label: '其他', desc: '其他类型任务', icon: SettingsIcon, color: 'gray' },
-  ];
+  useEffect(() => {
+    api.getEconomyStatus()
+      .then(setEconomy)
+      .catch(() => setEconomy({ burnRate: 0.25 }));
+  }, []);
 
-  const colorClasses = {
-    blue: { selected: 'border-blue-500 bg-blue-50 ring-2 ring-blue-200', icon: 'text-blue-600' },
-    green: { selected: 'border-green-500 bg-green-50 ring-2 ring-green-200', icon: 'text-green-600' },
-    orange: { selected: 'border-orange-500 bg-orange-50 ring-2 ring-orange-200', icon: 'text-orange-600' },
-    purple: { selected: 'border-purple-500 bg-purple-50 ring-2 ring-purple-200', icon: 'text-purple-600' },
-    gray: { selected: 'border-gray-500 bg-gray-50 ring-2 ring-gray-200', icon: 'text-gray-600' },
-  };
+  const categories = [
+    { value: 'writing', label: '写作', desc: '文章、文案、博客等', icon: WriteIcon },
+    { value: 'coding', label: '编程', desc: '代码审查、脚本编写等', icon: CodeIcon },
+    { value: 'analysis', label: '分析', desc: '数据分析、市场研究等', icon: AnalysisIcon },
+    { value: 'translation', label: '翻译', desc: '文档翻译、本地化等', icon: TranslateIcon },
+    { value: 'general', label: '其他', desc: '其他类型任务', icon: SettingsIcon },
+  ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!auth.key) {
+      alert('请先登录后再发布任务');
+      navigate('/login');
+      return;
+    }
 
     if (!form.title || !form.description || !form.budget) {
       alert('请填写必填项');
@@ -66,49 +74,70 @@ function PostTask() {
     }
   };
 
+  // 未登录提示
+  if (!auth.key) {
+    return (
+      <div className="max-w-md mx-auto text-center py-16">
+        <div className="w-20 h-20 bg-dark-elevated rounded-2xl flex items-center justify-center mx-auto mb-6">
+          <TaskIcon className="w-10 h-10 text-dark-text-muted" />
+        </div>
+        <h1 className="text-2xl font-bold text-dark-text-primary mb-4">发布任务需要登录</h1>
+        <p className="text-dark-text-muted mb-8">
+          登录后即可发布任务，让 Agent 为你完成工作
+        </p>
+        <Link
+          to="/login"
+          className="inline-flex items-center px-6 py-3 bg-accent-cyan text-dark-bg font-medium rounded-lg hover:bg-accent-cyan/90 transition-colors"
+        >
+          <LoginIcon className="w-5 h-5 mr-2" />
+          登录 / 注册
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-8">
         <div className="flex items-center space-x-2 mb-2">
-          <TaskIcon className="w-6 h-6 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900">发布任务</h1>
+          <TaskIcon className="w-6 h-6 text-accent-cyan" />
+          <h1 className="text-2xl font-bold text-dark-text-primary">发布任务</h1>
         </div>
-        <p className="text-gray-500">描述你的需求，等待 Agent 接单执行</p>
+        <p className="text-dark-text-muted">描述你的需求，等待 Agent 接单执行</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl p-6 shadow-sm border space-y-6">
+      <form onSubmit={handleSubmit} className="bg-dark-card border border-dark-border rounded-xl p-6 space-y-6">
         {/* 任务标题 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            任务标题 <span className="text-red-500">*</span>
+          <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+            任务标题 <span className="text-red-400">*</span>
           </label>
           <input
             type="text"
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             placeholder="例如：写一篇关于 AI 的文章"
-            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-cyan focus:border-transparent"
             required
           />
         </div>
 
         {/* 任务类型 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            任务类型 <span className="text-red-500">*</span>
+          <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+            任务类型 <span className="text-red-400">*</span>
           </label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {categories.map((cat) => {
               const Icon = cat.icon;
               const isSelected = form.category === cat.value;
-              const colors = colorClasses[cat.color];
               return (
                 <label
                   key={cat.value}
                   className={`relative flex flex-col p-4 border rounded-xl cursor-pointer transition-all ${
                     isSelected
-                      ? colors.selected
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-accent-cyan bg-accent-cyan/10 ring-2 ring-accent-cyan/30'
+                      : 'border-dark-border hover:border-dark-elevated'
                   }`}
                 >
                   <input
@@ -120,12 +149,12 @@ function PostTask() {
                     className="sr-only"
                   />
                   <div className="flex items-center space-x-2 mb-1">
-                    <Icon className={`w-5 h-5 ${isSelected ? colors.icon : 'text-gray-400'}`} />
-                    <span className={`font-medium ${isSelected ? 'text-gray-900' : 'text-gray-700'}`}>
+                    <Icon className={`w-5 h-5 ${isSelected ? 'text-accent-cyan' : 'text-dark-text-muted'}`} />
+                    <span className={`font-medium ${isSelected ? 'text-dark-text-primary' : 'text-dark-text-secondary'}`}>
                       {cat.label}
                     </span>
                   </div>
-                  <span className="text-xs text-gray-500">{cat.desc}</span>
+                  <span className="text-xs text-dark-text-muted">{cat.desc}</span>
                 </label>
               );
             })}
@@ -134,15 +163,15 @@ function PostTask() {
 
         {/* 任务描述 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            详细描述 <span className="text-red-500">*</span>
+          <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+            详细描述 <span className="text-red-400">*</span>
           </label>
           <textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             placeholder={`详细描述你的需求，越清晰越好...\n\n例如：\n- 文章主题：AI 在医疗领域的应用\n- 字数要求：2000字左右\n- 风格要求：专业但易懂`}
             rows={6}
-            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-cyan focus:border-transparent resize-none"
             required
           />
         </div>
@@ -150,10 +179,10 @@ function PostTask() {
         {/* 预算和截止时间 */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-dark-text-secondary mb-2">
               <span className="flex items-center">
-                <MoneyIcon className="w-4 h-4 mr-1 text-gray-400" />
-                预算 (元) <span className="text-red-500 ml-1">*</span>
+                <MoneyIcon className="w-4 h-4 mr-1 text-dark-text-muted" />
+                预算 (MP) <span className="text-red-400 ml-1">*</span>
               </span>
             </label>
             <input
@@ -162,27 +191,21 @@ function PostTask() {
               onChange={(e) => setForm({ ...form, budget: e.target.value })}
               placeholder="100"
               min="1"
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-cyan focus:border-transparent"
               required
             />
-            {form.budget && (
-              <p className="flex items-center text-sm text-green-600 mt-2">
-                <AgentIcon className="w-4 h-4 mr-1" />
-                Agent 将获得: ¥{Math.round(form.budget * 0.7)}
-              </p>
-            )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-dark-text-secondary mb-2">
               <span className="flex items-center">
-                <ClockIcon className="w-4 h-4 mr-1 text-gray-400" />
+                <ClockIcon className="w-4 h-4 mr-1 text-dark-text-muted" />
                 截止时间
               </span>
             </label>
             <select
               value={form.deadline_hours}
               onChange={(e) => setForm({ ...form, deadline_hours: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-accent-cyan focus:border-transparent"
             >
               <option value="6">6 小时</option>
               <option value="12">12 小时</option>
@@ -194,33 +217,28 @@ function PostTask() {
           </div>
         </div>
 
-        {/* 联系邮箱 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            联系邮箱 (可选)
-          </label>
-          <input
-            type="email"
-            value={form.contact_email}
-            onChange={(e) => setForm({ ...form, contact_email: e.target.value })}
-            placeholder="your@email.com"
-            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        {/* 结算预览 */}
+        {form.budget && (
+          <SettlementPreview
+            taskPrice={form.budget}
+            showBreakdown={false}
+            economy={economy}
           />
-        </div>
+        )}
 
         {/* 提交按钮 */}
-        <div className="flex justify-end space-x-3 pt-4 border-t">
+        <div className="flex justify-end space-x-3 pt-4 border-t border-dark-border">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-6 py-3 border border-dark-border text-dark-text-secondary font-medium rounded-lg hover:bg-dark-elevated transition-colors"
           >
             取消
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="flex items-center px-6 py-3 bg-accent-cyan text-dark-bg font-medium rounded-lg hover:bg-accent-cyan/90 disabled:opacity-50 transition-colors"
           >
             {loading ? (
               '发布中...'

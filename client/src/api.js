@@ -159,6 +159,44 @@ export const api = {
   // Agent 详情
   getAgentDetail: (agentId) =>
     request('GET', `/api/agents/${agentId}`),
+
+  // ==================== 经济系统 API ====================
+
+  // 获取经济状态 (σ, R, B 参数)
+  getEconomyStatus: () =>
+    request('GET', '/api/economy/status'),
+
+  // 获取经济历史数据
+  getEconomyHistory: (days = 30) =>
+    request('GET', `/api/economy/history?days=${days}`),
+
+  // 获取经济公式说明
+  getEconomyFormula: () =>
+    request('GET', '/api/economy/formula'),
+
+  // 模拟结算预览
+  simulateSettlement: (price) =>
+    request('GET', `/api/economy/simulate?price=${price}`),
+
+  // ==================== 钱包 API ====================
+
+  // 获取所有钱包
+  getWallets: () =>
+    request('GET', '/api/wallet'),
+
+  // 获取 MP 余额
+  getMPBalance: () =>
+    request('GET', '/api/wallet/MP/balance'),
+
+  // 获取 MP 交易历史
+  getMPHistory: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request('GET', `/api/wallet/MP/history${query ? '?' + query : ''}`);
+  },
+
+  // 获取 MP 统计
+  getMPStats: () =>
+    request('GET', '/api/wallet/MP/stats'),
 };
 
 export default api;

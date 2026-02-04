@@ -14,6 +14,7 @@ import {
   XCircleIcon,
   ClockIcon,
   ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
   ChartBarIcon,
   TrophyIcon,
   SparklesIcon,
@@ -38,16 +39,29 @@ import {
   AdjustmentsHorizontalIcon,
   ChevronRightIcon,
   ChevronDownIcon,
+  ChevronUpIcon,
   EllipsisHorizontalIcon,
   Bars3Icon,
   XMarkIcon,
   BookOpenIcon,
+  WalletIcon as WalletOutlineIcon,
+  BanknotesIcon,
+  FireIcon,
+  ArrowsRightLeftIcon,
+  ScaleIcon,
+  GiftIcon,
+  CalculatorIcon,
+  CircleStackIcon,
+  ArrowUpCircleIcon,
+  ArrowDownCircleIcon,
 } from '@heroicons/react/24/outline';
 
 import {
   StarIcon as StarSolidIcon,
   CheckCircleIcon as CheckCircleSolidIcon,
   CpuChipIcon as CpuChipSolidIcon,
+  FireIcon as FireSolidIcon,
+  CircleStackIcon as CircleStackSolidIcon,
 } from '@heroicons/react/24/solid';
 
 // 导出所有图标
@@ -104,10 +118,26 @@ export {
   // UI 相关
   ChevronRightIcon,
   ChevronDownIcon,
+  ChevronUpIcon,
   EllipsisHorizontalIcon as MoreIcon,
   Bars3Icon as MenuIcon,
   XMarkIcon as CloseIcon,
   BookOpenIcon as BookIcon,
+
+  // 经济系统相关
+  WalletOutlineIcon as WalletIcon,
+  BanknotesIcon,
+  FireIcon as BurnIcon,
+  FireSolidIcon as BurnSolidIcon,
+  ArrowsRightLeftIcon as TransferIcon,
+  ScaleIcon as BalanceIcon,
+  GiftIcon,
+  CalculatorIcon,
+  CircleStackIcon as CoinsIcon,
+  CircleStackSolidIcon as CoinsSolidIcon,
+  ArrowUpCircleIcon as IncomeIcon,
+  ArrowDownCircleIcon as ExpenseIcon,
+  ArrowTrendingDownIcon as TrendingDownIcon,
 };
 
 // 技能图标映射

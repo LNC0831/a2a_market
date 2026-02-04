@@ -12,27 +12,19 @@ import {
   CheckCircleIcon,
 } from '../components/Icons';
 
-// reCAPTCHA Site Key (测试密钥)
 const RECAPTCHA_SITE_KEY = process.env.REACT_APP_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI';
 
 function Login() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState('login'); // 'login' | 'register'
-  const [mode, setMode] = useState('client'); // 'client' | 'agent'
+  const [tab, setTab] = useState('login');
+  const [mode, setMode] = useState('client');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const recaptchaRef = useRef(null);
 
-  // 客户登录表单
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
-
-  // Agent 登录表单
   const [agentLoginForm, setAgentLoginForm] = useState({ apiKey: '' });
-
-  // 客户注册表单
   const [clientForm, setClientForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
-
-  // Agent 注册表单
   const [agentForm, setAgentForm] = useState({
     name: '',
     skills: [],
@@ -47,7 +39,6 @@ function Login() {
     { value: 'translation', label: '翻译', icon: TranslateIcon },
   ];
 
-  // 客户登录
   const handleClientLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -57,7 +48,6 @@ function Login() {
       return;
     }
 
-    // 获取 reCAPTCHA token
     const recaptchaToken = recaptchaRef.current?.getValue();
     if (!recaptchaToken) {
       setError('请完成验证码验证');
@@ -77,7 +67,6 @@ function Login() {
     }
   };
 
-  // Agent 登录 (API Key)
   const handleAgentLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -95,7 +84,6 @@ function Login() {
     setLoading(true);
     try {
       setAuth(agentLoginForm.apiKey, 'agent');
-      // 验证 Key 是否有效
       await api.getEarnings();
       navigate('/');
     } catch (err) {
@@ -106,7 +94,6 @@ function Login() {
     }
   };
 
-  // 客户注册
   const handleClientRegister = async (e) => {
     e.preventDefault();
     setError('');
@@ -128,7 +115,6 @@ function Login() {
       return;
     }
 
-    // 获取 reCAPTCHA token
     const recaptchaToken = recaptchaRef.current?.getValue();
     if (!recaptchaToken) {
       setError('请完成验证码验证');
@@ -154,7 +140,6 @@ function Login() {
     }
   };
 
-  // Agent 注册
   const handleAgentRegister = async (e) => {
     e.preventDefault();
     setError('');
@@ -189,18 +174,18 @@ function Login() {
   return (
     <div className="max-w-md mx-auto">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">登录 / 注册</h1>
-        <p className="text-gray-500 mt-2">选择你的身份开始使用</p>
+        <h1 className="text-2xl font-bold text-dark-text-primary">登录 / 注册</h1>
+        <p className="text-dark-text-muted mt-2">选择你的身份开始使用</p>
       </div>
 
       {/* 登录/注册切换 */}
-      <div className="flex mb-6 bg-gray-100 rounded-xl p-1">
+      <div className="flex mb-6 bg-dark-elevated rounded-xl p-1">
         <button
           onClick={() => { setTab('login'); setError(''); }}
           className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all ${
             tab === 'login'
-              ? 'bg-white shadow text-gray-900'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-dark-card text-dark-text-primary shadow'
+              : 'text-dark-text-muted hover:text-dark-text-secondary'
           }`}
         >
           登录
@@ -209,8 +194,8 @@ function Login() {
           onClick={() => { setTab('register'); setError(''); }}
           className={`flex-1 py-3 rounded-lg text-sm font-medium transition-all ${
             tab === 'register'
-              ? 'bg-white shadow text-gray-900'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-dark-card text-dark-text-primary shadow'
+              : 'text-dark-text-muted hover:text-dark-text-secondary'
           }`}
         >
           注册
@@ -219,7 +204,7 @@ function Login() {
 
       {/* 错误提示 */}
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
           {error}
         </div>
       )}
@@ -228,13 +213,13 @@ function Login() {
       {tab === 'login' && (
         <>
           {/* 身份切换 */}
-          <div className="flex mb-6 bg-gray-100 rounded-xl p-1">
+          <div className="flex mb-6 bg-dark-elevated rounded-xl p-1">
             <button
               onClick={() => { setMode('client'); setError(''); }}
               className={`flex-1 flex items-center justify-center space-x-2 py-3 rounded-lg text-sm font-medium transition-all ${
                 mode === 'client'
-                  ? 'bg-white shadow text-gray-900'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-dark-card text-accent-cyan shadow'
+                  : 'text-dark-text-muted hover:text-dark-text-secondary'
               }`}
             >
               <UserIcon className="w-5 h-5" />
@@ -244,8 +229,8 @@ function Login() {
               onClick={() => { setMode('agent'); setError(''); }}
               className={`flex-1 flex items-center justify-center space-x-2 py-3 rounded-lg text-sm font-medium transition-all ${
                 mode === 'agent'
-                  ? 'bg-white shadow text-gray-900'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-dark-card text-accent-purple shadow'
+                  : 'text-dark-text-muted hover:text-dark-text-secondary'
               }`}
             >
               <AgentIcon className="w-5 h-5" />
@@ -255,14 +240,14 @@ function Login() {
 
           {/* 客户登录表单 */}
           {mode === 'client' && (
-            <form onSubmit={handleClientLogin} className="bg-white rounded-xl p-6 shadow-sm border space-y-4">
-              <div className="text-center text-gray-600 text-sm mb-4 flex items-center justify-center space-x-2">
-                <UserIcon className="w-5 h-5 text-blue-500" />
+            <form onSubmit={handleClientLogin} className="bg-dark-card border border-dark-border rounded-xl p-6 space-y-4">
+              <div className="text-center text-dark-text-muted text-sm mb-4 flex items-center justify-center space-x-2">
+                <UserIcon className="w-5 h-5 text-accent-cyan" />
                 <span>使用邮箱和密码登录</span>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-dark-text-secondary mb-2">
                   邮箱
                 </label>
                 <input
@@ -270,13 +255,13 @@ function Login() {
                   value={loginForm.email}
                   onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                   placeholder="your@email.com"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-cyan focus:border-transparent"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-dark-text-secondary mb-2">
                   密码
                 </label>
                 <input
@@ -284,7 +269,7 @@ function Login() {
                   value={loginForm.password}
                   onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                   placeholder="输入密码"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-cyan focus:border-transparent"
                   required
                 />
               </div>
@@ -293,13 +278,14 @@ function Login() {
                 <ReCAPTCHA
                   ref={recaptchaRef}
                   sitekey={RECAPTCHA_SITE_KEY}
+                  theme="dark"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="w-full py-3 bg-accent-cyan text-dark-bg font-medium rounded-lg hover:bg-accent-cyan/90 disabled:opacity-50 transition-colors"
               >
                 {loading ? '登录中...' : '登录'}
               </button>
@@ -308,7 +294,7 @@ function Login() {
                 <button
                   type="button"
                   onClick={() => setTab('register')}
-                  className="text-sm text-blue-600 hover:underline"
+                  className="text-sm text-accent-cyan hover:underline"
                 >
                   没有账号？立即注册
                 </button>
@@ -318,14 +304,14 @@ function Login() {
 
           {/* Agent 登录表单 */}
           {mode === 'agent' && (
-            <form onSubmit={handleAgentLogin} className="bg-white rounded-xl p-6 shadow-sm border space-y-4">
-              <div className="text-center text-gray-600 text-sm mb-4 flex items-center justify-center space-x-2">
-                <AgentIcon className="w-5 h-5 text-purple-500" />
+            <form onSubmit={handleAgentLogin} className="bg-dark-card border border-dark-border rounded-xl p-6 space-y-4">
+              <div className="text-center text-dark-text-muted text-sm mb-4 flex items-center justify-center space-x-2">
+                <AgentIcon className="w-5 h-5 text-accent-purple" />
                 <span>使用 API Key 登录</span>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-dark-text-secondary mb-2">
                   API Key
                 </label>
                 <input
@@ -333,10 +319,10 @@ function Login() {
                   value={agentLoginForm.apiKey}
                   onChange={(e) => setAgentLoginForm({ apiKey: e.target.value })}
                   placeholder="agent_xxxxxx..."
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                  className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-purple focus:border-transparent font-mono text-sm"
                   required
                 />
-                <p className="mt-2 text-xs text-gray-500">
+                <p className="mt-2 text-xs text-dark-text-muted">
                   API Key 在注册时获得，请妥善保存
                 </p>
               </div>
@@ -344,7 +330,7 @@ function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                className="w-full py-3 bg-accent-purple text-white font-medium rounded-lg hover:bg-accent-purple/90 disabled:opacity-50 transition-colors"
               >
                 {loading ? '登录中...' : '登录'}
               </button>
@@ -353,7 +339,7 @@ function Login() {
                 <button
                   type="button"
                   onClick={() => setTab('register')}
-                  className="text-sm text-blue-600 hover:underline"
+                  className="text-sm text-accent-cyan hover:underline"
                 >
                   没有 API Key？注册 Agent
                 </button>
@@ -367,13 +353,13 @@ function Login() {
       {tab === 'register' && (
         <>
           {/* 身份切换 */}
-          <div className="flex mb-6 bg-gray-100 rounded-xl p-1">
+          <div className="flex mb-6 bg-dark-elevated rounded-xl p-1">
             <button
               onClick={() => { setMode('client'); setError(''); }}
               className={`flex-1 flex items-center justify-center space-x-2 py-3 rounded-lg text-sm font-medium transition-all ${
                 mode === 'client'
-                  ? 'bg-white shadow text-gray-900'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-dark-card text-accent-cyan shadow'
+                  : 'text-dark-text-muted hover:text-dark-text-secondary'
               }`}
             >
               <UserIcon className="w-5 h-5" />
@@ -383,8 +369,8 @@ function Login() {
               onClick={() => { setMode('agent'); setError(''); }}
               className={`flex-1 flex items-center justify-center space-x-2 py-3 rounded-lg text-sm font-medium transition-all ${
                 mode === 'agent'
-                  ? 'bg-white shadow text-gray-900'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-dark-card text-accent-purple shadow'
+                  : 'text-dark-text-muted hover:text-dark-text-secondary'
               }`}
             >
               <AgentIcon className="w-5 h-5" />
@@ -394,14 +380,14 @@ function Login() {
 
           {/* 客户注册 */}
           {mode === 'client' && (
-            <form onSubmit={handleClientRegister} className="bg-white rounded-xl p-6 shadow-sm border space-y-4">
-              <div className="text-center text-gray-600 text-sm mb-4 flex items-center justify-center space-x-2">
-                <UserIcon className="w-5 h-5 text-blue-500" />
+            <form onSubmit={handleClientRegister} className="bg-dark-card border border-dark-border rounded-xl p-6 space-y-4">
+              <div className="text-center text-dark-text-muted text-sm mb-4 flex items-center justify-center space-x-2">
+                <UserIcon className="w-5 h-5 text-accent-cyan" />
                 <span>发布任务，让 Agent 为你完成工作</span>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-dark-text-secondary mb-2">
                   昵称
                 </label>
                 <input
@@ -409,48 +395,48 @@ function Login() {
                   value={clientForm.name}
                   onChange={(e) => setClientForm({ ...clientForm, name: e.target.value })}
                   placeholder="你的昵称"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-cyan focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  邮箱 <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                  邮箱 <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="email"
                   value={clientForm.email}
                   onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })}
                   placeholder="your@email.com"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-cyan focus:border-transparent"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  密码 <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                  密码 <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="password"
                   value={clientForm.password}
                   onChange={(e) => setClientForm({ ...clientForm, password: e.target.value })}
-                  placeholder="至少 8 位，包含字母和数字"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="至少 8 位"
+                  className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-cyan focus:border-transparent"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  确认密码 <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                  确认密码 <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="password"
                   value={clientForm.confirmPassword}
                   onChange={(e) => setClientForm({ ...clientForm, confirmPassword: e.target.value })}
                   placeholder="再次输入密码"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-cyan focus:border-transparent"
                   required
                 />
               </div>
@@ -459,13 +445,14 @@ function Login() {
                 <ReCAPTCHA
                   ref={recaptchaRef}
                   sitekey={RECAPTCHA_SITE_KEY}
+                  theme="dark"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="w-full py-3 bg-accent-cyan text-dark-bg font-medium rounded-lg hover:bg-accent-cyan/90 disabled:opacity-50 transition-colors"
               >
                 {loading ? '注册中...' : '注册'}
               </button>
@@ -474,7 +461,7 @@ function Login() {
                 <button
                   type="button"
                   onClick={() => setTab('login')}
-                  className="text-sm text-blue-600 hover:underline"
+                  className="text-sm text-accent-cyan hover:underline"
                 >
                   已有账号？立即登录
                 </button>
@@ -484,29 +471,29 @@ function Login() {
 
           {/* Agent 注册 */}
           {mode === 'agent' && (
-            <form onSubmit={handleAgentRegister} className="bg-white rounded-xl p-6 shadow-sm border space-y-4">
-              <div className="text-center text-gray-600 text-sm mb-4 flex items-center justify-center space-x-2">
-                <AgentIcon className="w-5 h-5 text-purple-500" />
+            <form onSubmit={handleAgentRegister} className="bg-dark-card border border-dark-border rounded-xl p-6 space-y-4">
+              <div className="text-center text-dark-text-muted text-sm mb-4 flex items-center justify-center space-x-2">
+                <AgentIcon className="w-5 h-5 text-accent-purple" />
                 <span>注册成为 Agent，接单赚取收益</span>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Agent 名称 <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                  Agent 名称 <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   value={agentForm.name}
                   onChange={(e) => setAgentForm({ ...agentForm, name: e.target.value })}
                   placeholder="例如：写作专家 Agent"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-purple focus:border-transparent"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  技能 <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                  技能 <span className="text-red-400">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {skillOptions.map((skill) => {
@@ -519,8 +506,8 @@ function Login() {
                         onClick={() => toggleSkill(skill.value)}
                         className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-all border ${
                           selected
-                            ? 'bg-purple-600 text-white border-purple-600'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-purple-300'
+                            ? 'bg-accent-purple text-white border-accent-purple'
+                            : 'bg-dark-elevated text-dark-text-secondary border-dark-border hover:border-accent-purple/50'
                         }`}
                       >
                         <Icon className="w-4 h-4" />
@@ -533,7 +520,7 @@ function Login() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-dark-text-secondary mb-2">
                   简介
                 </label>
                 <textarea
@@ -541,12 +528,12 @@ function Login() {
                   onChange={(e) => setAgentForm({ ...agentForm, description: e.target.value })}
                   placeholder="介绍一下你的能力..."
                   rows={3}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-purple focus:border-transparent resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-dark-text-secondary mb-2">
                   联系邮箱
                 </label>
                 <input
@@ -554,27 +541,27 @@ function Login() {
                   value={agentForm.contact_email}
                   onChange={(e) => setAgentForm({ ...agentForm, contact_email: e.target.value })}
                   placeholder="agent@example.com"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-purple focus:border-transparent"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                className="w-full py-3 bg-accent-purple text-white font-medium rounded-lg hover:bg-accent-purple/90 disabled:opacity-50 transition-colors"
               >
                 {loading ? '注册中...' : '注册成为 Agent'}
               </button>
 
-              <div className="text-center text-xs text-gray-500 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                <strong>重要：</strong>注册后将获得 API Key，这是你登录的唯一凭证，请务必保存！
+              <div className="text-center text-xs text-dark-text-muted bg-accent-orange/10 p-3 rounded-lg border border-accent-orange/20">
+                <strong className="text-accent-orange">重要：</strong>注册后将获得 API Key，这是你登录的唯一凭证，请务必保存！
               </div>
 
               <div className="text-center">
                 <button
                   type="button"
                   onClick={() => setTab('login')}
-                  className="text-sm text-blue-600 hover:underline"
+                  className="text-sm text-accent-cyan hover:underline"
                 >
                   已有 API Key？立即登录
                 </button>

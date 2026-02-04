@@ -11,8 +11,10 @@ import {
   ChevronRightIcon,
   HallIcon,
   TrophyIcon,
+  WalletIcon,
 } from '../components/Icons';
 import { statusConfig, skillColors, skillLabels, getSkillIcon } from '../components/Icons';
+import MPBalance from '../components/MPBalance';
 
 function Me() {
   const navigate = useNavigate();
@@ -63,31 +65,68 @@ function Me() {
 
   return (
     <div className="space-y-6">
+      {/* MP 余额卡片 */}
+      <MPBalance variant="full" showRegen={true} />
+
+      {/* 快捷链接 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Link
+          to="/wallet"
+          className="flex items-center justify-center space-x-2 px-4 py-3 bg-dark-card border border-dark-border rounded-lg hover:bg-dark-elevated transition-colors"
+        >
+          <WalletIcon className="w-4 h-4 text-accent-orange" />
+          <span className="text-sm font-medium text-dark-text-secondary">钱包详情</span>
+        </Link>
+        {auth.type === 'agent' && (
+          <Link
+            to="/earnings"
+            className="flex items-center justify-center space-x-2 px-4 py-3 bg-dark-card border border-dark-border rounded-lg hover:bg-dark-elevated transition-colors"
+          >
+            <MoneyIcon className="w-4 h-4 text-accent-green" />
+            <span className="text-sm font-medium text-dark-text-secondary">收益统计</span>
+          </Link>
+        )}
+        <Link
+          to="/hall"
+          className="flex items-center justify-center space-x-2 px-4 py-3 bg-dark-card border border-dark-border rounded-lg hover:bg-dark-elevated transition-colors"
+        >
+          <HallIcon className="w-4 h-4 text-accent-purple" />
+          <span className="text-sm font-medium text-dark-text-secondary">任务大厅</span>
+        </Link>
+        <Link
+          to="/post"
+          className="flex items-center justify-center space-x-2 px-4 py-3 bg-dark-card border border-dark-border rounded-lg hover:bg-dark-elevated transition-colors"
+        >
+          <TaskIcon className="w-4 h-4 text-accent-cyan" />
+          <span className="text-sm font-medium text-dark-text-secondary">发布任务</span>
+        </Link>
+      </div>
+
       {/* 用户信息卡片 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border">
+      <div className="bg-dark-card border border-dark-border rounded-xl p-6">
         <div className="flex justify-between items-start">
           <div className="flex items-center space-x-4">
             <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
-              auth.type === 'client' ? 'bg-blue-100' : 'bg-purple-100'
+              auth.type === 'client' ? 'bg-accent-cyan/10' : 'bg-accent-purple/10'
             }`}>
               {auth.type === 'client' ? (
-                <UserIcon className="w-8 h-8 text-blue-600" />
+                <UserIcon className="w-8 h-8 text-accent-cyan" />
               ) : (
-                <AgentIcon className="w-8 h-8 text-purple-600" />
+                <AgentIcon className="w-8 h-8 text-accent-purple" />
               )}
             </div>
             <div>
-              <div className="text-xl font-bold text-gray-900">
+              <div className="text-xl font-bold text-dark-text-primary">
                 {auth.type === 'client' ? '客户账户' : 'Agent 账户'}
               </div>
-              <div className="text-sm text-gray-500 mt-1 font-mono">
+              <div className="text-sm text-dark-text-muted mt-1 font-mono">
                 Key: {auth.key.substring(0, 20)}...
               </div>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center space-x-1 px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+            className="flex items-center space-x-1 px-4 py-2 text-red-400 border border-red-400/30 rounded-lg hover:bg-red-400/10 transition-colors"
           >
             <LogoutIcon className="w-4 h-4" />
             <span>退出登录</span>
@@ -96,30 +135,30 @@ function Me() {
 
         {/* Agent 收益统计 */}
         {auth.type === 'agent' && earnings && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-dark-border">
             <StatItem
               icon={TaskIcon}
               value={earnings.total_tasks}
               label="总任务"
-              color="text-gray-600"
+              color="text-dark-text-secondary"
             />
             <StatItem
               icon={TrophyIcon}
               value={earnings.completed_tasks}
               label="已完成"
-              color="text-green-600"
+              color="text-accent-green"
             />
             <StatItem
               icon={MoneyIcon}
-              value={`¥${earnings.total_earnings}`}
+              value={`${earnings.total_earnings} MP`}
               label="总收益"
-              color="text-blue-600"
+              color="text-accent-cyan"
             />
             <StatItem
               icon={StarIcon}
               value={earnings.average_rating?.toFixed(1) || '-'}
               label="平均评分"
-              color="text-yellow-600"
+              color="text-yellow-500"
             />
           </div>
         )}
@@ -127,11 +166,11 @@ function Me() {
 
       {/* Tab 切换 */}
       {auth.type === 'agent' && (
-        <div className="flex space-x-1 bg-gray-100 rounded-xl p-1">
+        <div className="flex space-x-1 bg-dark-elevated rounded-xl p-1">
           <button
             onClick={() => setActiveTab('tasks')}
             className={`flex-1 flex items-center justify-center space-x-2 py-3 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'tasks' ? 'bg-white shadow text-gray-900' : 'text-gray-500'
+              activeTab === 'tasks' ? 'bg-dark-card text-accent-purple shadow' : 'text-dark-text-muted'
             }`}
           >
             <AgentIcon className="w-4 h-4" />
@@ -140,7 +179,7 @@ function Me() {
           <button
             onClick={() => setActiveTab('orders')}
             className={`flex-1 flex items-center justify-center space-x-2 py-3 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'orders' ? 'bg-white shadow text-gray-900' : 'text-gray-500'
+              activeTab === 'orders' ? 'bg-dark-card text-accent-cyan shadow' : 'text-dark-text-muted'
             }`}
           >
             <TaskIcon className="w-4 h-4" />
@@ -151,10 +190,10 @@ function Me() {
 
       {/* 任务列表 (Agent) */}
       {(auth.type === 'agent' && activeTab === 'tasks') && (
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <div className="p-4 border-b flex items-center space-x-2">
-            <AgentIcon className="w-5 h-5 text-gray-400" />
-            <h2 className="font-bold text-gray-900">我接的任务</h2>
+        <div className="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-dark-border flex items-center space-x-2">
+            <AgentIcon className="w-5 h-5 text-dark-text-muted" />
+            <h2 className="font-bold text-dark-text-primary">我接的任务</h2>
           </div>
           {loading ? (
             <LoadingList />
@@ -165,7 +204,7 @@ function Me() {
               action={{ to: '/hall', text: '去任务大厅看看' }}
             />
           ) : (
-            <div className="divide-y">
+            <div className="divide-y divide-dark-border">
               {tasks.map((task) => (
                 <TaskItem key={task.id} item={task} showEarnings />
               ))}
@@ -176,10 +215,10 @@ function Me() {
 
       {/* 订单列表 (客户或Agent发布的) */}
       {(auth.type === 'client' || activeTab === 'orders') && (
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <div className="p-4 border-b flex items-center space-x-2">
-            <TaskIcon className="w-5 h-5 text-gray-400" />
-            <h2 className="font-bold text-gray-900">
+        <div className="bg-dark-card border border-dark-border rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-dark-border flex items-center space-x-2">
+            <TaskIcon className="w-5 h-5 text-dark-text-muted" />
+            <h2 className="font-bold text-dark-text-primary">
               {auth.type === 'client' ? '我的订单' : '我发布的任务'}
             </h2>
           </div>
@@ -192,7 +231,7 @@ function Me() {
               action={{ to: '/post', text: '发布第一个任务' }}
             />
           ) : (
-            <div className="divide-y">
+            <div className="divide-y divide-dark-border">
               {orders.map((order) => (
                 <TaskItem key={order.task_id} item={order} isOrder />
               ))}
@@ -203,15 +242,15 @@ function Me() {
 
       {/* API Key 提示 (Agent) */}
       {auth.type === 'agent' && (
-        <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+        <div className="bg-accent-purple/10 rounded-xl p-4 border border-accent-purple/20">
           <div className="flex items-start space-x-3">
-            <AgentIcon className="w-5 h-5 text-blue-600 mt-0.5" />
+            <AgentIcon className="w-5 h-5 text-accent-purple mt-0.5" />
             <div>
-              <div className="font-medium text-blue-900">API 接入提示</div>
-              <p className="text-sm text-blue-700 mt-1">
+              <div className="font-medium text-dark-text-primary">API 接入提示</div>
+              <p className="text-sm text-dark-text-secondary mt-1">
                 你的 API Key 可用于程序化接入。在请求头中添加：
               </p>
-              <code className="block mt-2 px-3 py-2 bg-blue-100 rounded text-sm font-mono text-blue-800">
+              <code className="block mt-2 px-3 py-2 bg-dark-elevated rounded text-sm font-mono text-accent-cyan">
                 X-Agent-Key: {auth.key.substring(0, 20)}...
               </code>
             </div>
@@ -230,7 +269,7 @@ function StatItem({ icon: Icon, value, label, color }) {
         <Icon className="w-5 h-5" />
         <span className="text-2xl font-bold">{value}</span>
       </div>
-      <div className="text-sm text-gray-500 mt-1">{label}</div>
+      <div className="text-sm text-dark-text-muted mt-1">{label}</div>
     </div>
   );
 }
@@ -245,12 +284,12 @@ function TaskItem({ item, showEarnings, isOrder }) {
   return (
     <Link
       to={`/task/${taskId}`}
-      className="block p-4 hover:bg-gray-50 transition-colors"
+      className="block p-4 hover:bg-dark-elevated transition-colors"
     >
       <div className="flex justify-between items-center">
         <div className="min-w-0 flex-1">
           <div className="flex items-center space-x-2 mb-1">
-            <span className="font-medium text-gray-900 truncate">{item.title}</span>
+            <span className="font-medium text-dark-text-primary truncate">{item.title}</span>
             {item.category && (
               <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs ${skillColors[item.category] || skillColors.general}`}>
                 <SkillIcon className="w-3 h-3 mr-0.5" />
@@ -258,13 +297,13 @@ function TaskItem({ item, showEarnings, isOrder }) {
               </span>
             )}
           </div>
-          <div className="flex items-center space-x-3 text-sm text-gray-500">
+          <div className="flex items-center space-x-3 text-sm text-dark-text-muted">
             <span className="flex items-center">
               <MoneyIcon className="w-3.5 h-3.5 mr-1" />
-              ¥{item.budget}
+              {item.budget} MP
             </span>
             {item.client_rating && (
-              <span className="flex items-center text-yellow-600">
+              <span className="flex items-center text-yellow-500">
                 <StarIcon className="w-3.5 h-3.5 mr-1" />
                 {item.client_rating}
               </span>
@@ -283,8 +322,8 @@ function TaskItem({ item, showEarnings, isOrder }) {
             {status.label}
           </span>
           {showEarnings && item.earnings > 0 && (
-            <span className="text-sm text-green-600 font-medium">
-              +¥{item.earnings}
+            <span className="text-sm text-accent-green font-medium">
+              +{item.earnings} MP
             </span>
           )}
         </div>
@@ -300,10 +339,10 @@ function LoadingList() {
       {[1, 2, 3].map(i => (
         <div key={i} className="animate-pulse flex justify-between">
           <div className="flex-1">
-            <div className="h-4 bg-gray-200 rounded w-48 mb-2"></div>
-            <div className="h-3 bg-gray-200 rounded w-32"></div>
+            <div className="h-4 bg-dark-elevated rounded w-48 mb-2"></div>
+            <div className="h-3 bg-dark-elevated rounded w-32"></div>
           </div>
-          <div className="w-16 h-6 bg-gray-200 rounded"></div>
+          <div className="w-16 h-6 bg-dark-elevated rounded"></div>
         </div>
       ))}
     </div>
@@ -314,9 +353,9 @@ function LoadingList() {
 function EmptyState({ icon: Icon, title, action }) {
   return (
     <div className="p-8 text-center">
-      <Icon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-      <p className="text-gray-500 mb-3">{title}</p>
-      <Link to={action.to} className="inline-flex items-center text-blue-600 hover:underline text-sm">
+      <Icon className="w-12 h-12 mx-auto text-dark-text-muted mb-3" />
+      <p className="text-dark-text-muted mb-3">{title}</p>
+      <Link to={action.to} className="inline-flex items-center text-accent-cyan hover:underline text-sm">
         {action.text}
         <ChevronRightIcon className="w-4 h-4 ml-1" />
       </Link>

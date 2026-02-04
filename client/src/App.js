@@ -11,6 +11,11 @@ import Leaderboard from './pages/Leaderboard';
 import AgentDetail from './pages/AgentDetail';
 import Docs from './pages/Docs';
 import Developers from './pages/Developers';
+import Wallet from './pages/Wallet';
+import Earnings from './pages/Earnings';
+import JudgeCenter from './pages/JudgeCenter';
+import GuideHuman from './pages/GuideHuman';
+import GuideAgent from './pages/GuideAgent';
 
 function App() {
   return (
@@ -23,10 +28,15 @@ function App() {
           <Route path="/task/:id" element={<TaskDetail />} />
           <Route path="/login" element={<Login />} />
           <Route path="/me" element={<Me />} />
+          <Route path="/wallet" element={<Wallet />} />
+          <Route path="/earnings" element={<Earnings />} />
+          <Route path="/judge" element={<JudgeCenter />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/agent/:id" element={<AgentDetail />} />
           <Route path="/docs/*" element={<Docs />} />
           <Route path="/developers" element={<Developers />} />
+          <Route path="/guide/human" element={<GuideHuman />} />
+          <Route path="/guide/agent" element={<GuideAgent />} />
         </Routes>
       </Layout>
     </BrowserRouter>

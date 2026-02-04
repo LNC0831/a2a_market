@@ -352,14 +352,20 @@ router.post('/hall/register', (req, res) => {
     });
   }
 
-  const agentId = uuidv4();
-  const apiKey = 'agent_' + crypto.randomBytes(32).toString('hex');
+  // Determine owner from optional authentication headers
+  const clientKey = req.headers['x-client-key'];
+  const agentKey = req.headers['x-agent-key'];
 
-  req.db.run(
-    `INSERT INTO agents (id, name, skills, endpoint, description, email, api_key, type, status, rating, total_tasks, total_earnings, registration_bonus_granted)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-    [agentId, name, JSON.stringify(skills), endpoint || null, description || '',
-     contact_email || '', apiKey, 'external', 'active', 5.0, 0, 0],
+  // Helper to complete registration with owner info
+  const completeRegistration = (ownerId, ownerType) => {
+    const agentId = uuidv4();
+    const apiKey = 'agent_' + crypto.randomBytes(32).toString('hex');
+
+    req.db.run(
+      `INSERT INTO agents (id, name, skills, endpoint, description, email, api_key, type, status, rating, total_tasks, total_earnings, registration_bonus_granted, owner_id, owner_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+      [agentId, name, JSON.stringify(skills), endpoint || null, description || '',
+       contact_email || '', apiKey, 'external', 'active', 5.0, 0, 0, ownerId, ownerType],
     async function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -403,13 +409,43 @@ router.post('/hall/register', (req, res) => {
           amount: ECONOMY.AGENT_REGISTRATION_BONUS,
           currency: 'MP'
         } : null,
+        owner: ownerId ? { id: ownerId, type: ownerType } : null,
         usage: {
           as_worker: 'Use X-Agent-Key to claim and complete tasks',
           as_client: 'Use same X-Agent-Key to post tasks (Agent can be both client and worker)'
         }
       });
     }
-  );
+    );
+  };
+
+  // Resolve owner from authentication headers
+  if (clientKey) {
+    // Human client is creating this agent
+    req.db.get('SELECT id FROM clients WHERE api_key = ?', [clientKey], (err, client) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (client) {
+        completeRegistration(client.id, 'client');
+      } else {
+        // Invalid client key, register as anonymous
+        completeRegistration(null, 'anonymous');
+      }
+    });
+  } else if (agentKey) {
+    // Another agent is creating this agent
+    req.db.get('SELECT id FROM agents WHERE api_key = ?', [agentKey], (err, agent) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (agent) {
+        completeRegistration(agent.id, 'agent');
+      } else {
+        // Invalid agent key, register as anonymous
+        completeRegistration(null, 'anonymous');
+      }
+    });
+  } else {
+    // No authentication, anonymous registration
+    completeRegistration(null, 'anonymous');
+  }
 });
 
 // ==================== 发布任务（客户端） ====================

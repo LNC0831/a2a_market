@@ -13,6 +13,8 @@ import {
   XCircleIcon,
   ChevronRightIcon,
   FastIcon,
+  BurnIcon,
+  CoinsIcon,
 } from '../components/Icons';
 import { statusConfig, skillColors, skillLabels, getSkillIcon } from '../components/Icons';
 
@@ -25,10 +27,14 @@ function TaskDetail() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [submitResult, setSubmitResult] = useState('');
+  const [economy, setEconomy] = useState(null);
   const auth = getAuth();
 
   useEffect(() => {
     loadTask();
+    api.getEconomyStatus()
+      .then(setEconomy)
+      .catch(() => setEconomy({ burnRate: 0.25 }));
   }, [id]);
 
   const loadTask = async () => {
@@ -124,10 +130,10 @@ function TaskDetail() {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-xl p-8 shadow-sm border animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-64 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+        <div className="bg-dark-card border border-dark-border rounded-xl p-8 animate-pulse">
+          <div className="h-8 bg-dark-elevated rounded w-64 mb-4"></div>
+          <div className="h-4 bg-dark-elevated rounded w-full mb-2"></div>
+          <div className="h-4 bg-dark-elevated rounded w-3/4"></div>
         </div>
       </div>
     );
@@ -136,9 +142,9 @@ function TaskDetail() {
   if (error) {
     return (
       <div className="max-w-4xl mx-auto text-center py-12">
-        <XCircleIcon className="w-16 h-16 mx-auto text-red-300 mb-4" />
-        <h2 className="text-xl font-bold text-gray-900 mb-2">加载失败</h2>
-        <p className="text-red-500">{error}</p>
+        <XCircleIcon className="w-16 h-16 mx-auto text-red-400 mb-4" />
+        <h2 className="text-xl font-bold text-dark-text-primary mb-2">加载失败</h2>
+        <p className="text-red-400">{error}</p>
       </div>
     );
   }
@@ -146,8 +152,8 @@ function TaskDetail() {
   if (!task) {
     return (
       <div className="max-w-4xl mx-auto text-center py-12">
-        <TaskIcon className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-        <h2 className="text-xl font-bold text-gray-900 mb-2">任务不存在</h2>
+        <TaskIcon className="w-16 h-16 mx-auto text-dark-text-muted mb-4" />
+        <h2 className="text-xl font-bold text-dark-text-primary mb-2">任务不存在</h2>
       </div>
     );
   }
@@ -159,24 +165,24 @@ function TaskDetail() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* 任务头部 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border">
+      <div className="bg-dark-card border border-dark-border rounded-xl p-6">
         <div className="flex flex-col md:flex-row justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center flex-wrap gap-2 mb-2">
-              <h1 className="text-2xl font-bold text-gray-900">{task.title}</h1>
+              <h1 className="text-2xl font-bold text-dark-text-primary">{task.title}</h1>
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${status.color}`}>
                 <StatusIcon className="w-4 h-4 mr-1" />
                 {status.label}
               </span>
             </div>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-dark-text-muted">
               <span className={`inline-flex items-center px-2 py-1 rounded border ${skillColors[task.category] || skillColors.general}`}>
                 <SkillIcon className="w-4 h-4 mr-1" />
                 {skillLabels[task.category] || task.category}
               </span>
               <span className="flex items-center">
                 <MoneyIcon className="w-4 h-4 mr-1" />
-                预算 ¥{task.budget}
+                预算 {task.budget} MP
               </span>
               {task.timestamps?.created && (
                 <span className="flex items-center">
@@ -187,32 +193,36 @@ function TaskDetail() {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold text-blue-600">¥{task.budget}</div>
-            <div className="text-sm text-gray-500 mt-1 flex items-center justify-end">
+            <div className="text-3xl font-bold text-accent-cyan">{task.budget} MP</div>
+            <div className="text-sm text-accent-green mt-1 flex items-center justify-end font-medium">
               <AgentIcon className="w-4 h-4 mr-1" />
-              Agent 收益: ¥{Math.round(task.budget * 0.7)}
+              Agent 获得: +{Math.round(task.budget * (1 - (economy?.burnRate || 0.25)))} MP
+            </div>
+            <div className="text-xs text-accent-orange mt-0.5 flex items-center justify-end">
+              <BurnIcon className="w-3 h-3 mr-1" />
+              销毁: {Math.round(task.budget * (economy?.burnRate || 0.25))} MP
             </div>
           </div>
         </div>
 
         <div className="mt-6">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">任务描述</h3>
-          <p className="text-gray-600 whitespace-pre-wrap bg-gray-50 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-dark-text-secondary mb-2">任务描述</h3>
+          <p className="text-dark-text-secondary whitespace-pre-wrap bg-dark-elevated rounded-lg p-4">
             {task.description}
           </p>
         </div>
 
         {/* Agent 信息 */}
         {task.agent && (
-          <div className="mt-6 p-4 bg-purple-50 rounded-lg border border-purple-100">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">接单 Agent</h3>
+          <div className="mt-6 p-4 bg-accent-purple/10 rounded-lg border border-accent-purple/20">
+            <h3 className="text-sm font-medium text-dark-text-secondary mb-2">接单 Agent</h3>
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <AgentIcon className="w-6 h-6 text-purple-600" />
+              <div className="w-10 h-10 bg-accent-purple/20 rounded-lg flex items-center justify-center">
+                <AgentIcon className="w-6 h-6 text-accent-purple" />
               </div>
               <div>
-                <div className="font-medium text-gray-900">{task.agent.name}</div>
-                <div className="flex items-center text-sm text-gray-500">
+                <div className="font-medium text-dark-text-primary">{task.agent.name}</div>
+                <div className="flex items-center text-sm text-dark-text-muted">
                   <StarSolidIcon className="w-4 h-4 text-yellow-400 mr-1" />
                   {task.agent.rating?.toFixed(1) || '暂无评分'}
                 </div>
@@ -224,22 +234,61 @@ function TaskDetail() {
 
       {/* 执行结果 */}
       {task.result && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border">
-          <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-            <FastIcon className="w-5 h-5 mr-2 text-blue-600" />
+        <div className="bg-dark-card border border-dark-border rounded-xl p-6">
+          <h2 className="text-lg font-bold text-dark-text-primary mb-4 flex items-center">
+            <FastIcon className="w-5 h-5 mr-2 text-accent-cyan" />
             执行结果
           </h2>
-          <div className="bg-gray-50 rounded-lg p-4 whitespace-pre-wrap text-gray-700 font-mono text-sm">
+          <div className="bg-dark-elevated rounded-lg p-4 whitespace-pre-wrap text-dark-text-secondary font-mono text-sm">
             {task.result}
           </div>
         </div>
       )}
 
+      {/* 结算信息 - 仅对已完成任务显示 */}
+      {task.status === 'completed' && (
+        <div className="bg-dark-card border border-dark-border rounded-xl p-6">
+          <h2 className="text-lg font-bold text-dark-text-primary mb-4 flex items-center">
+            <CoinsIcon className="w-5 h-5 mr-2 text-accent-orange" />
+            结算信息
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-accent-cyan/10 rounded-lg p-4 text-center">
+              <div className="text-sm text-dark-text-muted mb-1">任务金额</div>
+              <div className="text-2xl font-bold text-accent-cyan">{task.budget} MP</div>
+            </div>
+            <div className="bg-accent-green/10 rounded-lg p-4 text-center">
+              <div className="text-sm text-dark-text-muted mb-1 flex items-center justify-center">
+                <AgentIcon className="w-4 h-4 mr-1" />
+                Agent 获得
+              </div>
+              <div className="text-2xl font-bold text-accent-green">
+                +{task.settlement?.agent_amount || Math.round(task.budget * (1 - (economy?.burnRate || 0.25)))} MP
+              </div>
+            </div>
+            <div className="bg-accent-orange/10 rounded-lg p-4 text-center">
+              <div className="text-sm text-dark-text-muted mb-1 flex items-center justify-center">
+                <BurnIcon className="w-4 h-4 mr-1" />
+                已销毁
+              </div>
+              <div className="text-2xl font-bold text-accent-orange">
+                -{task.settlement?.burn_amount || Math.round(task.budget * (economy?.burnRate || 0.25))} MP
+              </div>
+            </div>
+          </div>
+          {task.settlement?.settled_at && (
+            <div className="mt-4 text-sm text-dark-text-muted text-center">
+              结算时间: {new Date(task.settlement.settled_at).toLocaleString()}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 时间线 */}
       {task.timeline && task.timeline.length > 0 && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border">
-          <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-            <ClockIcon className="w-5 h-5 mr-2 text-gray-400" />
+        <div className="bg-dark-card border border-dark-border rounded-xl p-6">
+          <h2 className="text-lg font-bold text-dark-text-primary mb-4 flex items-center">
+            <ClockIcon className="w-5 h-5 mr-2 text-dark-text-muted" />
             时间线
           </h2>
           <div className="space-y-4">
@@ -248,12 +297,12 @@ function TaskDetail() {
               const EventIcon = eventConfig.icon;
               return (
                 <div key={i} className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <EventIcon className="w-4 h-4 text-blue-600" />
+                  <div className="w-8 h-8 bg-accent-cyan/10 rounded-full flex items-center justify-center flex-shrink-0">
+                    <EventIcon className="w-4 h-4 text-accent-cyan" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900">{eventConfig.label}</div>
-                    <div className="text-sm text-gray-500 flex items-center">
+                    <div className="font-medium text-dark-text-primary">{eventConfig.label}</div>
+                    <div className="text-sm text-dark-text-muted flex items-center">
                       {event.actor === 'human' || event.actor === 'anonymous' ? (
                         <><UserIcon className="w-3.5 h-3.5 mr-1" /> 客户</>
                       ) : (
@@ -273,8 +322,8 @@ function TaskDetail() {
 
       {/* 评价 */}
       {task.rating && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border">
-          <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+        <div className="bg-dark-card border border-dark-border rounded-xl p-6">
+          <h2 className="text-lg font-bold text-dark-text-primary mb-4 flex items-center">
             <StarIcon className="w-5 h-5 mr-2 text-yellow-500" />
             客户评价
           </h2>
@@ -283,26 +332,26 @@ function TaskDetail() {
               star <= task.rating.score ? (
                 <StarSolidIcon key={star} className="w-6 h-6 text-yellow-400" />
               ) : (
-                <StarIcon key={star} className="w-6 h-6 text-gray-300" />
+                <StarIcon key={star} className="w-6 h-6 text-dark-text-muted" />
               )
             ))}
-            <span className="text-gray-500 ml-2">{task.rating.score} 分</span>
+            <span className="text-dark-text-muted ml-2">{task.rating.score} 分</span>
           </div>
           {task.rating.comment && (
-            <p className="text-gray-600 bg-gray-50 rounded-lg p-3">{task.rating.comment}</p>
+            <p className="text-dark-text-secondary bg-dark-elevated rounded-lg p-3">{task.rating.comment}</p>
           )}
         </div>
       )}
 
       {/* 操作区域 */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">操作</h2>
+      <div className="bg-dark-card border border-dark-border rounded-xl p-6">
+        <h2 className="text-lg font-bold text-dark-text-primary mb-4">操作</h2>
 
         {/* Agent 接单 */}
         {task.status === 'open' && auth.type === 'agent' && (
           <button
             onClick={handleClaim}
-            className="w-full flex items-center justify-center py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            className="w-full flex items-center justify-center py-3 bg-accent-purple text-white font-medium rounded-lg hover:bg-accent-purple/90 transition-colors"
           >
             <AgentIcon className="w-5 h-5 mr-2" />
             接单
@@ -317,11 +366,11 @@ function TaskDetail() {
               onChange={(e) => setSubmitResult(e.target.value)}
               placeholder="输入执行结果..."
               rows={6}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-cyan resize-none"
             />
             <button
               onClick={handleSubmit}
-              className="w-full flex items-center justify-center py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              className="w-full flex items-center justify-center py-3 bg-accent-cyan text-dark-bg font-medium rounded-lg hover:bg-accent-cyan/90 transition-colors"
             >
               <FastIcon className="w-5 h-5 mr-2" />
               提交结果
@@ -334,14 +383,14 @@ function TaskDetail() {
           <div className="flex space-x-3">
             <button
               onClick={handleAccept}
-              className="flex-1 flex items-center justify-center py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
+              className="flex-1 flex items-center justify-center py-3 bg-accent-green text-white font-medium rounded-lg hover:bg-accent-green/90 transition-colors"
             >
               <CheckCircleIcon className="w-5 h-5 mr-2" />
               验收通过
             </button>
             <button
               onClick={handleReject}
-              className="flex-1 flex items-center justify-center py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
+              className="flex-1 flex items-center justify-center py-3 bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 transition-colors"
             >
               <XCircleIcon className="w-5 h-5 mr-2" />
               拒绝
@@ -353,7 +402,7 @@ function TaskDetail() {
         {task.status === 'completed' && !task.rating && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">评分</label>
+              <label className="block text-sm font-medium text-dark-text-secondary mb-2">评分</label>
               <div className="flex space-x-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
@@ -365,7 +414,7 @@ function TaskDetail() {
                     {star <= rating ? (
                       <StarSolidIcon className="w-8 h-8 text-yellow-400" />
                     ) : (
-                      <StarIcon className="w-8 h-8 text-gray-300" />
+                      <StarIcon className="w-8 h-8 text-dark-text-muted" />
                     )}
                   </button>
                 ))}
@@ -376,11 +425,11 @@ function TaskDetail() {
               onChange={(e) => setComment(e.target.value)}
               placeholder="写一下评价吧..."
               rows={3}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-cyan resize-none"
             />
             <button
               onClick={handleRate}
-              className="w-full flex items-center justify-center py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              className="w-full flex items-center justify-center py-3 bg-accent-cyan text-dark-bg font-medium rounded-lg hover:bg-accent-cyan/90 transition-colors"
             >
               <StarIcon className="w-5 h-5 mr-2" />
               提交评价
@@ -392,7 +441,7 @@ function TaskDetail() {
         {task.status === 'open' && (
           <button
             onClick={handleCancel}
-            className="w-full flex items-center justify-center py-3 border border-red-300 text-red-600 font-medium rounded-lg hover:bg-red-50 mt-3 transition-colors"
+            className="w-full flex items-center justify-center py-3 border border-red-400/30 text-red-400 font-medium rounded-lg hover:bg-red-400/10 mt-3 transition-colors"
           >
             <XCircleIcon className="w-5 h-5 mr-2" />
             取消任务
@@ -402,8 +451,8 @@ function TaskDetail() {
         {/* 已完成 */}
         {task.status === 'completed' && task.rating && (
           <div className="text-center py-4">
-            <CheckCircleIcon className="w-12 h-12 mx-auto text-green-500 mb-2" />
-            <p className="text-gray-500">任务已完成并评价</p>
+            <CheckCircleIcon className="w-12 h-12 mx-auto text-accent-green mb-2" />
+            <p className="text-dark-text-muted">任务已完成并评价</p>
           </div>
         )}
       </div>
@@ -412,7 +461,7 @@ function TaskDetail() {
       <div className="text-center">
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center text-gray-500 hover:text-gray-700 transition-colors"
+          className="inline-flex items-center text-dark-text-muted hover:text-dark-text-secondary transition-colors"
         >
           <ChevronRightIcon className="w-4 h-4 mr-1 rotate-180" />
           返回

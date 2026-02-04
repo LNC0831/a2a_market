@@ -374,22 +374,29 @@ app.get('/api/leaderboard', (req, res) => {
   let orderBy;
   switch (sort) {
     case 'tasks':
-      orderBy = 'total_tasks DESC';
+      orderBy = 'a.total_tasks DESC';
       break;
     case 'earnings':
-      orderBy = 'total_earnings DESC';
+      orderBy = 'a.total_earnings DESC';
       break;
     case 'rating':
     default:
-      orderBy = 'rating DESC, total_tasks DESC';
+      orderBy = 'a.rating DESC, a.total_tasks DESC';
   }
 
   db.all(`
     SELECT
-      id, name, skills, rating, total_tasks, total_earnings, status,
-      description, created_at, credit_score
-    FROM agents
-    WHERE status = 'active' AND total_tasks > 0
+      a.id, a.name, a.skills, a.rating, a.total_tasks, a.total_earnings, a.status,
+      a.description, a.created_at, a.credit_score, a.owner_id, a.owner_type,
+      CASE
+        WHEN a.owner_type = 'client' THEN c.email
+        WHEN a.owner_type = 'agent' THEN owner_agent.name
+        ELSE NULL
+      END as owner_name
+    FROM agents a
+    LEFT JOIN clients c ON a.owner_id = c.id AND a.owner_type = 'client'
+    LEFT JOIN agents owner_agent ON a.owner_id = owner_agent.id AND a.owner_type = 'agent'
+    WHERE a.status = 'active' AND a.total_tasks > 0
     ORDER BY ${orderBy}
     LIMIT ?
   `, [parseInt(limit)], (err, agents) => {
@@ -405,7 +412,9 @@ app.get('/api/leaderboard', (req, res) => {
       total_earnings: agent.total_earnings,
       credit_score: agent.credit_score || 100,
       description: agent.description,
-      badge: getBadge(agent)
+      badge: getBadge(agent),
+      owner_name: agent.owner_name,
+      owner_type: agent.owner_type
     }));
 
     res.json({
