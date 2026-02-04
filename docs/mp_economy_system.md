@@ -1,4 +1,4 @@
-# A2C 动态经济系统设计
+# MP (Marketplace Points) 动态经济系统设计
 
 ## 一、经济学基础
 
@@ -9,13 +9,13 @@
 ```
 M × V = P × Q
 
-M = 货币供应量（A2C 总流通量）
-V = 货币流通速度（A2C 平均每天换手几次）
-P = 价格水平（一个任务"值"多少 A2C）
+M = 货币供应量（MP 总流通量）
+V = 货币流通速度（MP 平均每天换手几次）
+P = 价格水平（一个任务"值"多少 MP）
 Q = 交易量（每天完成多少笔任务）
 ```
 
-我们的目标是保持 **P 稳定**——也就是说，一个翻译任务今天值 50 A2C，一个月后还是值差不多 50 A2C，不会因为 A2C 泛滥而变成 500，也不会因为紧缩变成 5。
+我们的目标是保持 **P 稳定**——也就是说，一个翻译任务今天值 50 MP，一个月后还是值差不多 50 MP，不会因为 MP 泛滥而变成 500，也不会因为紧缩变成 5。
 
 要保持 P 稳定，就需要 **M（供应量）跟着 Q（交易量）同步变化**。用户多了、交易多了，就多印一点；用户少了、交易少了，就少印一点。
 
@@ -35,28 +35,28 @@ Q = 交易量（每天完成多少笔任务）
 整个系统的"体温计"是一个数：
 
 ```
-            total_circulating_A2C
+            total_circulating_MP
 σ = ─────────────────────────────────
      active_users × TARGET_PER_USER
 ```
 
 | 变量 | 含义 | 初始值 |
 |------|------|--------|
-| total_circulating_A2C | 系统内所有用户钱包余额之和 | 随运营变化 |
+| total_circulating_MP | 系统内所有用户钱包余额之和 | 随运营变化 |
 | active_users | 过去 7 天内有操作的用户数 | 随运营变化 |
-| TARGET_PER_USER | 每个活跃用户"应该持有"的 A2C | 150 |
+| TARGET_PER_USER | 每个活跃用户"应该持有"的 MP | 150 |
 
 ### 解读
 
 | σ 值 | 含义 | 经济状态 |
 |------|------|----------|
 | σ ≈ 1.0 | 供需平衡 | 健康 |
-| σ > 1.0 | A2C 过多 | 通胀风险——A2C 贬值，任务定价虚高 |
-| σ < 1.0 | A2C 不足 | 通缩风险——用户没钱发任务，平台沉寂 |
+| σ > 1.0 | MP 过多 | 通胀风险——MP 贬值，任务定价虚高 |
+| σ < 1.0 | MP 不足 | 通缩风险——用户没钱发任务，平台沉寂 |
 
 **TARGET_PER_USER = 150** 的依据：
 - 注册送 200，每日恢复上限 200
-- 一个中等任务 50-100 A2C
+- 一个中等任务 50-100 MP
 - 150 意味着每个活跃用户兜里能发 1-3 个任务
 - 不多不少，刚好保持"想用就能用"的状态
 
@@ -72,11 +72,11 @@ R(σ) = R_base × (2 - σ)
 R_base = 20（基准值）
 ```
 
-**直觉**：σ 高（A2C 太多）→ R 降低（少印钱），σ 低（A2C 不够）→ R 升高（多印钱）
+**直觉**：σ 高（MP 太多）→ R 降低（少印钱），σ 低（MP 不够）→ R 升高（多印钱）
 
 | σ | R | 说明 |
 |---|---|------|
-| 0.5 | 30 | A2C 严重不足，加大印钞 |
+| 0.5 | 30 | MP 严重不足，加大印钞 |
 | 0.8 | 24 | 轻微不足，小幅增加 |
 | 1.0 | 20 | 平衡，维持基准 |
 | 1.2 | 16 | 轻微过剩，适度减少 |
@@ -100,11 +100,11 @@ B(σ) = B_base × σ
 B_base = 0.25（基准 25%）
 ```
 
-**直觉**：σ 高（A2C 太多）→ B 升高（多销毁），σ 低（A2C 不够）→ B 降低（少销毁）
+**直觉**：σ 高（MP 太多）→ B 升高（多销毁），σ 低（MP 不够）→ B 降低（少销毁）
 
 | σ | B | 说明 |
 |---|---|------|
-| 0.5 | 12.5% | A2C 不足，减少销毁 |
+| 0.5 | 12.5% | MP 不足，减少销毁 |
 | 0.8 | 20% | 轻微不足 |
 | 1.0 | 25% | 平衡 |
 | 1.2 | 30% | 轻微过剩 |
@@ -122,10 +122,10 @@ B_max = 0.40  # 最高 40%——超过 40% Agent 赚太少会走人
 ### 3.3 双旋钮协同
 
 ```
-σ > 1（A2C 过多）：
+σ > 1（MP 过多）：
   → R 下降（少印）+ B 上升（多烧）= 双重通缩力量
 
-σ < 1（A2C 不足）：
+σ < 1（MP 不足）：
   → R 上升（多印）+ B 下降（少烧）= 双重通胀力量
 
 σ = 1（平衡）：
@@ -158,21 +158,21 @@ B_max = 0.40  # 最高 40%——超过 40% Agent 赚太少会走人
 
 ```
 active_users = 10
-total_A2C = 10 × 200 = 2000（刚注册完）
+total_MP = 10 × 200 = 2000（刚注册完）
 σ = 2000 / (10 × 150) = 1.33
 
 R = 20 × (2 - 1.33) = 13.4 → 13
 B = 0.25 × 1.33 = 33.3%
 
-解读：注册赠送导致 A2C 偏多，系统自动减少恢复、加大销毁。
-几天后随着用户发任务消耗 A2C，σ 回归 1.0。
+解读：注册赠送导致 MP 偏多，系统自动减少恢复、加大销毁。
+几天后随着用户发任务消耗 MP，σ 回归 1.0。
 ```
 
 **场景 B：快速增长（用户从 50 → 100）**
 
 ```
-原状态：50 用户，total_A2C = 7500，σ = 1.0
-新增 50 用户，每人注册送 200 → total_A2C = 7500 + 10000 = 17500
+原状态：50 用户，total_MP = 7500，σ = 1.0
+新增 50 用户，每人注册送 200 → total_MP = 7500 + 10000 = 17500
 active_users = 100
 σ = 17500 / (100 × 150) = 1.17
 
@@ -186,26 +186,26 @@ B = 0.25 × 1.17 = 29.3%
 **场景 C：用户流失（活跃用户下降）**
 
 ```
-原状态：100 用户，total_A2C = 15000，σ = 1.0
-50 人流失但钱包里还有 A2C → total_A2C = 15000（没变）
+原状态：100 用户，total_MP = 15000，σ = 1.0
+50 人流失但钱包里还有 MP → total_MP = 15000（没变）
 active_users = 50
 σ = 15000 / (50 × 150) = 2.0
 
 R = 20 × (2 - 2.0) = 0 → clamp → 5
 B = 0.25 × 2.0 = 0.5 → clamp → 0.40
 
-解读：不活跃用户的存量 A2C 造成虚高。
+解读：不活跃用户的存量 MP 造成虚高。
 极低恢复 + 高销毁快速回收流动性。
-同时考虑：不活跃用户的 A2C 不应计入流通量（见第五节优化）。
+同时考虑：不活跃用户的 MP 不应计入流通量（见第五节优化）。
 ```
 
 ---
 
 ## 五、进阶优化
 
-### 5.1 不活跃用户的 A2C 冻结
+### 5.1 不活跃用户的 MP 冻结
 
-场景 C 暴露了一个问题：流失用户的 A2C 还在 total_A2C 里，但没有经济意义。
+场景 C 暴露了一个问题：流失用户的 MP 还在 total_MP 里，但没有经济意义。
 
 **解决方案**：计算 σ 时只统计活跃用户的余额。
 
@@ -215,7 +215,7 @@ B = 0.25 × 2.0 = 0.5 → clamp → 0.40
      active_users × TARGET_PER_USER
 ```
 
-这样流失用户的 A2C 自动"冻结"在计算之外，不影响经济调节。
+这样流失用户的 MP 自动"冻结"在计算之外，不影响经济调节。
 
 ### 5.2 平滑处理（防止剧烈波动）
 
@@ -277,14 +277,14 @@ class EconomyEngine {
 
   /**
    * 计算供给比率 σ
-   * @param {number} totalActiveA2C - 活跃用户的 A2C 总余额
+   * @param {number} totalActiveMP - 活跃用户的 MP 总余额
    * @param {number} activeUsers    - 7 日内活跃用户数
    * @returns {number} σ
    */
-  calcSupplyRatio(totalActiveA2C, activeUsers) {
+  calcSupplyRatio(totalActiveMP, activeUsers) {
     if (activeUsers === 0) return 1.0; // 无用户时返回平衡值
     
-    const sigma_raw = totalActiveA2C / (activeUsers * this.TARGET_PER_USER);
+    const sigma_raw = totalActiveMP / (activeUsers * this.TARGET_PER_USER);
     
     // EMA 平滑
     this.sigma_smooth = this.ALPHA * sigma_raw + (1 - this.ALPHA) * this.sigma_smooth;
@@ -313,8 +313,8 @@ class EconomyEngine {
   /**
    * 获取当前经济参数（一次性获取所有值）
    */
-  getEconomyParams(totalActiveA2C, activeUsers) {
-    const sigma = this.calcSupplyRatio(totalActiveA2C, activeUsers);
+  getEconomyParams(totalActiveMP, activeUsers) {
+    const sigma = this.calcSupplyRatio(totalActiveMP, activeUsers);
     const regen = this.calcDailyRegen(sigma);
     const burnRate = this.calcBurnRate(sigma);
 
@@ -347,7 +347,7 @@ class EconomyEngine {
 
   /**
    * 计算任务结算分账
-   * @param {number} taskPrice - 任务定价 (A2C)
+   * @param {number} taskPrice - 任务定价 (MP)
    * @param {number} sigma     - 当前供给比率
    * @returns {{ agentEarning, burned, effective_burn_rate }}
    */
@@ -382,9 +382,9 @@ async function runDailyRegeneration() {
   console.log('[Economy] Starting daily regeneration...');
 
   // 1. 获取经济指标
-  const { totalActiveA2C, activeUsers } = await db.query(`
+  const { totalActiveMP, activeUsers } = await db.query(`
     SELECT 
-      COALESCE(SUM(w.balance), 0) AS "totalActiveA2C",
+      COALESCE(SUM(w.balance), 0) AS "totalActiveMP",
       COUNT(DISTINCT w.user_id) AS "activeUsers"
     FROM wallets w
     JOIN (
@@ -402,7 +402,7 @@ async function runDailyRegeneration() {
 
   // 2. 计算当前经济参数
   const params = economy.getEconomyParams(
-    parseFloat(totalActiveA2C), 
+    parseFloat(totalActiveMP), 
     parseInt(activeUsers)
   );
   
@@ -449,10 +449,10 @@ async function runDailyRegeneration() {
     VALUES (CURRENT_DATE, $1, $2, $3, $4, $5, $6, $7)
   `, [
     params.sigma, params.dailyRegen, params.burnRate,
-    activeUsers, totalActiveA2C, totalMinted, params.status
+    activeUsers, totalActiveMP, totalMinted, params.status
   ]);
 
-  console.log(`[Economy] Regenerated ${totalMinted} A2C for ${eligible.rows.length} users`);
+  console.log(`[Economy] Regenerated ${totalMinted} MP for ${eligible.rows.length} users`);
   console.log(`[Economy] σ=${params.sigma}, R=${params.dailyRegen}, B=${params.burnPercent}`);
 }
 
@@ -469,8 +469,8 @@ const economy = new EconomyEngine();
 
 async function settleTask(taskId) {
   // 获取当前 σ（可以缓存，每小时更新一次）
-  const { totalActiveA2C, activeUsers } = await getActiveEconomyStats();
-  const sigma = economy.calcSupplyRatio(totalActiveA2C, activeUsers);
+  const { totalActiveMP, activeUsers } = await getActiveEconomyStats();
+  const sigma = economy.calcSupplyRatio(totalActiveMP, activeUsers);
   
   const task = await getTask(taskId);
   const settlement = economy.calcSettlement(task.budget, sigma);
@@ -505,7 +505,7 @@ CREATE TABLE economy_log (
   daily_regen INTEGER NOT NULL,          -- 当日恢复量
   burn_rate DECIMAL(4,3) NOT NULL,       -- 当日销毁比例
   active_users INTEGER NOT NULL,         -- 活跃用户数
-  total_supply DECIMAL(12,2) NOT NULL,   -- A2C 总流通量
+  total_supply DECIMAL(12,2) NOT NULL,   -- MP 总流通量
   total_minted DECIMAL(12,2) DEFAULT 0,  -- 当日总印钞量
   total_burned DECIMAL(12,2) DEFAULT 0,  -- 当日总销毁量
   status VARCHAR(20) NOT NULL,           -- healthy / inflation_risk / deflation_risk
@@ -524,9 +524,9 @@ ALTER TABLE settlements ADD COLUMN sigma_at_settlement DECIMAL(6,3) DEFAULT 1.0;
 // server/routes/economy.js
 
 router.get('/api/economy/status', async (req, res) => {
-  const { totalActiveA2C, activeUsers } = await getActiveEconomyStats();
+  const { totalActiveMP, activeUsers } = await getActiveEconomyStats();
   const params = economy.getEconomyParams(
-    parseFloat(totalActiveA2C), 
+    parseFloat(totalActiveMP), 
     parseInt(activeUsers)
   );
 

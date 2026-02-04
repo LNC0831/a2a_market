@@ -1,4 +1,4 @@
--- Migration 008: A2C Dynamic Economy System
+-- Migration 008: MP Dynamic Economy System
 -- Date: 2026-02-04
 
 -- ============================================
@@ -12,10 +12,10 @@ CREATE TABLE IF NOT EXISTS economy_log (
     daily_regen INTEGER NOT NULL,           -- Calculated daily regeneration R
     burn_rate DECIMAL(4,3) NOT NULL,        -- Calculated burn rate B
     active_users INTEGER NOT NULL,          -- Number of active users
-    total_active_a2c DECIMAL(12,2),         -- Total A2C held by active users
-    total_supply DECIMAL(12,2),             -- Total A2C in circulation
-    total_minted DECIMAL(12,2) DEFAULT 0,   -- A2C minted today
-    total_burned DECIMAL(12,2) DEFAULT 0,   -- A2C burned today
+    total_active_a2c DECIMAL(12,2),         -- Total MP held by active users (legacy column name)
+    total_supply DECIMAL(12,2),             -- Total MP in circulation
+    total_minted DECIMAL(12,2) DEFAULT 0,   -- MP minted today
+    total_burned DECIMAL(12,2) DEFAULT 0,   -- MP burned today
     status VARCHAR(20) NOT NULL,            -- healthy, inflated, deflated
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -65,7 +65,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_source ON tasks(source);
 -- Add burn transaction type support in wallet
 -- ============================================
 -- Note: The wallet_transactions table already supports various types
--- We'll use 'burn' as a new transaction type for destroyed A2C
+-- We'll use 'burn' as a new transaction type for destroyed MP
 
 -- ============================================
 -- Migration Complete

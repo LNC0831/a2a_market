@@ -12,7 +12,7 @@
 
 | 原名称 | 新名称 | 法律定性 |
 |--------|--------|----------|
-| A2A Coin (A2C) | 积分 (Points) | 服务预付款凭证 |
+| Marketplace Points (MP) | 积分 (Points) | 服务预付款凭证 |
 | 钱包 (Wallet) | 账户余额 | 预付费账户 |
 | 充值 (Deposit) | 购买积分 | 购买服务 |
 | 提现 (Withdraw) | 积分兑换 | 退还未消费余额 |
@@ -610,7 +610,7 @@ ALTER TABLE tasks ADD COLUMN risk_score INTEGER;
 ALTER TABLE tasks ADD COLUMN risk_checked BOOLEAN DEFAULT FALSE;
 
 -- 重命名货币相关（可选，或保持内部名称）
--- wallets 表的 currency 字段值 'A2C' 可改为 'POINTS'
+-- wallets 表的 currency 字段值 'MP' 可改为 'POINTS'
 ```
 
 ---

@@ -1,7 +1,7 @@
 /**
- * A2C Economy Engine
+ * MP Economy Engine
  *
- * Core service for calculating and managing the dynamic A2C economy.
+ * Core service for calculating and managing the dynamic MP (Marketplace Points) economy.
  *
  * The economy self-regulates through supply ratio (σ):
  *   σ = Σ(active user balances) / (active users × TARGET_PER_USER)
@@ -34,17 +34,17 @@ class EconomyEngine {
    *
    * σ_raw = Σ(active user balances) / (active users × TARGET_PER_USER)
    *
-   * @param {number} totalActiveA2C - Sum of all active users' A2C balances
+   * @param {number} totalActiveMP - Sum of all active users' MP balances
    * @param {number} activeUsers - Number of active users
    * @returns {number} - Raw sigma value
    */
-  calcSupplyRatioRaw(totalActiveA2C, activeUsers) {
+  calcSupplyRatioRaw(totalActiveMP, activeUsers) {
     if (activeUsers <= 0) {
       // Cold start: return 1.0 (balanced state)
       return 1.0;
     }
     const targetTotal = activeUsers * ECONOMY.TARGET_PER_USER;
-    return totalActiveA2C / targetTotal;
+    return totalActiveMP / targetTotal;
   }
 
   /**
@@ -94,7 +94,7 @@ class EconomyEngine {
   /**
    * Calculate settlement distribution
    *
-   * @param {number} taskPrice - Task price in A2C
+   * @param {number} taskPrice - Task price in MP
    * @param {number} sigma - Current sigma
    * @returns {Object} - { agentEarning, burned, burnRate }
    */
@@ -150,19 +150,19 @@ class EconomyEngine {
    *
    * Active users = users with activity in last ACTIVE_WINDOW_DAYS
    *
-   * @returns {Promise<Object>} - { activeUsers, totalActiveA2C, totalSupply }
+   * @returns {Promise<Object>} - { activeUsers, totalActiveMP, totalSupply }
    */
   async getEconomyMetrics() {
     const windowDays = ECONOMY.ACTIVE_WINDOW_DAYS;
 
     return new Promise((resolve, reject) => {
-      // Query to get active users and their total A2C
+      // Query to get active users and their total MP
       // Active = has wallet transaction in last N days
       const sql = `
         WITH active_wallets AS (
           SELECT DISTINCT w.id, w.owner_id, w.balance
           FROM wallets w
-          WHERE w.currency_code = 'A2C'
+          WHERE w.currency_code = 'MP'
             AND w.owner_type IN ('client', 'agent')
             AND EXISTS (
               SELECT 1 FROM wallet_transactions wt
@@ -172,7 +172,7 @@ class EconomyEngine {
         )
         SELECT
           COUNT(DISTINCT owner_id) as active_users,
-          COALESCE(SUM(balance), 0) as total_active_a2c
+          COALESCE(SUM(balance), 0) as total_active_mp
         FROM active_wallets
       `;
 
@@ -182,11 +182,11 @@ class EconomyEngine {
           return reject(err);
         }
 
-        // Get total supply (all A2C in circulation)
+        // Get total supply (all MP in circulation)
         this.db.get(`
           SELECT COALESCE(SUM(balance + frozen_balance), 0) as total_supply
           FROM wallets
-          WHERE currency_code = 'A2C' AND owner_type IN ('client', 'agent')
+          WHERE currency_code = 'MP' AND owner_type IN ('client', 'agent')
         `, [], (err, supplyResult) => {
           if (err) {
             console.error('[EconomyEngine] Failed to get total supply:', err);
@@ -195,7 +195,7 @@ class EconomyEngine {
 
           resolve({
             activeUsers: activeResult?.active_users || 0,
-            totalActiveA2C: activeResult?.total_active_a2c || 0,
+            totalActiveMP: activeResult?.total_active_mp || 0,
             totalSupply: supplyResult?.total_supply || 0
           });
         });
@@ -240,7 +240,7 @@ class EconomyEngine {
     }
 
     // Calculate sigma
-    const sigmaRaw = this.calcSupplyRatioRaw(metrics.totalActiveA2C, metrics.activeUsers);
+    const sigmaRaw = this.calcSupplyRatioRaw(metrics.totalActiveMP, metrics.activeUsers);
     const sigma = this.applySmoothingSigma(sigmaRaw);
 
     // Calculate derived values
@@ -259,7 +259,7 @@ class EconomyEngine {
       // Metrics
       metrics: {
         activeUsers: metrics.activeUsers,
-        totalActiveA2C: metrics.totalActiveA2C,
+        totalActiveMP: metrics.totalActiveMP,
         totalSupply: metrics.totalSupply,
         targetPerUser: ECONOMY.TARGET_PER_USER
       },
@@ -292,7 +292,7 @@ class EconomyEngine {
       this.db.run(`
         INSERT INTO economy_log
           (id, date, sigma, sigma_raw, daily_regen, burn_rate,
-           active_users, total_active_a2c, total_supply,
+           active_users, total_active_mp, total_supply,
            total_minted, total_burned, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (date) DO UPDATE SET
@@ -301,7 +301,7 @@ class EconomyEngine {
           daily_regen = EXCLUDED.daily_regen,
           burn_rate = EXCLUDED.burn_rate,
           active_users = EXCLUDED.active_users,
-          total_active_a2c = EXCLUDED.total_active_a2c,
+          total_active_mp = EXCLUDED.total_active_mp,
           total_supply = EXCLUDED.total_supply,
           total_minted = economy_log.total_minted + EXCLUDED.total_minted,
           total_burned = economy_log.total_burned + EXCLUDED.total_burned,
@@ -314,7 +314,7 @@ class EconomyEngine {
         params.dailyRegen,
         params.burnRate.toFixed(3),
         params.metrics.activeUsers,
-        params.metrics.totalActiveA2C,
+        params.metrics.totalActiveMP,
         params.metrics.totalSupply,
         minted,
         burned,
@@ -419,7 +419,7 @@ class EconomyEngine {
    * Get users eligible for daily regeneration
    *
    * Criteria:
-   * - Has A2C wallet
+   * - Has MP wallet
    * - Balance < BALANCE_CAP
    * - Has been active in ACTIVE_WINDOW_DAYS
    *
@@ -440,7 +440,7 @@ class EconomyEngine {
         FROM wallets w
         LEFT JOIN clients c ON w.owner_type = 'client' AND w.owner_id = c.id
         LEFT JOIN agents a ON w.owner_type = 'agent' AND w.owner_id = a.id
-        WHERE w.currency_code = 'A2C'
+        WHERE w.currency_code = 'MP'
           AND w.owner_type IN ('client', 'agent')
           AND w.balance < ?
           AND EXISTS (

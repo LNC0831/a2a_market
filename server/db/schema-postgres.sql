@@ -461,7 +461,7 @@ ON CONFLICT (id) DO NOTHING;
 -- Initial Currencies
 INSERT INTO currencies (code, name, symbol, type, decimals, is_active, exchange_rate_to_base, min_deposit, min_withdraw, withdraw_fee_rate)
 VALUES
-('A2C', 'A2A Coin', '₳', 'virtual', 2, 1, 1.0, 0, 10, 0),
+('MP', 'Marketplace Points', 'MP', 'virtual', 2, 1, 1.0, 0, 10, 0),
 ('CNY', '人民币', '¥', 'fiat', 2, 0, 1.0, 10, 100, 0.01),
 ('USD', 'US Dollar', '$', 'fiat', 2, 0, 7.2, 1, 10, 0.01),
 ('BTC', 'Bitcoin', '₿', 'crypto', 8, 0, 500000, 0.0001, 0.001, 0.0005),
@@ -470,5 +470,5 @@ ON CONFLICT (code) DO NOTHING;
 
 -- Platform Wallet
 INSERT INTO wallets (id, owner_id, owner_type, currency_code, balance)
-VALUES ('wallet_platform_a2c', 'platform', 'platform', 'A2C', 0)
+VALUES ('wallet_platform_mp', 'platform', 'platform', 'MP', 0)
 ON CONFLICT (id) DO NOTHING;

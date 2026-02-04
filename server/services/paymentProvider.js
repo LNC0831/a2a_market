@@ -561,7 +561,7 @@ class PaymentProviderFactory {
   static getProviderForCurrency(currency, db, config = {}) {
     // Map currencies to default providers
     const currencyProviders = {
-      'A2C': PROVIDERS.MANUAL,  // Virtual currency - manual admin
+      'MP': PROVIDERS.MANUAL,  // Virtual currency - manual admin
       'CNY': PROVIDERS.ALIPAY,  // China - Alipay/WeChat
       'USD': PROVIDERS.STRIPE,  // International - Stripe
       'BTC': PROVIDERS.CRYPTO,  // Bitcoin

@@ -465,13 +465,13 @@ agent.start_working(
 
 #### 4.1 基础架构 ✅
 - [x] 多币种钱包系统 (wallets 表)
-- [x] 货币管理 (currencies 表: A2C, CNY, USD, BTC, ETH)
+- [x] 货币管理 (currencies 表: MP, CNY, USD, BTC, ETH)
 - [x] 余额管理（充值、消费、冻结、解冻、转账）
 - [x] 交易记录表 (wallet_transactions)
 - [x] 充值/提现订单表 (payment_orders)
 
 #### 4.2 虚拟货币系统 ✅
-- [x] A2A Coin (A2C) 虚拟货币 - 立即可用
+- [x] Marketplace Points (MP) 虚拟货币 - 立即可用
 - [x] 任务发布自动冻结余额
 - [x] 任务完成自动分账 (Agent 75%, 平台 25%)
 - [x] 任务取消自动退款

@@ -15,7 +15,7 @@ const agentAccessRoutes = require('./routes/agentAccess');
 const agentContributorRoutes = require('./routes/agentContributor');
 const mcpRoutes = require('./routes/mcp');
 const TimeoutChecker = require('./jobs/timeoutChecker');  // 超时检查后台任务
-const DailyRegenJob = require('./jobs/DailyRegenJob');    // 每日 A2C 恢复任务
+const DailyRegenJob = require('./jobs/DailyRegenJob');    // 每日 MP 恢复任务
 const economyRoutes = require('./routes/economy');         // 经济系统 API
 
 const app = express();
@@ -72,7 +72,7 @@ app.get('/api/health', (req, res) => {
     quality_system: {
       credit_rules: {
         task_completed: '+5',
-        five_star_rating: '+10 credit + 20 A2C',
+        five_star_rating: '+10 credit + 20 MP',
         first_rejection: '-5',
         second_rejection: '-15',
         third_rejection: '-30',
@@ -85,17 +85,17 @@ app.get('/api/health', (req, res) => {
       }
     },
     economy_system: {
-      description: 'Dynamic A2C economy with self-regulating supply',
+      description: 'Dynamic MP economy with self-regulating supply',
       formula: {
         sigma: 'σ = active_balance / (active_users × 150)',
         daily_regen: 'R = 20 × (2 - σ), clamped [5, 40]',
         burn_rate: 'B = 25% × σ, clamped [10%, 40%]'
       },
       rewards: {
-        human_registration: '200 A2C',
-        agent_registration: '100 A2C',
-        judge_reward: '10 A2C (fixed)',
-        five_star_bonus: '20 A2C'
+        human_registration: '200 MP',
+        agent_registration: '100 MP',
+        judge_reward: '10 MP (fixed)',
+        five_star_bonus: '20 MP'
       },
       endpoints: {
         status: '/api/economy/status',
@@ -104,12 +104,12 @@ app.get('/api/health', (req, res) => {
       }
     },
     wallet_system: {
-      currencies: ['A2C (active)', 'CNY (reserved)', 'USD (reserved)', 'BTC (reserved)'],
+      currencies: ['MP (active)', 'CNY (reserved)', 'USD (reserved)', 'BTC (reserved)'],
       settlement: {
         agent_share: '60%-90% (dynamic, based on σ)',
         burn_rate: '10%-40% (dynamic, based on σ)',
         platform_fee: '0% (from task)',
-        judge_reward: '10 A2C (fixed, from platform)'
+        judge_reward: '10 MP (fixed, from platform)'
       },
       endpoints: {
         wallets: '/api/wallet',
@@ -578,14 +578,14 @@ app.listen(PORT, () => {
   console.log(`   ✓ 信用分系统 (奖惩机制)`);
   console.log(`   ✓ 超时检查 (自动释放)`);
   console.log(`   ✓ 自动裁判 (质量检查)`);
-  console.log(`   ✓ 多币种钱包 (A2C/CNY/USD/BTC)`);
+  console.log(`   ✓ 多币种钱包 (MP/CNY/USD/BTC)`);
   console.log(`   ✓ 支付网关 (手动/预留第三方)`);
   console.log(`   ✓ 动态经济系统 (自动调节供给)`);
   console.log(`\n💰 动态经济系统:`);
   console.log(`   σ = 活跃余额 / (活跃用户 × 150)`);
   console.log(`   R = 20 × (2-σ) [5,40] 每日恢复`);
   console.log(`   B = 25% × σ [10%,40%] 销毁比例`);
-  console.log(`   注册赠送: 人类 200 A2C, Agent 100 A2C`);
+  console.log(`   注册赠送: 人类 200 MP, Agent 100 MP`);
   console.log(`\n🔗 访问地址:`);
   console.log(`   前端: http://localhost:3000`);
   console.log(`   API文档: http://localhost:${PORT}/api/health`);
@@ -594,7 +594,7 @@ app.listen(PORT, () => {
   // 启动超时检查后台任务 (每分钟检查一次)
   timeoutChecker.start(60000);
 
-  // 启动每日 A2C 恢复任务 (每小时检查一次)
+  // 启动每日 MP 恢复任务 (每小时检查一次)
   dailyRegenJob.start(3600000);
 });
 

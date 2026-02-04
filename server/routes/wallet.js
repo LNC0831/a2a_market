@@ -139,11 +139,11 @@ router.get('/wallet', authenticate, async (req, res) => {
     const walletService = new WalletService(req.db);
     const wallets = await walletService.getAllWallets(req.user.id);
 
-    // If no wallets exist, create default A2C wallet
+    // If no wallets exist, create default MP wallet
     if (wallets.length === 0) {
-      const defaultWallet = await walletService.createWallet(req.user.id, req.user.type, 'A2C');
+      const defaultWallet = await walletService.createWallet(req.user.id, req.user.type, 'MP');
       const currencyService = new CurrencyService(req.db);
-      const currency = await currencyService.getCurrency('A2C');
+      const currency = await currencyService.getCurrency('MP');
 
       wallets.push({
         ...defaultWallet,
@@ -771,7 +771,7 @@ router.post('/admin/currencies/:code/rate', authenticateAdmin, async (req, res) 
 router.get('/admin/wallet/stats', authenticateAdmin, async (req, res) => {
   try {
     const walletService = new WalletService(req.db);
-    const currencyCode = req.query.currency || 'A2C';
+    const currencyCode = req.query.currency || 'MP';
 
     const stats = await walletService.getPlatformStats(currencyCode);
 

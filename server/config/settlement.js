@@ -6,7 +6,7 @@
  * 新的结算逻辑 (Phase 8A):
  *   - Agent 获得: taskPrice × (1 - B)，B 为动态销毁率
  *   - 销毁 (Burn): taskPrice × B (不归任何人)
- *   - 裁判奖励: 固定 10 A2C (从平台账户发放，不从任务扣)
+ *   - 裁判奖励: 固定 10 MP (从平台账户发放，不从任务扣)
  *   - 平台收入: 通过法币充值入口盈利 (未来实现)
  *
  * 旧的固定比例保留用于:
@@ -20,7 +20,7 @@ const SETTLEMENT = {
   // 实际结算使用 EconomyEngine.calcSettlement()
   AGENT_RATIO: 0.75,      // 预估: Agent 获得 75% (实际为 1-B, B 在 10%-40% 之间)
   PLATFORM_RATIO: 0.00,   // 平台不再从任务中抽成
-  JUDGE_RATIO: 0.00,      // 裁判奖励改为固定 10 A2C
+  JUDGE_RATIO: 0.00,      // 裁判奖励改为固定 10 MP
 
   // Skill 调用分成 (仍使用固定比例)
   SKILL_DEVELOPER_RATIO: 0.75,  // Skill 开发者获得 75%

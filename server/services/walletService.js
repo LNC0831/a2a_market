@@ -1,7 +1,7 @@
 /**
  * Wallet Service
  *
- * Core wallet operations for the A2A multi-currency system.
+ * Core wallet operations for the multi-currency system.
  * Handles wallet management, balance operations, transfers, and task payments.
  */
 
@@ -35,7 +35,7 @@ const COUNTERPARTY_TYPES = {
 };
 
 // Platform wallet ID for fee collection
-const PLATFORM_WALLET_ID = 'wallet_platform_a2c';
+const PLATFORM_WALLET_ID = 'wallet_platform_mp';
 
 class WalletService {
   constructor(db) {
@@ -612,7 +612,7 @@ class WalletService {
    * Freeze client balance for task payment
    * Called when task is posted
    */
-  async freezeForTask(clientId, taskId, amount, currencyCode = 'A2C') {
+  async freezeForTask(clientId, taskId, amount, currencyCode = 'MP') {
     const wallet = await this.getOrCreateWallet(clientId, 'client', currencyCode);
 
     if (wallet.balance < amount) {
@@ -626,7 +626,7 @@ class WalletService {
    * Process task completion payment
    * Distributes funds: Agent (70%), Platform (30%), Judge (5% if applicable)
    */
-  async processTaskPayment(clientId, agentId, taskId, amount, judgeId = null, currencyCode = 'A2C') {
+  async processTaskPayment(clientId, agentId, taskId, amount, judgeId = null, currencyCode = 'MP') {
     const clientWallet = await this.getWallet(clientId, currencyCode);
     if (!clientWallet) {
       throw new Error('Client wallet not found');
@@ -724,7 +724,7 @@ class WalletService {
    * Refund task payment (unfreeze to client)
    * Called when task is cancelled
    */
-  async refundTask(clientId, taskId, amount, currencyCode = 'A2C') {
+  async refundTask(clientId, taskId, amount, currencyCode = 'MP') {
     const wallet = await this.getWallet(clientId, currencyCode);
     if (!wallet) {
       throw new Error('Client wallet not found');
@@ -849,7 +849,7 @@ class WalletService {
   /**
    * Get wallet statistics
    */
-  async getWalletStats(ownerId, currencyCode = 'A2C') {
+  async getWalletStats(ownerId, currencyCode = 'MP') {
     const wallet = await this.getWallet(ownerId, currencyCode);
     if (!wallet) {
       return null;
@@ -879,7 +879,7 @@ class WalletService {
   /**
    * Get platform statistics
    */
-  getPlatformStats(currencyCode = 'A2C') {
+  getPlatformStats(currencyCode = 'MP') {
     return new Promise((resolve, reject) => {
       this.db.get(
         `SELECT

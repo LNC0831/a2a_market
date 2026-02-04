@@ -1,7 +1,7 @@
 /**
  * Daily Regeneration Job
  *
- * Handles daily A2C regeneration for active users.
+ * Handles daily MP (Marketplace Points) regeneration for active users.
  * Runs every hour, but only executes regeneration once per day.
  *
  * Regeneration rules:
@@ -118,7 +118,7 @@ class DailyRegenJob {
     }
 
     this.isRunning = true;
-    console.log('💰 Starting daily A2C regeneration...');
+    console.log('💰 Starting daily MP regeneration...');
 
     try {
       // 1. Get current economy parameters
@@ -170,7 +170,7 @@ class DailyRegenJob {
         }
       }
 
-      console.log(`  ✅ Regeneration complete: ${processedCount} users, ${totalMinted} A2C minted`);
+      console.log(`  ✅ Regeneration complete: ${processedCount} users, ${totalMinted} MP minted`);
       if (skippedCount > 0) {
         console.log(`  ⏭️ Skipped ${skippedCount} users (at cap or zero regen)`);
       }
@@ -191,7 +191,7 @@ class DailyRegenJob {
   }
 
   /**
-   * Get total A2C burned today from settlements
+   * Get total MP burned today from settlements
    *
    * @returns {Promise<number>}
    */

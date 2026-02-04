@@ -1,7 +1,7 @@
 /**
  * Economy API Routes
  *
- * Provides endpoints for monitoring and managing the A2C economy system.
+ * Provides endpoints for monitoring and managing the MP (Marketplace Points) economy system.
  * These endpoints are public for transparency.
  */
 
@@ -39,7 +39,7 @@ router.get('/economy/status', async (req, res) => {
       },
       metrics: {
         active_users: params.metrics.activeUsers,
-        total_active_a2c: params.metrics.totalActiveA2C,
+        total_active_mp: params.metrics.totalActiveMP,
         total_supply: params.metrics.totalSupply,
         target_per_user: params.metrics.targetPerUser,
         active_window_days: ECONOMY.ACTIVE_WINDOW_DAYS
@@ -175,8 +175,8 @@ router.get('/economy/formula', (req, res) => {
     },
     reference_table: referenceTable,
     explanation: {
-      sigma_below_1: 'When σ < 1: Users have less A2C than target. R increases (more daily regen), B decreases (less burn). Economy inflates.',
-      sigma_above_1: 'When σ > 1: Users have more A2C than target. R decreases (less daily regen), B increases (more burn). Economy deflates.',
+      sigma_below_1: 'When σ < 1: Users have less MP than target. R increases (more daily regen), B decreases (less burn). Economy inflates.',
+      sigma_above_1: 'When σ > 1: Users have more MP than target. R decreases (less daily regen), B increases (more burn). Economy deflates.',
       equilibrium: 'The system automatically adjusts to maintain σ ≈ 1.0 over time.'
     }
   });

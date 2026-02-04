@@ -125,10 +125,10 @@ async function runTests() {
     assert(res.data.currencies.every(c => c.is_active === 1), 'All should be active');
   });
 
-  await test('GET /api/currencies/A2C - Get specific currency', async () => {
-    const res = await request('GET', '/api/currencies/A2C');
+  await test('GET /api/currencies/MP - Get specific currency', async () => {
+    const res = await request('GET', '/api/currencies/MP');
     assert(res.status === 200, 'Should return 200');
-    assert(res.data.code === 'A2C', 'Code should be A2C');
+    assert(res.data.code === 'MP', 'Code should be MP');
     assert(res.data.symbol === '₳', 'Symbol should be ₳');
   });
 
@@ -227,18 +227,18 @@ async function runTests() {
       console.log(`   Found ${res.data.wallets.length} wallet(s)`);
     });
 
-    await test('GET /api/wallet/A2C - Get A2C wallet', async () => {
-      const res = await request('GET', '/api/wallet/A2C', null, {
+    await test('GET /api/wallet/MP - Get MP wallet', async () => {
+      const res = await request('GET', '/api/wallet/MP', null, {
         'X-Client-Key': testClientApiKey
       });
       assert(res.status === 200, 'Should return 200');
       assert(res.data.wallet, 'Should have wallet');
-      assert(res.data.wallet.currency_code === 'A2C', 'Should be A2C wallet');
-      console.log(`   Balance: ${res.data.wallet.balance} A2C`);
+      assert(res.data.wallet.currency_code === 'MP', 'Should be MP wallet');
+      console.log(`   Balance: ${res.data.wallet.balance} MP`);
     });
 
-    await test('GET /api/wallet/A2C/balance - Get balance', async () => {
-      const res = await request('GET', '/api/wallet/A2C/balance', null, {
+    await test('GET /api/wallet/MP/balance - Get balance', async () => {
+      const res = await request('GET', '/api/wallet/MP/balance', null, {
         'X-Client-Key': testClientApiKey
       });
       assert(res.status === 200, 'Should return 200');
@@ -246,8 +246,8 @@ async function runTests() {
       console.log(`   Available: ${res.data.available}, Frozen: ${res.data.frozen}`);
     });
 
-    await test('GET /api/wallet/A2C/history - Get transaction history', async () => {
-      const res = await request('GET', '/api/wallet/A2C/history', null, {
+    await test('GET /api/wallet/MP/history - Get transaction history', async () => {
+      const res = await request('GET', '/api/wallet/MP/history', null, {
         'X-Client-Key': testClientApiKey
       });
       assert(res.status === 200, 'Should return 200');
@@ -255,8 +255,8 @@ async function runTests() {
       console.log(`   Found ${res.data.transactions.length} transaction(s)`);
     });
 
-    await test('POST /api/wallet/A2C/deposit - Create deposit order', async () => {
-      const res = await request('POST', '/api/wallet/A2C/deposit', {
+    await test('POST /api/wallet/MP/deposit - Create deposit order', async () => {
+      const res = await request('POST', '/api/wallet/MP/deposit', {
         amount: 1000,
         remark: 'API test deposit'
       }, {
@@ -293,13 +293,13 @@ async function runTests() {
       console.log(`   Found ${res.data.wallets.length} wallet(s)`);
     });
 
-    await test('GET /api/wallet/A2C/stats - Get wallet stats', async () => {
-      const res = await request('GET', '/api/wallet/A2C/stats', null, {
+    await test('GET /api/wallet/MP/stats - Get wallet stats', async () => {
+      const res = await request('GET', '/api/wallet/MP/stats', null, {
         'X-Agent-Key': testAgentApiKey
       });
       assert(res.status === 200, 'Should return 200');
       assert(res.data.balance, 'Should have balance info');
-      console.log(`   Total earned: ${res.data.totals?.earned || 0} A2C`);
+      console.log(`   Total earned: ${res.data.totals?.earned || 0} MP`);
     });
   }
 
@@ -313,8 +313,8 @@ async function runTests() {
     assert(res.status === 401, 'Should return 401 without auth');
   });
 
-  await test('POST /api/wallet/A2C/deposit - Requires authentication', async () => {
-    const res = await request('POST', '/api/wallet/A2C/deposit', { amount: 100 });
+  await test('POST /api/wallet/MP/deposit - Requires authentication', async () => {
+    const res = await request('POST', '/api/wallet/MP/deposit', { amount: 100 });
     assert(res.status === 401, 'Should return 401 without auth');
   });
 

@@ -170,7 +170,7 @@ router.post('/hall/client/register', async (req, res) => {
         let bonusGranted = false;
         try {
           const walletService = new WalletService(req.db);
-          const wallet = await walletService.getOrCreateWallet(clientId, 'client', 'A2C');
+          const wallet = await walletService.getOrCreateWallet(clientId, 'client', 'MP');
           await walletService.addBalance(
             wallet.id,
             ECONOMY.HUMAN_REGISTRATION_BONUS,
@@ -198,7 +198,7 @@ router.post('/hall/client/register', async (req, res) => {
           bonus: bonusGranted ? {
             granted: true,
             amount: ECONOMY.HUMAN_REGISTRATION_BONUS,
-            currency: 'A2C'
+            currency: 'MP'
           } : null
         });
       }
@@ -369,7 +369,7 @@ router.post('/hall/register', (req, res) => {
       let bonusGranted = false;
       try {
         const walletService = new WalletService(req.db);
-        const wallet = await walletService.getOrCreateWallet(agentId, 'agent', 'A2C');
+        const wallet = await walletService.getOrCreateWallet(agentId, 'agent', 'MP');
         await walletService.addBalance(
           wallet.id,
           ECONOMY.AGENT_REGISTRATION_BONUS,
@@ -401,7 +401,7 @@ router.post('/hall/register', (req, res) => {
         bonus: bonusGranted ? {
           granted: true,
           amount: ECONOMY.AGENT_REGISTRATION_BONUS,
-          currency: 'A2C'
+          currency: 'MP'
         } : null,
         usage: {
           as_worker: 'Use X-Agent-Key to claim and complete tasks',
@@ -455,7 +455,7 @@ router.post('/hall/post', optionalAuth, async (req, res) => {
       const ownerType = clientType === 'agent' ? 'agent' : 'client';
 
       // 获取或创建钱包
-      const wallet = await walletService.getOrCreateWallet(clientId, ownerType, 'A2C');
+      const wallet = await walletService.getOrCreateWallet(clientId, ownerType, 'MP');
 
       // 检查余额
       if (wallet.balance < budget) {
@@ -463,8 +463,8 @@ router.post('/hall/post', optionalAuth, async (req, res) => {
           error: 'Insufficient balance',
           required: budget,
           available: wallet.balance,
-          message: 'Please deposit more A2C coins to post this task',
-          deposit_url: '/api/wallet/A2C/deposit'
+          message: 'Please deposit more MP (Marketplace Points) to post this task',
+          deposit_url: '/api/wallet/MP/deposit'
         });
       }
 
@@ -492,7 +492,7 @@ router.post('/hall/post', optionalAuth, async (req, res) => {
         if (walletFrozen && clientId) {
           const walletService = new WalletService(req.db);
           const ownerType = clientType === 'agent' ? 'agent' : 'client';
-          walletService.getWallet(clientId, 'A2C')
+          walletService.getWallet(clientId, 'MP')
             .then(wallet => {
               if (wallet) {
                 return walletService.unfreezeBalance(wallet.id, budget, taskId, 'Task creation failed - refund');
@@ -1007,7 +1007,7 @@ router.get('/hall/my-orders', authenticateClient, (req, res) => {
  * 动态经济系统:
  * - Agent 获得 (1 - B) 比例，B 为当前销毁率
  * - B 部分销毁（不归任何人）
- * - 裁判奖励为固定 10 A2C（从平台账户发放，不从任务扣）
+ * - 裁判奖励为固定 10 MP（从平台账户发放，不从任务扣）
  */
 router.post('/hall/tasks/:id/accept', async (req, res) => {
   const { id } = req.params;
@@ -1043,7 +1043,7 @@ router.post('/hall/tasks/:id/accept', async (req, res) => {
     if (task.payment_status === 'frozen' && task.client_id) {
       try {
         // 1. Consume frozen balance from client
-        const clientWallet = await walletService.getWallet(task.client_id, 'A2C');
+        const clientWallet = await walletService.getWallet(task.client_id, 'MP');
         if (clientWallet) {
           await walletService.consumeFrozenBalance(
             clientWallet.id,
@@ -1055,7 +1055,7 @@ router.post('/hall/tasks/:id/accept', async (req, res) => {
         }
 
         // 2. Pay agent (1 - B)
-        const agentWallet = await walletService.getOrCreateWallet(task.agent_id, 'agent', 'A2C');
+        const agentWallet = await walletService.getOrCreateWallet(task.agent_id, 'agent', 'MP');
         const agentResult = await walletService.addBalance(
           agentWallet.id,
           agentEarnings,
@@ -1067,24 +1067,24 @@ router.post('/hall/tasks/:id/accept', async (req, res) => {
         // 3. Burned amount is NOT transferred anywhere (it's destroyed)
         // Record burn transaction for transparency
         await walletService.addBalance(
-          'wallet_platform_a2c',
+          'wallet_platform_mp',
           0,  // Platform receives nothing from burn
           'platform_fee',
-          `Burn record for task ${id}: ${burnedAmount} A2C destroyed`,
+          `Burn record for task ${id}: ${burnedAmount} MP destroyed`,
           { task_id: id, burned: burnedAmount, burn_rate: burnRate }
         );
 
-        // 4. Judge reward (fixed 10 A2C from platform account, if judge exists)
+        // 4. Judge reward (fixed 10 MP from platform account, if judge exists)
         let judgeRewardPaid = 0;
         if (task.judge_id) {
           try {
-            const judgeWallet = await walletService.getOrCreateWallet(task.judge_id, 'agent', 'A2C');
-            const platformWallet = await walletService.getWalletById('wallet_platform_a2c');
+            const judgeWallet = await walletService.getOrCreateWallet(task.judge_id, 'agent', 'MP');
+            const platformWallet = await walletService.getWalletById('wallet_platform_mp');
 
             // Only pay if platform has sufficient balance
             if (platformWallet && platformWallet.balance >= ECONOMY.JUDGE_REWARD) {
               await walletService.deductBalance(
-                'wallet_platform_a2c',
+                'wallet_platform_mp',
                 ECONOMY.JUDGE_REWARD,
                 'judge_reward',
                 `Judge reward for task ${id}`,
@@ -1346,14 +1346,14 @@ router.post('/hall/tasks/:id/reject', (req, res) => {
 });
 
 /**
- * 评价 Agent - 5星评价奖励信用分 + A2C奖励
+ * 评价 Agent - 5星评价奖励信用分 + MP奖励
  *
  * POST /api/hall/tasks/:id/rate
  * { "rating": 5, "comment": "非常满意" }
  *
  * 5星评价奖励:
  * - 信用分 +10
- * - A2C +20 (从平台账户发放)
+ * - MP +20 (从平台账户发放)
  */
 router.post('/hall/tasks/:id/rate', async (req, res) => {
   const { id } = req.params;
@@ -1394,7 +1394,7 @@ router.post('/hall/tasks/:id/rate', async (req, res) => {
           rating, comment
         });
 
-        // 5星评价奖励: 信用分 +10 和 A2C 奖励
+        // 5星评价奖励: 信用分 +10 和 MP 奖励
         if (rating === 5) {
           let creditResult = null;
           let a2cBonusGranted = false;
@@ -1406,19 +1406,19 @@ router.post('/hall/tasks/:id/rate', async (req, res) => {
             console.error('Failed to reward 5-star credit:', creditErr);
           }
 
-          // A2C bonus (from platform account)
+          // MP bonus (from platform account)
           try {
-            const platformWallet = await walletService.getWalletById('wallet_platform_a2c');
+            const platformWallet = await walletService.getWalletById('wallet_platform_mp');
             if (platformWallet && platformWallet.balance >= ECONOMY.FIVE_STAR_BONUS) {
               await walletService.deductBalance(
-                'wallet_platform_a2c',
+                'wallet_platform_mp',
                 ECONOMY.FIVE_STAR_BONUS,
                 'bonus',
                 `5-star bonus payout for task ${id}`,
                 { task_id: id }
               );
 
-              const agentWallet = await walletService.getOrCreateWallet(task.agent_id, 'agent', 'A2C');
+              const agentWallet = await walletService.getOrCreateWallet(task.agent_id, 'agent', 'MP');
               await walletService.addBalance(
                 agentWallet.id,
                 ECONOMY.FIVE_STAR_BONUS,
@@ -1429,7 +1429,7 @@ router.post('/hall/tasks/:id/rate', async (req, res) => {
               a2cBonusGranted = true;
             }
           } catch (bonusErr) {
-            console.error('Failed to grant 5-star A2C bonus:', bonusErr);
+            console.error('Failed to grant 5-star MP bonus:', bonusErr);
           }
 
           res.json({
@@ -1444,7 +1444,7 @@ router.post('/hall/tasks/:id/rate', async (req, res) => {
               a2c: a2cBonusGranted ? {
                 awarded: true,
                 amount: ECONOMY.FIVE_STAR_BONUS,
-                reason: '5星好评 A2C 奖励'
+                reason: '5星好评 MP 奖励'
               } : null
             }
           });
@@ -1482,7 +1482,7 @@ router.post('/hall/tasks/:id/cancel', async (req, res) => {
     if (task.payment_status === 'frozen' && task.client_id) {
       try {
         const walletService = new WalletService(req.db);
-        refundResult = await walletService.refundTask(task.client_id, id, task.budget, 'A2C');
+        refundResult = await walletService.refundTask(task.client_id, id, task.budget, 'MP');
       } catch (walletErr) {
         console.error('Failed to refund frozen balance:', walletErr);
         // 继续取消任务，但记录错误

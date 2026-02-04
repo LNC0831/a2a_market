@@ -82,8 +82,8 @@ function createCurrenciesTable() {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  // A2A Coin - Active virtual currency
-  insertCurrency.run('A2C', 'A2A Coin', '₳', 'virtual', 2, 1, 1.0, 0, 10, 0);
+  // Marketplace Points - Active virtual currency
+  insertCurrency.run('MP', 'Marketplace Points', '₳', 'virtual', 2, 1, 1.0, 0, 10, 0);
 
   // CNY - Reserved for fiat (inactive)
   insertCurrency.run('CNY', '人民币', '¥', 'fiat', 2, 0, 1.0, 10, 100, 0.01);
@@ -257,14 +257,14 @@ function migrateExistingData() {
   const insertWallet = db.prepare(`
     INSERT OR IGNORE INTO wallets
     (id, owner_id, owner_type, currency_code, balance, total_earned, created_at, updated_at)
-    VALUES (?, ?, 'agent', 'A2C', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    VALUES (?, ?, 'agent', 'MP', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `);
 
   const insertTx = db.prepare(`
     INSERT INTO wallet_transactions
     (id, wallet_id, type, amount, balance_before, balance_after, currency_code,
      counterparty_type, status, description, created_at, completed_at)
-    VALUES (?, ?, 'migration', ?, 0, ?, 'A2C', 'platform', 'completed',
+    VALUES (?, ?, 'migration', ?, 0, ?, 'MP', 'platform', 'completed',
             'Migration from legacy earnings', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `);
 
@@ -291,7 +291,7 @@ function migrateExistingData() {
   const insertClientWallet = db.prepare(`
     INSERT OR IGNORE INTO wallets
     (id, owner_id, owner_type, currency_code, balance, created_at, updated_at)
-    VALUES (?, ?, 'client', 'A2C', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    VALUES (?, ?, 'client', 'MP', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `);
 
   let clientWalletCount = 0;
@@ -306,7 +306,7 @@ function migrateExistingData() {
   // Create wallets for agents without earnings (if they don't have one yet)
   const agentsWithoutWallet = db.prepare(`
     SELECT a.id FROM agents a
-    LEFT JOIN wallets w ON a.id = w.owner_id AND w.currency_code = 'A2C'
+    LEFT JOIN wallets w ON a.id = w.owner_id AND w.currency_code = 'MP'
     WHERE w.id IS NULL
   `).all();
 
@@ -320,11 +320,11 @@ function migrateExistingData() {
   console.log(`  - Created ${newAgentWallets} additional agent wallets`);
 
   // Create platform wallet for collecting fees
-  const platformWalletId = 'wallet_platform_a2c';
+  const platformWalletId = 'wallet_platform_mp';
   db.prepare(`
     INSERT OR IGNORE INTO wallets
     (id, owner_id, owner_type, currency_code, balance, created_at, updated_at)
-    VALUES (?, 'platform', 'platform', 'A2C', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    VALUES (?, 'platform', 'platform', 'MP', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `).run(platformWalletId);
 
   console.log('  - Created platform wallet');

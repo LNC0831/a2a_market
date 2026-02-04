@@ -75,37 +75,37 @@ async function runTests() {
     assert(currencies.every(c => c.is_active === 1), 'All should be active');
   });
 
-  await test('Get specific currency (A2C)', async () => {
-    const a2c = await currencyService.getCurrency('A2C');
-    assert(a2c, 'A2C currency should exist');
-    assert(a2c.code === 'A2C', 'Code should be A2C');
+  await test('Get specific currency (MP)', async () => {
+    const a2c = await currencyService.getCurrency('MP');
+    assert(a2c, 'MP currency should exist');
+    assert(a2c.code === 'MP', 'Code should be MP');
     assert(a2c.symbol === '₳', 'Symbol should be ₳');
     assert(a2c.type === 'virtual', 'Type should be virtual');
   });
 
   await test('Check currency active status', async () => {
-    const isActive = await currencyService.isCurrencyActive('A2C');
-    assert(isActive === true, 'A2C should be active');
+    const isActive = await currencyService.isCurrencyActive('MP');
+    assert(isActive === true, 'MP should be active');
 
     const cnyActive = await currencyService.isCurrencyActive('CNY');
     assert(cnyActive === false, 'CNY should be inactive by default');
   });
 
   await test('Get exchange rate (same currency)', async () => {
-    const rate = await currencyService.getExchangeRate('A2C', 'A2C');
+    const rate = await currencyService.getExchangeRate('MP', 'MP');
     assert(rate === 1.0, 'Same currency rate should be 1.0');
   });
 
   await test('Format amount', async () => {
-    const formatted = await currencyService.formatAmount(100.50, 'A2C');
+    const formatted = await currencyService.formatAmount(100.50, 'MP');
     assert(formatted === '₳100.50', 'Should format with symbol');
   });
 
   await test('Validate amount', async () => {
-    const valid = await currencyService.validateAmount(100.50, 'A2C');
+    const valid = await currencyService.validateAmount(100.50, 'MP');
     assert(valid.valid === true, 'Valid amount should pass');
 
-    const invalid = await currencyService.validateAmount(100.555, 'A2C');
+    const invalid = await currencyService.validateAmount(100.555, 'MP');
     assert(invalid.valid === false, 'Too many decimals should fail');
   });
 
@@ -119,25 +119,25 @@ async function runTests() {
   const testAgentId = 'test_agent_' + Date.now();
 
   await test('Create client wallet', async () => {
-    const wallet = await walletService.createWallet(testClientId, 'client', 'A2C');
+    const wallet = await walletService.createWallet(testClientId, 'client', 'MP');
     assert(wallet, 'Wallet should be created');
     assert(wallet.owner_id === testClientId, 'Owner ID should match');
     assert(wallet.balance === 0, 'Initial balance should be 0');
   });
 
   await test('Get wallet by owner', async () => {
-    const wallet = await walletService.getWallet(testClientId, 'A2C');
+    const wallet = await walletService.getWallet(testClientId, 'MP');
     assert(wallet, 'Should find wallet');
     assert(wallet.owner_id === testClientId, 'Owner should match');
   });
 
   await test('Get or create wallet (existing)', async () => {
-    const wallet = await walletService.getOrCreateWallet(testClientId, 'client', 'A2C');
+    const wallet = await walletService.getOrCreateWallet(testClientId, 'client', 'MP');
     assert(wallet, 'Should return existing wallet');
   });
 
   await test('Get or create wallet (new)', async () => {
-    const wallet = await walletService.getOrCreateWallet(testAgentId, 'agent', 'A2C');
+    const wallet = await walletService.getOrCreateWallet(testAgentId, 'agent', 'MP');
     assert(wallet, 'Should create new wallet');
     assert(wallet.owner_id === testAgentId, 'Owner should match');
   });
@@ -153,7 +153,7 @@ async function runTests() {
   // ==================== Balance Operation Tests ====================
   console.log('--- Balance Operation Tests ---\n');
 
-  let clientWallet = await walletService.getWallet(testClientId, 'A2C');
+  let clientWallet = await walletService.getWallet(testClientId, 'MP');
 
   await test('Add balance (deposit)', async () => {
     const result = await walletService.addBalance(
@@ -234,7 +234,7 @@ async function runTests() {
   // ==================== Transfer Tests ====================
   console.log('--- Transfer Tests ---\n');
 
-  let agentWallet = await walletService.getWallet(testAgentId, 'A2C');
+  let agentWallet = await walletService.getWallet(testAgentId, 'MP');
 
   await test('Transfer between wallets', async () => {
     const result = await walletService.transfer(
@@ -264,7 +264,7 @@ async function runTests() {
   });
 
   await test('Get wallet stats', async () => {
-    const stats = await walletService.getWalletStats(testClientId, 'A2C');
+    const stats = await walletService.getWalletStats(testClientId, 'MP');
     assert(stats, 'Should return stats');
     assert(stats.balance.available === 500, 'Available balance should match');
   });
@@ -275,14 +275,14 @@ async function runTests() {
   console.log('--- Task Payment Flow Tests ---\n');
 
   // Refresh wallets
-  clientWallet = await walletService.getWallet(testClientId, 'A2C');
-  agentWallet = await walletService.getWallet(testAgentId, 'A2C');
+  clientWallet = await walletService.getWallet(testClientId, 'MP');
+  agentWallet = await walletService.getWallet(testAgentId, 'MP');
 
   const testTaskId = 'test_task_' + Date.now();
   const taskBudget = 100;
 
   await test('Freeze for task', async () => {
-    const result = await walletService.freezeForTask(testClientId, testTaskId, taskBudget, 'A2C');
+    const result = await walletService.freezeForTask(testClientId, testTaskId, taskBudget, 'MP');
     assert(result.success, 'Should succeed');
 
     const balance = await walletService.getBalance(clientWallet.id);
@@ -297,7 +297,7 @@ async function runTests() {
       testTaskId,
       taskBudget,
       null,  // no judge
-      'A2C'
+      'MP'
     );
 
     assert(result.task_id === testTaskId, 'Task ID should match');
@@ -321,7 +321,7 @@ async function runTests() {
   const paymentProvider = new ManualPaymentProvider(db);
 
   await test('Create deposit order', async () => {
-    const result = await paymentProvider.createDeposit(500, 'A2C', {
+    const result = await paymentProvider.createDeposit(500, 'MP', {
       wallet_id: clientWallet.id,
       user_id: testClientId,
       remark: 'Test deposit order'
@@ -332,7 +332,7 @@ async function runTests() {
   });
 
   await test('Create withdraw order', async () => {
-    const result = await paymentProvider.createWithdraw(100, 'A2C', 'test_bank_123', {
+    const result = await paymentProvider.createWithdraw(100, 'MP', 'test_bank_123', {
       wallet_id: clientWallet.id,
       user_id: testClientId,
       method: 'bank',

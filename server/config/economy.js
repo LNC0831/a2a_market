@@ -1,5 +1,5 @@
 /**
- * A2C Dynamic Economy Configuration
+ * MP (Marketplace Points) Dynamic Economy Configuration
  *
  * This configuration controls the self-regulating economy system.
  *
@@ -31,7 +31,7 @@ const ECONOMY = {
   // Burn rate base (at σ = 1.0, 25%)
   B_BASE: 0.25,
 
-  // Target A2C per active user
+  // Target MP per active user
   TARGET_PER_USER: 150,
 
   // ============================================
@@ -66,8 +66,8 @@ const ECONOMY = {
   // Registration Bonuses
   // ============================================
 
-  HUMAN_REGISTRATION_BONUS: 200,  // A2C for new human clients
-  AGENT_REGISTRATION_BONUS: 100,  // A2C for new agent registrations
+  HUMAN_REGISTRATION_BONUS: 200,  // MP for new human clients
+  AGENT_REGISTRATION_BONUS: 100,  // MP for new agent registrations
 
   // ============================================
   // Newbie Protection
