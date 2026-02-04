@@ -7,35 +7,46 @@
 -- IMPORTANT: Run this migration BEFORE deploying code changes.
 -- This migration is idempotent and can be run multiple times safely.
 
--- 1. Update currencies table
--- Check if A2C exists and MP doesn't, then update
-UPDATE currencies SET
-  code = 'MP',
-  name = 'Marketplace Points',
-  symbol = 'MP'
+-- ============================================
+-- Strategy: INSERT new -> UPDATE references -> DELETE old
+-- (Cannot directly UPDATE primary key with foreign key references)
+-- ============================================
+
+BEGIN;
+
+-- 1. First, INSERT the new 'MP' currency by copying from 'A2C' (if A2C exists and MP doesn't)
+INSERT INTO currencies (code, name, symbol, type, decimals, is_active, exchange_rate_to_base, min_deposit, min_withdraw, withdraw_fee_rate, created_at, updated_at)
+SELECT 'MP', 'Marketplace Points', 'MP', type, decimals, is_active, exchange_rate_to_base, min_deposit, min_withdraw, withdraw_fee_rate, created_at, NOW()
+FROM currencies
 WHERE code = 'A2C'
   AND NOT EXISTS (SELECT 1 FROM currencies WHERE code = 'MP');
 
--- If somehow both exist (shouldn't happen), keep MP and delete A2C
-DELETE FROM currencies WHERE code = 'A2C' AND EXISTS (SELECT 1 FROM currencies WHERE code = 'MP');
-
--- 2. Update all wallets' currency_code
+-- 2. Update all wallets' currency_code from A2C to MP
 UPDATE wallets SET currency_code = 'MP' WHERE currency_code = 'A2C';
 
--- 3. Update platform wallet ID
--- First check if the old wallet exists
-UPDATE wallets SET id = 'wallet_platform_mp' WHERE id = 'wallet_platform_a2c';
-
--- 4. Update wallet_transactions currency_code
+-- 3. Update wallet_transactions currency_code
 UPDATE wallet_transactions SET currency_code = 'MP' WHERE currency_code = 'A2C';
 
--- 5. Update payment_orders currency_code
+-- 4. Update payment_orders currency_code
 UPDATE payment_orders SET currency_code = 'MP' WHERE currency_code = 'A2C';
 
--- 6. Update exchange_rates (if any)
+-- 5. Update exchange_rates (if any)
 UPDATE exchange_rates SET from_currency = 'MP' WHERE from_currency = 'A2C';
 UPDATE exchange_rates SET to_currency = 'MP' WHERE to_currency = 'A2C';
 
+-- 6. Now delete the old 'A2C' currency (no more references)
+DELETE FROM currencies WHERE code = 'A2C';
+
+-- 7. Update platform wallet ID
+UPDATE wallets SET id = 'wallet_platform_mp' WHERE id = 'wallet_platform_a2c';
+
+COMMIT;
+
+-- ============================================
 -- Verify the migration
+-- ============================================
+-- Run these queries to verify:
 -- SELECT * FROM currencies WHERE code IN ('A2C', 'MP');
+-- SELECT COUNT(*) FROM wallets WHERE currency_code = 'A2C';  -- Should be 0
+-- SELECT COUNT(*) FROM wallets WHERE currency_code = 'MP';   -- Should be > 0
 -- SELECT id FROM wallets WHERE id LIKE 'wallet_platform%';
