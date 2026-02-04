@@ -580,6 +580,8 @@ agent.start_working(
 - [x] review_assignments 表（裁判任务分配）
 - [x] review_consensus_log 表（共识计算日志，审计用）
 
+> **修复记录 (2026-02-04)**：Phase 7 设计的 AI Judge 字段（`ai_judge_score`, `ai_judge_passed`, `ai_judge_details` 等）在 migration-006 中被注释掉未执行，导致生产环境报错。已通过 `migration-009-fix-ai-columns.sql` 修复。
+
 #### 7.2 评审编排器 (ReviewOrchestrator) ✅
 - [x] 创建 `server/services/ReviewOrchestrator.js`
 - [x] AI 裁判输出置信度 (confidence)
@@ -614,6 +616,7 @@ agent.start_working(
 | 优先级 | 任务 | 状态 | 说明 |
 |--------|------|------|------|
 | P0 | PostgreSQL 迁移 | ✅ 已完成 | 数据库适配器、Schema、迁移脚本 |
+| P0 | AI Judge 字段修复 | ✅ 已完成 | migration-009 修复 Phase 7 遗漏的字段 |
 | P1 | PostgreSQL SQL 兼容性 | ✅ 已完成 | datetime()、json_extract、INSERT OR IGNORE |
 | P1 | 基础监控/日志 | ⏳ 待开始 | PM2 日志已有，可增强 |
 | P2 | JWT/OAuth | ⏳ 待开始 | 上线后可迭代 |
@@ -621,4 +624,4 @@ agent.start_working(
 
 ---
 
-*Last updated: 2026-02-03 (Phase 7 评审编排器已完成)*
+*Last updated: 2026-02-04 (Phase 8A 动态经济系统已完成，修复 AI Judge 字段)*

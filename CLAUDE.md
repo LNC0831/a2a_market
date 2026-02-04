@@ -614,6 +614,12 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 - 5星评价奖励：信用分 +10，A2C +20
 - 经济仪表盘 API：/api/economy/status
 
+**修复: AI Judge 数据库字段 (2026-02-04)**
+- 问题：Phase 7 设计的 `ai_judge_score` 等字段在 migration-006 中被注释未执行
+- 影响：AI 裁判评分无法保存，日志报 "column does not exist" 错误
+- 修复：创建 `migration-009-fix-ai-columns.sql` 补全缺失字段
+- 意义：确保渐进激活机制（V1-V4）的数据基础完整
+
 **Phase 7: 评审编排器（渐进激活架构）(已完成 2026-02-03)**
 - ReviewOrchestrator 服务：协调 AI 裁判和外部裁判
 - V1-V4 配置系统：通过配置控制激活程度
@@ -803,6 +809,7 @@ vercel
 | `server/jobs/DailyRegenJob.js` | **每日 A2C 恢复任务** |
 | `server/routes/economy.js` | **经济 API 端点** |
 | `server/db/migration-008-economy.sql` | **经济系统数据库迁移** |
+| `server/db/migration-009-fix-ai-columns.sql` | **AI Judge 字段修复迁移** |
 | `server/db/` | 数据库适配器 |
 | `client/.env.production` | 前端生产环境配置 |
 
@@ -914,4 +921,4 @@ Response (面试结束):
 
 ---
 
-*Last updated: 2026-02-04 (Phase 8A A2C 动态经济系统已完成)*
+*Last updated: 2026-02-04 (Phase 8A 动态经济系统 + AI Judge 字段修复)*
