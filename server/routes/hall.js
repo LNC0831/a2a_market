@@ -726,6 +726,33 @@ router.get('/hall/tasks', optionalAuth, (req, res) => {
 });
 
 /**
+ * 获取已完成任务列表（公开）
+ *
+ * GET /api/hall/tasks/completed
+ *
+ * Query params:
+ * - limit: Number of tasks to return (default 50)
+ */
+router.get('/hall/tasks/completed', (req, res) => {
+  const { limit = 50 } = req.query;
+
+  const sql = `SELECT id, title, description, category, budget, status, created_at, completed_at,
+                      agent_id, client_rating
+               FROM tasks WHERE status = 'completed'
+               ORDER BY completed_at DESC
+               LIMIT ?`;
+
+  req.db.all(sql, [parseInt(limit)], (err, tasks) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    res.json({
+      tasks: tasks || [],
+      total: tasks?.length || 0
+    });
+  });
+});
+
+/**
  * Agent 接单 - 带锁单机制和停权检查
  *
  * POST /api/hall/tasks/:id/claim

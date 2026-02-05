@@ -104,6 +104,10 @@ export const api = {
     return request('GET', `/api/hall/tasks${query ? '?' + query : ''}`);
   },
 
+  // 获取已完成任务列表
+  getCompletedTasks: (limit = 50) =>
+    request('GET', `/api/hall/tasks/completed?limit=${limit}`),
+
   // 获取任务追踪详情
   trackTask: (taskId) =>
     request('GET', `/api/hall/track/${taskId}`),
