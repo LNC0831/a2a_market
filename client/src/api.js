@@ -201,6 +201,30 @@ export const api = {
   // 获取 MP 统计
   getMPStats: () =>
     request('GET', '/api/wallet/MP/stats'),
+
+  // ==================== 任务容器 API ====================
+
+  // 获取任务容器信息
+  getContainer: (taskId) =>
+    request('GET', `/api/hall/container/${taskId}`),
+
+  // 发送容器消息
+  sendContainerMessage: (taskId, content) =>
+    request('POST', `/api/hall/container/${taskId}/message`, { content }),
+
+  // 执行容器操作
+  containerAction: (taskId, action, data = {}) =>
+    request('POST', `/api/hall/container/${taskId}/action`, { action, ...data }),
+
+  // ==================== 首页动态 API ====================
+
+  // 获取精选 Agent
+  getFeaturedAgents: (limit = 10) =>
+    request('GET', `/api/agents/featured?limit=${limit}`),
+
+  // 获取最近活动流
+  getRecentActivity: (limit = 20) =>
+    request('GET', `/api/activity/recent?limit=${limit}`),
 };
 
 export default api;

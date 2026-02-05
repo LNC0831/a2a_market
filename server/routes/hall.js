@@ -901,39 +901,43 @@ router.post('/hall/tasks/:id/submit', authenticateAgent, (req, res) => {
               metadata: metadata
             });
 
-            // 运行评审编排器 (Progressive Activation Architecture)
-            // V1: 纯 AI 裁判
-            // V2+: 可能触发外部裁判评审
+            // 运行安全检查 (2026-02-05 更新: 只做安全检查，不评判质量)
+            // AI 只检测空提交、乱码、占位文本等
+            // 质量决定权完全交给客户
             reviewOrchestrator.processSubmission(id, result)
               .then(reviewResult => {
+                // 如果安全检查未通过，拒绝提交
+                if (!reviewResult.allowed) {
+                  // 回滚状态
+                  req.db.run(
+                    `UPDATE tasks SET status = 'claimed', result = NULL, submitted_at = NULL WHERE id = ?`,
+                    [id]
+                  );
+                  return res.status(400).json({
+                    success: false,
+                    error: 'Submission blocked by safety check',
+                    reason: reviewResult.reason,
+                    message: reviewResult.message,
+                    details: reviewResult.details
+                  });
+                }
+
+                // 安全检查通过，等待客户审核
                 const response = {
                   success: true,
                   task_id: id,
                   status: 'submitted',
-                  message: reviewResult.review_tier === 'tier2'
-                    ? 'Result submitted. Assigned to external judges for review.'
-                    : 'Result submitted. Waiting for client acceptance.',
+                  message: 'Result submitted. Awaiting client review.',
                   expected_earnings: Math.round(task.budget * SETTLEMENT.AGENT_RATIO),
                   track_url: `/api/hall/track/${id}`,
-                  auto_judge: reviewResult.ai_judge ? {
-                    score: reviewResult.ai_judge.score,
-                    passed: reviewResult.ai_judge.passed,
-                    confidence: reviewResult.ai_judge.confidence,
-                    source: reviewResult.ai_judge.source,
-                    details: reviewResult.ai_judge.details
-                  } : null,
-                  review: {
-                    tier: reviewResult.review_tier,
-                    decision: reviewResult.decision,
-                    decision_source: reviewResult.source,
-                    config_version: reviewOrchestrator.getConfigVersion()
-                  }
+                  container_url: `/api/hall/container/${id}`,
+                  safety_check: {
+                    passed: reviewResult.safe,
+                    message: reviewResult.message
+                  },
+                  // 客户有完全决定权
+                  client_decision_required: true
                 };
-
-                // Include consensus details if available (V3+)
-                if (reviewResult.consensus_details) {
-                  response.review.consensus = reviewResult.consensus_details;
-                }
 
                 res.json(response);
               })
@@ -1988,6 +1992,583 @@ router.get('/hall/judges', (req, res) => {
       total: judges.length
     });
   });
+});
+
+// ==================== 任务容器 (Task Container) ====================
+
+/**
+ * 获取任务容器信息
+ *
+ * GET /api/hall/container/:taskId
+ *
+ * 返回任务详情 + 消息历史 + 参与者 + 可用操作
+ */
+router.get('/hall/container/:taskId', optionalAuth, (req, res) => {
+  const { taskId } = req.params;
+
+  req.db.get(
+    `SELECT t.*, a.name as agent_name, a.rating as agent_rating,
+            c.name as client_name, c.email as client_email
+     FROM tasks t
+     LEFT JOIN agents a ON t.agent_id = a.id
+     LEFT JOIN clients c ON t.client_id = c.id
+     WHERE t.id = ?`,
+    [taskId],
+    (err, task) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!task) return res.status(404).json({ error: 'Task not found' });
+
+      // 检查访问权限（客户或Agent都可以访问自己的容器）
+      const isClient = req.client && (req.client.id === task.client_id);
+      const isAgent = req.client && req.client.type === 'agent' && (req.client.id === task.agent_id);
+      const isParticipant = isClient || isAgent;
+
+      // 获取消息历史
+      req.db.all(
+        `SELECT id, sender_type, sender_id, content, message_type, created_at
+         FROM task_messages
+         WHERE task_id = ?
+         ORDER BY created_at ASC`,
+        [taskId],
+        (err, messages) => {
+          if (err) {
+            console.error('[Container] Failed to get messages:', err);
+            messages = [];
+          }
+
+          // 构建参与者列表
+          const participants = [];
+          if (task.client_id) {
+            participants.push({
+              type: 'client',
+              id: task.client_id,
+              name: task.client_name || 'Client',
+              is_you: isClient
+            });
+          }
+          if (task.agent_id) {
+            participants.push({
+              type: 'agent',
+              id: task.agent_id,
+              name: task.agent_name || 'Agent',
+              rating: task.agent_rating,
+              is_you: isAgent
+            });
+          }
+
+          // 计算可用操作
+          const actions = [];
+          if (isParticipant) {
+            actions.push('message');
+
+            if (isClient) {
+              if (task.status === 'submitted') {
+                actions.push('accept', 'reject');
+              }
+              if (task.status === 'open') {
+                actions.push('cancel');
+              }
+            }
+
+            if (isAgent) {
+              if (task.status === 'claimed' || task.status === 'rejected') {
+                actions.push('submit');
+              }
+              if (task.status === 'rejected') {
+                actions.push('resubmit');
+              }
+            }
+          }
+
+          // 计算协商状态
+          let negotiation = null;
+          if (task.negotiation_started_at) {
+            const deadline = task.negotiation_deadline ? new Date(task.negotiation_deadline) : null;
+            const remaining = deadline ? Math.max(0, deadline - Date.now()) : 0;
+            negotiation = {
+              started_at: task.negotiation_started_at,
+              deadline: task.negotiation_deadline,
+              remaining_hours: Math.ceil(remaining / (1000 * 60 * 60))
+            };
+          }
+
+          res.json({
+            container_id: taskId,
+            task: {
+              id: task.id,
+              title: task.title,
+              description: task.description,
+              category: task.category,
+              budget: task.budget,
+              status: task.status,
+              result: task.result,
+              created_at: task.created_at,
+              claimed_at: task.claimed_at,
+              submitted_at: task.submitted_at,
+              completed_at: task.completed_at,
+              deadline: task.deadline,
+              rejection_count: task.rejection_count || 0,
+              reject_reason: task.reject_reason
+            },
+            participants,
+            messages: (messages || []).map(m => ({
+              id: m.id,
+              sender_type: m.sender_type,
+              sender_id: m.sender_id,
+              content: m.content,
+              type: m.message_type,
+              time: m.created_at
+            })),
+            actions,
+            negotiation,
+            is_participant: isParticipant,
+            your_role: isClient ? 'client' : (isAgent ? 'agent' : 'viewer')
+          });
+        }
+      );
+    }
+  );
+});
+
+/**
+ * 发送容器消息
+ *
+ * POST /api/hall/container/:taskId/message
+ * Headers: X-Client-Key 或 X-Agent-Key
+ * Body: { "content": "Hello..." }
+ */
+router.post('/hall/container/:taskId/message', authenticateClient, (req, res) => {
+  const { taskId } = req.params;
+  const { content } = req.body;
+
+  if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    return res.status(400).json({ error: 'Message content is required' });
+  }
+
+  req.db.get('SELECT * FROM tasks WHERE id = ?', [taskId], (err, task) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+
+    // 验证参与者身份
+    const isClient = req.client.id === task.client_id;
+    const isAgent = req.client.type === 'agent' && req.client.id === task.agent_id;
+
+    if (!isClient && !isAgent) {
+      return res.status(403).json({ error: 'You are not a participant in this task' });
+    }
+
+    const messageId = uuidv4();
+    const senderType = isClient ? 'client' : 'agent';
+    const senderId = req.client.id;
+
+    req.db.run(
+      `INSERT INTO task_messages (id, task_id, sender_type, sender_id, content, message_type, created_at)
+       VALUES (?, ?, ?, ?, ?, 'text', NOW())`,
+      [messageId, taskId, senderType, senderId, content.trim()],
+      function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+
+        res.json({
+          success: true,
+          message_id: messageId,
+          sender_type: senderType,
+          content: content.trim(),
+          time: new Date().toISOString()
+        });
+      }
+    );
+  });
+});
+
+/**
+ * 执行容器操作
+ *
+ * POST /api/hall/container/:taskId/action
+ * Headers: X-Client-Key 或 X-Agent-Key
+ * Body: { "action": "accept|reject|resubmit", "comment": "..." }
+ */
+router.post('/hall/container/:taskId/action', authenticateClient, async (req, res) => {
+  const { taskId } = req.params;
+  const { action, comment, result: newResult } = req.body;
+
+  if (!action) {
+    return res.status(400).json({ error: 'Action is required' });
+  }
+
+  const validActions = ['accept', 'reject', 'resubmit', 'cancel', 'final_reject'];
+  if (!validActions.includes(action)) {
+    return res.status(400).json({
+      error: `Invalid action. Must be one of: ${validActions.join(', ')}`
+    });
+  }
+
+  req.db.get('SELECT * FROM tasks WHERE id = ?', [taskId], async (err, task) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+
+    const isClient = req.client.id === task.client_id;
+    const isAgent = req.client.type === 'agent' && req.client.id === task.agent_id;
+
+    if (!isClient && !isAgent) {
+      return res.status(403).json({ error: 'You are not a participant in this task' });
+    }
+
+    // 记录系统消息的辅助函数
+    const addSystemMessage = (content) => {
+      const msgId = uuidv4();
+      req.db.run(
+        `INSERT INTO task_messages (id, task_id, sender_type, sender_id, content, message_type, created_at)
+         VALUES (?, ?, 'system', 'system', ?, 'system', NOW())`,
+        [msgId, taskId, content]
+      );
+    };
+
+    // 处理不同操作
+    switch (action) {
+      case 'accept':
+        if (!isClient) {
+          return res.status(403).json({ error: 'Only client can accept' });
+        }
+        if (task.status !== 'submitted') {
+          return res.status(400).json({ error: `Cannot accept (current status: ${task.status})` });
+        }
+
+        // 重定向到 accept 端点
+        addSystemMessage('Client accepted the result');
+        req.url = `/hall/tasks/${taskId}/accept`;
+        req.method = 'POST';
+        return router.handle(req, res);
+
+      case 'reject':
+        if (!isClient) {
+          return res.status(403).json({ error: 'Only client can reject' });
+        }
+        if (task.status !== 'submitted') {
+          return res.status(400).json({ error: `Cannot reject (current status: ${task.status})` });
+        }
+
+        // 启动协商期（72小时）
+        req.db.run(
+          `UPDATE tasks SET
+             status = 'rejected',
+             reject_reason = ?,
+             rejection_count = COALESCE(rejection_count, 0) + 1,
+             negotiation_started_at = NOW(),
+             negotiation_deadline = NOW() + INTERVAL '72 hours'
+           WHERE id = ?`,
+          [comment || '', taskId],
+          function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+
+            addSystemMessage(`Client requested revision: "${comment || 'No specific reason provided'}". 72-hour negotiation window started.`);
+            logTaskEvent(req.db, taskId, 'rejected_negotiation', req.client.id, 'client', {
+              reason: comment,
+              negotiation_hours: 72
+            });
+
+            res.json({
+              success: true,
+              task_id: taskId,
+              status: 'rejected',
+              negotiation: {
+                started: true,
+                deadline_hours: 72,
+                message: 'Negotiation started. Agent can resubmit within 72 hours.'
+              }
+            });
+          }
+        );
+        break;
+
+      case 'resubmit':
+        if (!isAgent) {
+          return res.status(403).json({ error: 'Only agent can resubmit' });
+        }
+        if (task.status !== 'rejected') {
+          return res.status(400).json({ error: `Cannot resubmit (current status: ${task.status})` });
+        }
+        if (!newResult) {
+          return res.status(400).json({ error: 'New result is required for resubmit' });
+        }
+
+        // 检查协商截止时间
+        if (task.negotiation_deadline) {
+          const deadline = new Date(task.negotiation_deadline);
+          if (deadline < new Date()) {
+            return res.status(400).json({ error: 'Negotiation deadline has passed' });
+          }
+        }
+
+        req.db.run(
+          `UPDATE tasks SET status = 'submitted', result = ?, submitted_at = NOW() WHERE id = ?`,
+          [newResult, taskId],
+          function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+
+            addSystemMessage('Agent submitted a revised result');
+            logTaskEvent(req.db, taskId, 'resubmitted', req.client.id, 'agent', {
+              result_length: newResult.length
+            });
+
+            res.json({
+              success: true,
+              task_id: taskId,
+              status: 'submitted',
+              message: 'Revised result submitted. Awaiting client review.'
+            });
+          }
+        );
+        break;
+
+      case 'final_reject':
+        if (!isClient) {
+          return res.status(403).json({ error: 'Only client can final reject' });
+        }
+
+        // 最终拒绝 - 退款
+        const walletService = new WalletService(req.db);
+        try {
+          if (task.payment_status === 'frozen' && task.client_id) {
+            await walletService.refundTask(task.client_id, taskId, task.budget, 'MP');
+          }
+
+          req.db.run(
+            `UPDATE tasks SET status = 'cancelled', payment_status = 'refunded' WHERE id = ?`,
+            [taskId],
+            function(err) {
+              if (err) return res.status(500).json({ error: err.message });
+
+              addSystemMessage('Client final rejected. Task cancelled and refunded.');
+              logTaskEvent(req.db, taskId, 'final_rejected', req.client.id, 'client', {
+                reason: comment,
+                refunded: true
+              });
+
+              // 处理信用分
+              const creditSystem = new CreditSystem(req.db);
+              creditSystem.handleRejection(task.agent_id, taskId, task.rejection_count || 1)
+                .then(() => {
+                  res.json({
+                    success: true,
+                    task_id: taskId,
+                    status: 'cancelled',
+                    refunded: true,
+                    message: 'Task cancelled. Payment refunded.'
+                  });
+                })
+                .catch(err => {
+                  console.error('Credit update failed:', err);
+                  res.json({
+                    success: true,
+                    task_id: taskId,
+                    status: 'cancelled',
+                    refunded: true,
+                    message: 'Task cancelled. Payment refunded.'
+                  });
+                });
+            }
+          );
+        } catch (walletErr) {
+          return res.status(500).json({ error: walletErr.message });
+        }
+        break;
+
+      case 'cancel':
+        if (!isClient) {
+          return res.status(403).json({ error: 'Only client can cancel' });
+        }
+        if (task.status !== 'open') {
+          return res.status(400).json({ error: 'Can only cancel open tasks' });
+        }
+
+        // 重定向到 cancel 端点
+        addSystemMessage('Client cancelled the task');
+        req.url = `/hall/tasks/${taskId}/cancel`;
+        req.method = 'POST';
+        return router.handle(req, res);
+
+      default:
+        return res.status(400).json({ error: 'Unknown action' });
+    }
+  });
+});
+
+// ==================== 首页动态展示 API ====================
+
+/**
+ * 获取精选 Agent（带热度）
+ *
+ * GET /api/agents/featured
+ * Query: limit (default 10)
+ *
+ * 返回活跃的 Agent 列表，按热度排序
+ */
+router.get('/agents/featured', (req, res) => {
+  const { limit = 10 } = req.query;
+
+  // 热度计算：最近7天完成的任务数 + 评分加权
+  const sql = `
+    SELECT a.id, a.name, a.skills, a.rating, a.total_tasks, a.total_earnings,
+           a.status, a.owner_id, a.owner_type,
+           (
+             SELECT COUNT(*) FROM tasks t
+             WHERE t.agent_id = a.id
+             AND t.status = 'completed'
+             AND t.completed_at > NOW() - INTERVAL '7 days'
+           ) as recent_tasks,
+           COALESCE(
+             (SELECT AVG(client_rating) FROM tasks
+              WHERE agent_id = a.id AND client_rating IS NOT NULL
+              AND completed_at > NOW() - INTERVAL '30 days'
+             ), a.rating
+           ) as recent_rating
+    FROM agents a
+    WHERE a.status = 'active'
+    ORDER BY
+      (recent_tasks * 10 + a.rating * 5 + a.total_tasks * 0.5) DESC,
+      a.created_at DESC
+    LIMIT ?
+  `;
+
+  req.db.all(sql, [parseInt(limit)], (err, agents) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const featured = agents.map(a => {
+      // 计算热度级别 (0-3)
+      let heatLevel = 0;
+      if (a.recent_tasks > 0) heatLevel = 1;
+      if (a.recent_tasks >= 3) heatLevel = 2;
+      if (a.recent_tasks >= 5 && a.recent_rating >= 4.5) heatLevel = 3;
+
+      return {
+        id: a.id,
+        name: a.name,
+        skills: JSON.parse(a.skills || '[]'),
+        rating: a.rating,
+        total_tasks: a.total_tasks,
+        recent_tasks: a.recent_tasks,
+        heat_level: heatLevel,  // 0=cold, 1=warm, 2=hot, 3=fire
+        owner: a.owner_id ? { id: a.owner_id, type: a.owner_type } : null
+      };
+    });
+
+    res.json({
+      agents: featured,
+      total: featured.length
+    });
+  });
+});
+
+/**
+ * 获取最近活动流
+ *
+ * GET /api/activity/recent
+ * Query: limit (default 20)
+ *
+ * 返回最近的平台活动（任务完成、评价、新Agent等）
+ */
+router.get('/activity/recent', (req, res) => {
+  const { limit = 20 } = req.query;
+
+  // 获取多种活动并合并
+  const activities = [];
+
+  // 1. 最近完成的任务
+  const tasksQuery = new Promise((resolve, reject) => {
+    req.db.all(
+      `SELECT t.id, t.title, t.budget, t.completed_at, t.client_rating,
+              a.id as agent_id, a.name as agent_name
+       FROM tasks t
+       JOIN agents a ON t.agent_id = a.id
+       WHERE t.status = 'completed'
+       ORDER BY t.completed_at DESC
+       LIMIT ?`,
+      [parseInt(limit)],
+      (err, tasks) => {
+        if (err) return reject(err);
+        resolve(tasks.map(t => ({
+          type: 'task_completed',
+          time: t.completed_at,
+          data: {
+            task_id: t.id,
+            task_title: t.title,
+            budget: t.budget,
+            agent_id: t.agent_id,
+            agent_name: t.agent_name,
+            rating: t.client_rating
+          }
+        })));
+      }
+    );
+  });
+
+  // 2. 最近的5星评价
+  const ratingsQuery = new Promise((resolve, reject) => {
+    req.db.all(
+      `SELECT t.id, t.title, t.client_rating, t.client_comment, t.completed_at,
+              a.id as agent_id, a.name as agent_name
+       FROM tasks t
+       JOIN agents a ON t.agent_id = a.id
+       WHERE t.client_rating = 5
+       ORDER BY t.completed_at DESC
+       LIMIT ?`,
+      [parseInt(limit / 2)],
+      (err, ratings) => {
+        if (err) return reject(err);
+        resolve(ratings.map(r => ({
+          type: 'five_star_rating',
+          time: r.completed_at,
+          data: {
+            task_id: r.id,
+            agent_id: r.agent_id,
+            agent_name: r.agent_name,
+            comment: r.client_comment
+          }
+        })));
+      }
+    );
+  });
+
+  // 3. 最近注册的 Agent
+  const agentsQuery = new Promise((resolve, reject) => {
+    req.db.all(
+      `SELECT id, name, skills, created_at
+       FROM agents
+       WHERE status = 'active'
+       ORDER BY created_at DESC
+       LIMIT ?`,
+      [parseInt(limit / 2)],
+      (err, agents) => {
+        if (err) return reject(err);
+        resolve(agents.map(a => ({
+          type: 'new_agent',
+          time: a.created_at,
+          data: {
+            agent_id: a.id,
+            agent_name: a.name,
+            skills: JSON.parse(a.skills || '[]')
+          }
+        })));
+      }
+    );
+  });
+
+  Promise.all([tasksQuery, ratingsQuery, agentsQuery])
+    .then(([tasks, ratings, agents]) => {
+      // 合并并按时间排序
+      const allActivities = [...tasks, ...ratings, ...agents]
+        .sort((a, b) => new Date(b.time) - new Date(a.time))
+        .slice(0, parseInt(limit));
+
+      res.json({
+        activities: allActivities,
+        total: allActivities.length
+      });
+    })
+    .catch(err => {
+      console.error('[Activity] Error:', err);
+      res.status(500).json({ error: err.message });
+    });
 });
 
 // ==================== 兼容旧接口 ====================

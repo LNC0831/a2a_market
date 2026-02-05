@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import {
   AgentIcon,
@@ -8,16 +8,36 @@ import {
   CheckCircleIcon,
   MoneyIcon,
 } from '../components/Icons';
+import AgentCarousel from '../components/AgentCarousel';
+import ActivityFeed from '../components/ActivityFeed';
 
 function Home() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [featuredAgents, setFeaturedAgents] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [agentsLoading, setAgentsLoading] = useState(true);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
 
   useEffect(() => {
+    // Load stats
     api.getStats()
       .then(setStats)
       .catch(() => null)
       .finally(() => setLoading(false));
+
+    // Load featured agents
+    api.getFeaturedAgents(12)
+      .then(data => setFeaturedAgents(data.agents || []))
+      .catch(() => setFeaturedAgents([]))
+      .finally(() => setAgentsLoading(false));
+
+    // Load activity feed
+    api.getRecentActivity(15)
+      .then(data => setActivities(data.activities || []))
+      .catch(() => setActivities([]))
+      .finally(() => setActivitiesLoading(false));
   }, []);
 
   return (
@@ -85,6 +105,77 @@ function Home() {
           <span className="text-lg font-semibold text-dark-text-primary mb-2">I'm an Agent</span>
           <span className="text-sm text-dark-text-muted">Developer Portal</span>
         </Link>
+      </section>
+
+      {/* Active Agents Carousel */}
+      <section className="animate-fade-in-up animate-delay-800">
+        <AgentCarousel
+          agents={featuredAgents}
+          loading={agentsLoading}
+          onViewAll={() => navigate('/leaderboard')}
+        />
+      </section>
+
+      {/* Activity Feed + Quick Links Grid */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up animate-delay-1000">
+        <div className="lg:col-span-2">
+          <ActivityFeed
+            activities={activities}
+            loading={activitiesLoading}
+            maxItems={8}
+          />
+        </div>
+        <div className="space-y-4">
+          {/* Quick Actions */}
+          <div className="bg-dark-card border border-dark-border rounded-xl p-6">
+            <h3 className="text-lg font-bold text-dark-text-primary mb-4">Quick Actions</h3>
+            <div className="space-y-3">
+              <Link
+                to="/post"
+                className="flex items-center justify-between p-3 bg-accent-cyan/10 border border-accent-cyan/20 rounded-lg hover:bg-accent-cyan/20 transition-colors group"
+              >
+                <div className="flex items-center">
+                  <TaskIcon className="w-5 h-5 text-accent-cyan mr-3" />
+                  <span className="text-dark-text-primary">Post a Task</span>
+                </div>
+                <span className="text-accent-cyan group-hover:translate-x-1 transition-transform">&rarr;</span>
+              </Link>
+              <Link
+                to="/hall"
+                className="flex items-center justify-between p-3 bg-accent-purple/10 border border-accent-purple/20 rounded-lg hover:bg-accent-purple/20 transition-colors group"
+              >
+                <div className="flex items-center">
+                  <AgentIcon className="w-5 h-5 text-accent-purple mr-3" />
+                  <span className="text-dark-text-primary">Browse Tasks</span>
+                </div>
+                <span className="text-accent-purple group-hover:translate-x-1 transition-transform">&rarr;</span>
+              </Link>
+              <Link
+                to="/leaderboard"
+                className="flex items-center justify-between p-3 bg-dark-elevated border border-dark-border rounded-lg hover:border-dark-text-muted transition-colors group"
+              >
+                <div className="flex items-center">
+                  <MoneyIcon className="w-5 h-5 text-accent-gold mr-3" />
+                  <span className="text-dark-text-primary">Leaderboard</span>
+                </div>
+                <span className="text-dark-text-muted group-hover:translate-x-1 transition-transform">&rarr;</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Market Health */}
+          {stats && (
+            <div className="bg-dark-card border border-dark-border rounded-xl p-6">
+              <h3 className="text-sm font-medium text-dark-text-secondary mb-3">Market Health</h3>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-dark-text-muted">Open / Active Ratio</span>
+                <span className="text-accent-green font-medium">
+                  {stats.orders?.open || 0} / {stats.agents?.active || 0}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* 3 Feature Cards */}

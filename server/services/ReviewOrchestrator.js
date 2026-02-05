@@ -1,20 +1,26 @@
 /**
  * Review Orchestrator Service
  *
- * Implements the "Progressive Activation" architecture for task review.
- * Coordinates between AI Judge (Tier 1) and External Judges (Tier 2).
+ * UPDATED 2026-02-05: Simplified to safety-only mode
  *
- * Design Philosophy:
- * - Build complete skeleton now, activate progressively via config
- * - V1: Pure AI Judge (current)
- * - V2: Record external opinions
- * - V3: External opinions have weight
- * - V4: Full decentralization
+ * The AI now ONLY performs safety checks (empty, gibberish, placeholder detection).
+ * Quality decisions are entirely up to the client.
+ *
+ * New Flow:
+ * 1. Agent submits result
+ * 2. AI performs safety check (not quality judgment)
+ * 3. If unsafe (empty/gibberish/placeholder) - block submission
+ * 4. If safe - submission allowed, client decides on quality
+ *
+ * Legacy Features (preserved for backward compatibility):
+ * - Progressive Activation architecture (V1-V4)
+ * - External judges coordination (Tier 2)
+ * - Consensus calculation
  *
  * Key Principles:
- * - Never block waiting for any single agent
- * - Always have automated fallbacks
- * - Trust is earned through data, not assumed
+ * - Client has full decision authority on quality
+ * - AI only provides safety guardrails
+ * - Never block legitimate submissions
  */
 
 const { v4: uuidv4 } = require('uuid');
@@ -32,16 +38,78 @@ class ReviewOrchestrator {
   /**
    * Main entry point: process a task submission
    *
+   * NEW BEHAVIOR (2026-02-05):
+   * - Only performs safety check, not quality judgment
+   * - Returns { safe, allowed } - no more pass/fail recommendations
+   * - Client has full decision authority on quality
+   *
    * @param {string} taskId - Task ID
    * @param {string} result - Submitted result
-   * @returns {Promise<Object>} Review result with decision
+   * @returns {Promise<Object>} Safety check result
    */
   async processSubmission(taskId, result) {
     const startTime = Date.now();
 
     try {
+      console.log(`[ReviewOrchestrator] Processing submission for task ${taskId} (safety-only mode)`);
+
+      // Step 1: Perform safety check (NOT quality judgment)
+      const safetyResult = await this.aiJudge.safetyCheck(taskId);
+
+      const executionTime = Date.now() - startTime;
+      console.log(`[ReviewOrchestrator] Safety check completed in ${executionTime}ms | Safe: ${safetyResult.safe}`);
+
+      // If unsafe, block submission
+      if (!safetyResult.safe) {
+        return {
+          success: false,
+          allowed: false,
+          safe: false,
+          reason: safetyResult.reason,
+          message: safetyResult.message,
+          details: safetyResult.details,
+          execution_time: executionTime
+        };
+      }
+
+      // Safe submission - allow it, client decides quality
+      return {
+        success: true,
+        allowed: true,
+        safe: true,
+        message: 'Submission passed safety checks. Awaiting client review.',
+        details: safetyResult.details,
+        execution_time: executionTime,
+        // No score, no pass/fail - client decides
+        client_decision_required: true
+      };
+
+    } catch (error) {
+      console.error(`[ReviewOrchestrator] Error processing task ${taskId}:`, error.message);
+      // On error, allow submission (benefit of the doubt)
+      return {
+        success: true,
+        allowed: true,
+        safe: true,
+        message: 'Safety check unavailable, submission allowed.',
+        error: error.message,
+        fallback: true
+      };
+    }
+  }
+
+  /**
+   * Legacy: Full quality evaluation (DEPRECATED)
+   * Use processSubmission() for safety-only mode.
+   *
+   * @deprecated Kept for backward compatibility with V1-V4 configs
+   */
+  async processSubmissionLegacy(taskId, result) {
+    const startTime = Date.now();
+
+    try {
       // Step 1: Always run AI Judge (Tier 1)
-      console.log(`[ReviewOrchestrator] Processing submission for task ${taskId}`);
+      console.log(`[ReviewOrchestrator] Processing submission for task ${taskId} (LEGACY MODE)`);
       const aiResult = await this.aiJudge.judge(taskId);
 
       // Step 2: Determine if we need Tier 2

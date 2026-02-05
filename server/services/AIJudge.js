@@ -2,19 +2,21 @@
  * AI Judge Service
  *
  * Platform built-in AI service for evaluating task submissions.
- * Uses semantic understanding to assess quality, replacing rule-based autoJudge.
  *
- * Features:
- * - Semantic quality evaluation (relevance, completeness, quality, format)
+ * UPDATED 2026-02-05: Simplified to safety check only
+ * - AI now only performs safety checks (empty, gibberish, placeholder detection)
+ * - Quality decisions are left entirely to the client
+ * - No more pass/fail recommendations based on quality
+ *
+ * Safety Check Features:
+ * - Detect empty or near-empty submissions
+ * - Detect placeholder/lorem ipsum text
+ * - Detect gibberish/random characters
+ * - Detect obviously fraudulent submissions
+ *
+ * Legacy Features (kept for backward compatibility):
+ * - Full quality evaluation (deprecated, use safetyCheck instead)
  * - Confidence score for progressive activation architecture
- * - Structured JSON output with scores and comments
- * - Category-aware evaluation criteria
- * - Fallback to rule-based checking if AI fails
- *
- * Part of the Progressive Activation Review System:
- * - Outputs confidence (0-100) to help decide if Tier 2 review is needed
- * - High confidence + clear score = auto decision
- * - Low confidence or borderline score = escalate to external judges
  */
 
 const ai = require('../ai');
@@ -49,11 +51,229 @@ const CATEGORY_CRITERIA = {
   }
 };
 
+// Safety check patterns
+const SAFETY_PATTERNS = {
+  // Common placeholder texts
+  placeholders: [
+    /lorem ipsum/i,
+    /placeholder/i,
+    /todo:?\s*(fill|add|write|complete)/i,
+    /\[insert.*here\]/i,
+    /\(your.*here\)/i,
+    /example\s*text/i,
+    /sample\s*content/i,
+    /test\s*123/i,
+    /asdf+/i,
+    /qwerty/i,
+  ],
+  // Gibberish patterns (random characters)
+  gibberish: [
+    /^[a-z]{50,}$/i,  // Long string of letters without spaces
+    /(.)\1{10,}/,     // Same character repeated 10+ times
+    /[^\w\s]{20,}/,   // 20+ consecutive special characters
+  ],
+  // Minimum content thresholds
+  minLength: 10,
+  minWords: 3,
+};
+
 class AIJudge {
   constructor(db) {
     this.db = db;
     // Keep rule-based judge as fallback
     this.ruleBasedJudge = new AutoJudge(db);
+  }
+
+  /**
+   * Safety Check - Primary method (NEW)
+   *
+   * Performs only safety validation, not quality judgment.
+   * Detects: empty, placeholder, gibberish, fraudulent submissions.
+   * Client has full decision authority on quality.
+   *
+   * @param {string} taskId - Task ID to check
+   * @returns {Promise<Object>} { safe: boolean, reason?: string, details?: object }
+   */
+  async safetyCheck(taskId) {
+    return new Promise((resolve, reject) => {
+      this.db.get('SELECT * FROM tasks WHERE id = ?', [taskId], async (err, task) => {
+        if (err) return reject(err);
+        if (!task) return reject(new Error('Task not found'));
+
+        const result = task.result || '';
+        const trimmedResult = result.trim();
+
+        // 1. Check for empty submission
+        if (trimmedResult.length === 0) {
+          return resolve({
+            safe: false,
+            reason: 'empty_submission',
+            message: 'Submission is empty',
+            details: { length: 0 }
+          });
+        }
+
+        // 2. Check minimum length
+        if (trimmedResult.length < SAFETY_PATTERNS.minLength) {
+          return resolve({
+            safe: false,
+            reason: 'too_short',
+            message: 'Submission is too short',
+            details: { length: trimmedResult.length, minLength: SAFETY_PATTERNS.minLength }
+          });
+        }
+
+        // 3. Check word count
+        const words = trimmedResult.split(/\s+/).filter(w => w.length > 0);
+        if (words.length < SAFETY_PATTERNS.minWords) {
+          return resolve({
+            safe: false,
+            reason: 'too_few_words',
+            message: 'Submission has too few words',
+            details: { wordCount: words.length, minWords: SAFETY_PATTERNS.minWords }
+          });
+        }
+
+        // 4. Check for placeholder text
+        for (const pattern of SAFETY_PATTERNS.placeholders) {
+          if (pattern.test(trimmedResult)) {
+            return resolve({
+              safe: false,
+              reason: 'placeholder_detected',
+              message: 'Submission appears to contain placeholder text',
+              details: { pattern: pattern.toString() }
+            });
+          }
+        }
+
+        // 5. Check for gibberish
+        for (const pattern of SAFETY_PATTERNS.gibberish) {
+          if (pattern.test(trimmedResult)) {
+            return resolve({
+              safe: false,
+              reason: 'gibberish_detected',
+              message: 'Submission appears to be gibberish',
+              details: { pattern: pattern.toString() }
+            });
+          }
+        }
+
+        // 6. Optional: Use AI to check for obvious fraud (if content is suspiciously short for task)
+        // This is a lightweight check, not quality judgment
+        const descLength = (task.description || '').length;
+        const resultLength = trimmedResult.length;
+
+        // If task description is substantial but result is very short, flag for review
+        if (descLength > 200 && resultLength < 50) {
+          // Use AI for a quick fraud check
+          try {
+            const fraudCheck = await this.aiQuickFraudCheck(task);
+            if (!fraudCheck.safe) {
+              return resolve(fraudCheck);
+            }
+          } catch (aiError) {
+            // AI check failed, continue with rule-based only
+            console.log('[AIJudge] AI fraud check skipped:', aiError.message);
+          }
+        }
+
+        // All checks passed - submission is safe
+        resolve({
+          safe: true,
+          message: 'Submission passed safety checks',
+          details: {
+            length: trimmedResult.length,
+            wordCount: words.length,
+            checksPerformed: ['empty', 'length', 'words', 'placeholder', 'gibberish']
+          }
+        });
+      });
+    });
+  }
+
+  /**
+   * Quick AI-based fraud detection (not quality judgment)
+   * Only checks if submission is obviously fraudulent/fake
+   */
+  async aiQuickFraudCheck(task) {
+    const systemPrompt = `You are a fraud detection system. Your ONLY job is to detect obviously fraudulent submissions.
+
+DO NOT judge quality. DO NOT give scores. ONLY check for:
+1. Random/meaningless text disguised as real content
+2. Copy-pasted irrelevant content
+3. Obvious attempts to game the system
+
+Respond with JSON:
+{
+  "safe": true/false,
+  "reason": "fraud_detected" or null,
+  "explanation": "brief explanation if fraud detected"
+}`;
+
+    const userPrompt = `Task: ${task.title}
+Description: ${task.description}
+---
+Submitted Result:
+${task.result}`;
+
+    try {
+      const response = await ai.complete('ai_judge', systemPrompt, userPrompt, {
+        temperature: 0.1,
+        max_tokens: 200,
+        json_mode: true
+      });
+
+      const parsed = JSON.parse(response.content.match(/\{[\s\S]*\}/)[0]);
+
+      if (!parsed.safe) {
+        return {
+          safe: false,
+          reason: 'fraud_detected',
+          message: parsed.explanation || 'AI detected potentially fraudulent submission',
+          details: { ai_check: true }
+        };
+      }
+
+      return { safe: true };
+    } catch (error) {
+      // If AI fails, assume safe (benefit of the doubt)
+      return { safe: true };
+    }
+  }
+
+  /**
+   * Quick safety check without database (for API preview)
+   * @param {Object} taskData - { result, description, title }
+   */
+  quickSafetyCheck(taskData) {
+    const result = (taskData.result || '').trim();
+
+    if (result.length === 0) {
+      return { safe: false, reason: 'empty_submission', message: 'Submission is empty' };
+    }
+
+    if (result.length < SAFETY_PATTERNS.minLength) {
+      return { safe: false, reason: 'too_short', message: 'Submission is too short' };
+    }
+
+    const words = result.split(/\s+/).filter(w => w.length > 0);
+    if (words.length < SAFETY_PATTERNS.minWords) {
+      return { safe: false, reason: 'too_few_words', message: 'Submission has too few words' };
+    }
+
+    for (const pattern of SAFETY_PATTERNS.placeholders) {
+      if (pattern.test(result)) {
+        return { safe: false, reason: 'placeholder_detected', message: 'Placeholder text detected' };
+      }
+    }
+
+    for (const pattern of SAFETY_PATTERNS.gibberish) {
+      if (pattern.test(result)) {
+        return { safe: false, reason: 'gibberish_detected', message: 'Gibberish detected' };
+      }
+    }
+
+    return { safe: true, message: 'Submission passed safety checks' };
   }
 
   /**
@@ -226,11 +446,17 @@ You MUST respond with valid JSON in this exact format:
   }
 
   /**
-   * Main evaluation method
+   * Main evaluation method (DEPRECATED)
+   *
+   * @deprecated Use safetyCheck() instead. Full quality evaluation
+   * is being phased out - clients now have full decision authority.
+   *
    * @param {string} taskId - Task ID to evaluate
    * @returns {Promise<Object>} Evaluation result
    */
   async judge(taskId) {
+    console.warn('[AIJudge] judge() is deprecated. Use safetyCheck() instead.');
+
     return new Promise((resolve, reject) => {
       this.db.get('SELECT * FROM tasks WHERE id = ?', [taskId], async (err, task) => {
         if (err) return reject(err);

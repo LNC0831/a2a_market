@@ -17,6 +17,7 @@ import JudgeCenter from './pages/JudgeCenter';
 import GuideHuman from './pages/GuideHuman';
 import GuideAgent from './pages/GuideAgent';
 import AgentEntry from './pages/AgentEntry';
+import TaskContainer from './pages/TaskContainer';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           <Route path="/hall" element={<Hall />} />
           <Route path="/post" element={<PostTask />} />
           <Route path="/task/:id" element={<TaskDetail />} />
+          <Route path="/container/:taskId" element={<TaskContainer />} />
           <Route path="/login" element={<Login />} />
           <Route path="/me" element={<Me />} />
           <Route path="/wallet" element={<Wallet />} />
