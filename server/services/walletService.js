@@ -186,11 +186,12 @@ class WalletService {
       const trx = await this.db.beginTransaction();
       try {
         // Update wallet balance
+        // Note: Use 0.0 instead of 0 to ensure PostgreSQL infers REAL type for CASE expression
         await trx.query(
           `UPDATE wallets
            SET balance = balance + $1,
-               total_deposited = total_deposited + CASE WHEN $2 = 'deposit' THEN $3 ELSE 0 END,
-               total_earned = total_earned + CASE WHEN $4 IN ('task_earning', 'judge_reward', 'bonus') THEN $5 ELSE 0 END,
+               total_deposited = total_deposited + CASE WHEN $2 = 'deposit' THEN $3 ELSE 0.0 END,
+               total_earned = total_earned + CASE WHEN $4 IN ('task_earning', 'judge_reward', 'bonus') THEN $5 ELSE 0.0 END,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $6`,
           [amount, type, amount, type, amount, walletId]
@@ -229,11 +230,12 @@ class WalletService {
     return new Promise((resolve, reject) => {
       this.db.serialize(() => {
         // Update wallet balance
+        // Note: Use 0.0 instead of 0 for consistency with PostgreSQL path
         this.db.run(
           `UPDATE wallets
            SET balance = balance + ?,
-               total_deposited = total_deposited + CASE WHEN ? = 'deposit' THEN ? ELSE 0 END,
-               total_earned = total_earned + CASE WHEN ? IN ('task_earning', 'judge_reward', 'bonus') THEN ? ELSE 0 END,
+               total_deposited = total_deposited + CASE WHEN ? = 'deposit' THEN ? ELSE 0.0 END,
+               total_earned = total_earned + CASE WHEN ? IN ('task_earning', 'judge_reward', 'bonus') THEN ? ELSE 0.0 END,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = ?`,
           [amount, type, amount, type, amount, walletId],
@@ -297,14 +299,62 @@ class WalletService {
     const balanceAfter = balanceBefore - amount;
     const txId = `tx_${uuidv4()}`;
 
+    // Use PostgreSQL transaction if available
+    if (this.db.type === 'postgres' && this.db.beginTransaction) {
+      const trx = await this.db.beginTransaction();
+      try {
+        const result = await trx.query(
+          `UPDATE wallets
+           SET balance = balance - $1,
+               total_withdrawn = total_withdrawn + CASE WHEN $2 = 'withdraw' THEN $3 ELSE 0.0 END,
+               total_spent = total_spent + CASE WHEN $4 IN ('task_payment', 'platform_fee') THEN $5 ELSE 0.0 END,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $6 AND balance >= $7`,
+          [amount, type, amount, type, amount, walletId, amount]
+        );
+
+        if (result.rowCount === 0) {
+          await trx.rollback();
+          throw new Error('Insufficient balance or wallet not found');
+        }
+
+        await trx.query(
+          `INSERT INTO wallet_transactions
+           (id, wallet_id, type, amount, balance_before, balance_after, currency_code,
+            counterparty_id, counterparty_type, status, description, metadata,
+            related_task_id, created_at, completed_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'completed', $10, $11, $12,
+                   CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+          [
+            txId, walletId, type, -amount, balanceBefore, balanceAfter, wallet.currency_code,
+            metadata.counterparty_id || null, metadata.counterparty_type || null,
+            description, JSON.stringify(metadata), metadata.task_id || null
+          ]
+        );
+
+        await trx.commit();
+        return {
+          success: true,
+          transaction_id: txId,
+          balance_before: balanceBefore,
+          balance_after: balanceAfter,
+          amount: -amount
+        };
+      } catch (err) {
+        await trx.rollback();
+        throw err;
+      }
+    }
+
+    // SQLite fallback
     return new Promise((resolve, reject) => {
       this.db.serialize(() => {
         // Update wallet balance
         this.db.run(
           `UPDATE wallets
            SET balance = balance - ?,
-               total_withdrawn = total_withdrawn + CASE WHEN ? = 'withdraw' THEN ? ELSE 0 END,
-               total_spent = total_spent + CASE WHEN ? IN ('task_payment', 'platform_fee') THEN ? ELSE 0 END,
+               total_withdrawn = total_withdrawn + CASE WHEN ? = 'withdraw' THEN ? ELSE 0.0 END,
+               total_spent = total_spent + CASE WHEN ? IN ('task_payment', 'platform_fee') THEN ? ELSE 0.0 END,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = ? AND balance >= ?`,
           [amount, type, amount, type, amount, walletId, amount],
