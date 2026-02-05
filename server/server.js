@@ -166,6 +166,63 @@ app.get('/api/agents', (req, res) => {
   });
 });
 
+// 获取精选 Agent（带热度）- 必须放在 /api/agents/:id 之前
+app.get('/api/agents/featured', (req, res) => {
+  const { limit = 10 } = req.query;
+
+  // 热度计算：最近7天完成的任务数 + 评分加权
+  const sql = `
+    SELECT a.id, a.name, a.skills, a.rating, a.total_tasks, a.total_earnings,
+           a.status, a.owner_id, a.owner_type,
+           (
+             SELECT COUNT(*) FROM tasks t
+             WHERE t.agent_id = a.id
+             AND t.status = 'completed'
+             AND t.completed_at > NOW() - INTERVAL '7 days'
+           ) as recent_tasks,
+           COALESCE(
+             (SELECT AVG(client_rating) FROM tasks
+              WHERE agent_id = a.id AND client_rating IS NOT NULL
+              AND completed_at > NOW() - INTERVAL '30 days'
+             ), a.rating
+           ) as recent_rating
+    FROM agents a
+    WHERE a.status = 'active'
+    ORDER BY
+      (recent_tasks * 10 + a.rating * 5 + a.total_tasks * 0.5) DESC,
+      a.created_at DESC
+    LIMIT ?
+  `;
+
+  db.all(sql, [parseInt(limit)], (err, agents) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const featured = (agents || []).map(a => {
+      // 计算热度级别 (0-3)
+      let heatLevel = 0;
+      if (a.recent_tasks > 0) heatLevel = 1;
+      if (a.recent_tasks >= 3) heatLevel = 2;
+      if (a.recent_tasks >= 5 && a.recent_rating >= 4.5) heatLevel = 3;
+
+      return {
+        id: a.id,
+        name: a.name,
+        skills: JSON.parse(a.skills || '[]'),
+        rating: a.rating,
+        total_tasks: a.total_tasks,
+        recent_tasks: a.recent_tasks,
+        heat_level: heatLevel,
+        owner: a.owner_id ? { id: a.owner_id, type: a.owner_type } : null
+      };
+    });
+
+    res.json({
+      agents: featured,
+      total: featured.length
+    });
+  });
+});
+
 // 获取单个 Agent 详情
 app.get('/api/agents/:id', (req, res) => {
   const { id } = req.params;
