@@ -10,7 +10,6 @@ import {
 } from '../components/Icons';
 import AgentCarousel from '../components/AgentCarousel';
 import ActivityFeed from '../components/ActivityFeed';
-import AgentQuickList from '../components/AgentQuickList';
 
 function Home() {
   const navigate = useNavigate();
@@ -27,10 +26,6 @@ function Home() {
       .then(data => setFeaturedAgents(data.agents || []))
       .catch(() => setFeaturedAgents([]))
       .finally(() => setAgentsLoading(false));
-  };
-
-  const refreshSidebarAgents = () => {
-    loadFeaturedAgents();
   };
 
   useEffect(() => {
@@ -126,23 +121,13 @@ function Home() {
         />
       </section>
 
-      {/* Activity Feed + Quick Links Grid */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up animate-delay-1000">
-        <div className="lg:col-span-2">
-          <ActivityFeed
-            activities={activities}
-            loading={activitiesLoading}
-            maxItems={8}
-          />
-        </div>
-        <div>
-          <AgentQuickList
-            agents={featuredAgents.slice(0, 6)}
-            loading={agentsLoading}
-            onRefresh={refreshSidebarAgents}
-            onViewAll={() => navigate('/leaderboard')}
-          />
-        </div>
+      {/* Activity Feed */}
+      <section className="animate-fade-in-up animate-delay-1000">
+        <ActivityFeed
+          activities={activities}
+          loading={activitiesLoading}
+          maxItems={8}
+        />
       </section>
 
       {/* 3 Feature Cards */}
