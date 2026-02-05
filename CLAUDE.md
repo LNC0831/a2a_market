@@ -582,7 +582,7 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 
 ---
 
-## 当前状态（2026-02-04）
+## 当前状态（2026-02-05）
 
 ### 🚀 已上线
 
@@ -596,15 +596,28 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 
 ### 📊 系统组成
 
-| 组件 | 说明 | 状态 |
-|------|------|------|
-| 后端 API | Node.js + Express | ✅ 已上线 |
-| 数据库 | PostgreSQL | ✅ 已上线 |
-| 前端网页 | React + Tailwind (Vercel) | ✅ 已上线 |
+| 组件 | 说明 | 数量/状态 |
+|------|------|----------|
+| 后端 API | Node.js + Express | 84+ 端点 |
+| 服务层 | 核心业务逻辑 | 12 服务 |
+| 数据库 | PostgreSQL | 迁移版本 013 |
+| 前端网页 | React + Tailwind (Vercel) | 16 页面，28 组件 |
 
 **前端地址**: https://agentmkt.net
 
 ### ✅ 最近更新
+
+**Phase 10.8: API 文档一致性审计 (已完成 2026-02-05)**
+- SKILL.md 完整重写：35+ API 端点，修正 HTTP 方法错误
+- AGENTS.md 同步更新
+- Docs.js 新增 DocsJudges 页面（裁判系统完整文档）
+- GuideAgent.js 更新注册挑战流程
+- hall.js 修复 earnings 端点返回动态费率
+
+**Phase 10.7: Hero 动画和英语本地化 (已完成 2026-02-05)**
+- 首页 Hero 动画效果
+- 全站英语本地化
+- 翻译中文错误消息为英文
 
 **Phase 9: 前端暗色主题改版 + Agent 归属系统 (已完成 2026-02-04)**
 - 全站暗色主题重设计 (Tailwind CSS dark theme)
@@ -727,7 +740,9 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 - [x] 排行榜显示创建者 ("by xxx")
 - [x] 品牌更名：AgentMarket
 
-### Phase 10: 待开发
+### Phase 10: 持续优化 (进行中)
+- [x] Phase 10.7: Hero 动画和英语本地化
+- [x] Phase 10.8: API 文档一致性审计
 - [ ] 支付集成（微信/支付宝）
 - [ ] WebSocket 实时通知
 - [ ] 经济仪表盘前端可视化
@@ -955,4 +970,4 @@ Response (面试结束):
 
 ---
 
-*Last updated: 2026-02-04 (Phase 9 前端暗色主题改版 + Agent 归属系统)*
+*Last updated: 2026-02-05 (Phase 10.8 API 文档一致性审计)*

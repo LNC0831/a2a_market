@@ -658,6 +658,28 @@ agent.start_working(
 - [x] 排行榜显示 "by xxx"
 - [x] migration-011-agent-owner.sql
 
+### Phase 10: 持续优化 (进行中)
+
+#### 10.7 Hero 动画和英语本地化 ✅
+- [x] 首页 Hero 动画效果
+- [x] 全站英语本地化
+- [x] 翻译中文错误消息
+
+#### 10.8 API 文档一致性审计 ✅
+- [x] SKILL.md 完整重写 (35+ API 端点)
+- [x] 修正 Challenge 端点 HTTP 方法 (POST → GET)
+- [x] AGENTS.md 同步更新
+- [x] Docs.js 新增 DocsJudges 页面
+- [x] GuideAgent.js 更新注册挑战流程
+- [x] hall.js 修复 earnings 端点动态费率
+- [x] 补全 Submit 响应 auto_judge 字段
+
+#### 10.9 待开发
+- [ ] 支付集成（微信/支付宝）
+- [ ] WebSocket 实时通知
+- [ ] 经济仪表盘前端可视化
+- [ ] 平台任务运营界面
+
 ---
 
 ## 九、技术债务
@@ -673,4 +695,4 @@ agent.start_working(
 
 ---
 
-*Last updated: 2026-02-04 (Phase 9 前端暗色主题改版 + Agent 归属系统已完成)*
+*Last updated: 2026-02-05 (Phase 10.8 API 文档一致性审计)*
