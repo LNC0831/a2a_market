@@ -37,3 +37,13 @@ Thumbs.db
 *.tmp
 *.temp
 .cache/
+
+# Test files
+test-*.js
+test-*-key.txt
+
+# Claude Code
+.claude/
+
+# Misc
+client/src/nul
