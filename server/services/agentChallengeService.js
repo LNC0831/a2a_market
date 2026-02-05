@@ -5,22 +5,18 @@
  * 通过计算挑战确保只有程序化的 Agent 能完成注册
  *
  * 挑战类型:
- * - SHA256 哈希计算
- * - Base64 编解码
- * - 数学运算
- * - Unix 时间戳转换
- * - 字符串处理
+ * - 复杂数学运算（大数乘法、链式运算、整数除法、大数加减）
  *
- * 人类难以在 10 秒内完成 5 道题，但 Agent 可以在毫秒级完成
+ * 人类难以在 3 秒内完成 3 道复杂计算题，但 Agent 可以在毫秒级完成
  */
 
 const crypto = require('crypto');
 
 // 挑战配置
 const CHALLENGE_CONFIG = {
-  expiry_seconds: 10,          // 挑战有效期 10 秒
-  required_questions: 5,        // 需要回答 5 道题
-  max_completion_time_ms: 8000  // 最大完成时间 8 秒（留 2 秒网络延迟）
+  expiry_seconds: 5,              // 挑战有效期 5 秒
+  required_questions: 3,          // 需要回答 3 道题
+  max_completion_time_ms: 3000    // 最大完成时间 3 秒（留 2 秒网络延迟）
 };
 
 // 存储活跃的挑战 (生产环境应使用 Redis)
@@ -49,16 +45,15 @@ class AgentChallengeService {
     const questions = [];
     const answers = [];
 
-    // 生成 5 道不同类型的题目
+    // 生成 3 道不同类型的数学题
     const questionGenerators = [
-      this._generateSHA256Question,
-      this._generateBase64DecodeQuestion,
-      this._generateMathQuestion,
-      this._generateTimestampQuestion,
-      this._generateStringQuestion
+      this._generateMultiplicationQuestion,
+      this._generateChainOperationQuestion,
+      this._generateDivisionQuestion,
+      this._generateAdditionQuestion
     ];
 
-    // 随机打乱顺序
+    // 随机打乱顺序并选择 3 道题
     const shuffled = questionGenerators.sort(() => Math.random() - 0.5);
 
     for (let i = 0; i < CHALLENGE_CONFIG.required_questions; i++) {
@@ -81,12 +76,15 @@ class AgentChallengeService {
 
     return {
       challenge_id: challengeId,
-      questions,
+      challenges: questions,
       expires_at: expiresAt,
-      expires_in_seconds: CHALLENGE_CONFIG.expiry_seconds,
+      expires_in: CHALLENGE_CONFIG.expiry_seconds,
+      note: `Solve ${CHALLENGE_CONFIG.required_questions} math problems within ${CHALLENGE_CONFIG.max_completion_time_ms / 1000} seconds to prove you are automated`,
       instructions: {
-        message: 'Complete all questions within the time limit to prove you are an Agent',
+        message: 'Complete all math problems within the time limit to prove you are an Agent',
         time_limit: `${CHALLENGE_CONFIG.expiry_seconds} seconds`,
+        completion_threshold: `${CHALLENGE_CONFIG.max_completion_time_ms / 1000} seconds`,
+        math_note: 'All operations use integer arithmetic. Division uses floor (integer division).',
         submit_to: 'POST /api/hall/register with challenge_id and answers'
       }
     };
@@ -157,80 +155,58 @@ class AgentChallengeService {
   }
 
   /**
-   * SHA256 哈希题
+   * 大数乘法题 (4位 × 3位)
+   * 例如: 1234 * 567 = 699678
    */
-  _generateSHA256Question() {
-    const input = crypto.randomBytes(8).toString('hex');
-    const hash = crypto.createHash('sha256').update(input).digest('hex');
+  _generateMultiplicationQuestion() {
+    const a = Math.floor(Math.random() * 9000) + 1000; // 1000-9999
+    const b = Math.floor(Math.random() * 900) + 100;   // 100-999
+    const result = a * b;
 
     return {
       question: {
-        type: 'sha256',
-        prompt: `Calculate the SHA256 hash of the string: "${input}"`,
-        input: input
+        type: 'math',
+        expression: `${a} * ${b}`,
+        prompt: `Calculate: ${a} * ${b}`
       },
-      answer: hash
+      answer: String(result)
     };
   }
 
   /**
-   * Base64 解码题
+   * 链式运算题 (带括号)
+   * 例如: (8765 + 4321) * 23 = 301178
    */
-  _generateBase64DecodeQuestion() {
-    // 生成随机字符串
-    const original = crypto.randomBytes(6).toString('hex');
-    const encoded = Buffer.from(original).toString('base64');
-
-    return {
-      question: {
-        type: 'base64_decode',
-        prompt: `Decode this Base64 string: "${encoded}"`,
-        input: encoded
-      },
-      answer: original
-    };
-  }
-
-  /**
-   * 数学运算题
-   */
-  _generateMathQuestion() {
+  _generateChainOperationQuestion() {
     const operations = [
       () => {
-        const a = Math.floor(Math.random() * 1000000);
-        const b = Math.floor(Math.random() * 1000000);
+        const a = Math.floor(Math.random() * 9000) + 1000; // 1000-9999
+        const b = Math.floor(Math.random() * 9000) + 1000; // 1000-9999
+        const c = Math.floor(Math.random() * 90) + 10;     // 10-99
+        const result = (a + b) * c;
         return {
-          prompt: `Calculate: ${a} + ${b}`,
-          input: { operation: 'add', a, b },
-          answer: String(a + b)
+          expression: `(${a} + ${b}) * ${c}`,
+          result: result
         };
       },
       () => {
-        const a = Math.floor(Math.random() * 10000);
-        const b = Math.floor(Math.random() * 10000);
+        const a = Math.floor(Math.random() * 9000) + 1000; // 1000-9999
+        const b = Math.floor(Math.random() * 900) + 100;   // 100-999
+        const c = Math.floor(Math.random() * 9000) + 1000; // 1000-9999
+        const result = a * b + c;
         return {
-          prompt: `Calculate: ${a} * ${b}`,
-          input: { operation: 'multiply', a, b },
-          answer: String(a * b)
+          expression: `${a} * ${b} + ${c}`,
+          result: result
         };
       },
       () => {
-        const base = Math.floor(Math.random() * 50) + 2;
-        const exp = Math.floor(Math.random() * 10) + 2;
+        const a = Math.floor(Math.random() * 9000) + 1000; // 1000-9999
+        const b = Math.floor(Math.random() * 9000) + 1000; // 1000-9999
+        const c = Math.floor(Math.random() * 90) + 10;     // 10-99
+        const result = (a - b) * c;
         return {
-          prompt: `Calculate: ${base}^${exp} (${base} to the power of ${exp})`,
-          input: { operation: 'power', base, exponent: exp },
-          answer: String(Math.pow(base, exp))
-        };
-      },
-      () => {
-        const n = Math.floor(Math.random() * 15) + 5;
-        let factorial = 1;
-        for (let i = 2; i <= n; i++) factorial *= i;
-        return {
-          prompt: `Calculate: ${n}! (factorial of ${n})`,
-          input: { operation: 'factorial', n },
-          answer: String(factorial)
+          expression: `(${a} - ${b}) * ${c}`,
+          result: result
         };
       }
     ];
@@ -239,75 +215,52 @@ class AgentChallengeService {
     return {
       question: {
         type: 'math',
-        prompt: op.prompt,
-        input: op.input
+        expression: op.expression,
+        prompt: `Calculate: ${op.expression}`
       },
-      answer: op.answer
+      answer: String(op.result)
     };
   }
 
   /**
-   * Unix 时间戳题
+   * 整数除法题 (使用 floor)
+   * 例如: 987654 / 123 = 8029
    */
-  _generateTimestampQuestion() {
-    // 生成随机的 ISO 日期
-    const year = 2020 + Math.floor(Math.random() * 6);
-    const month = Math.floor(Math.random() * 12);
-    const day = Math.floor(Math.random() * 28) + 1;
-    const hour = Math.floor(Math.random() * 24);
-    const minute = Math.floor(Math.random() * 60);
-    const second = Math.floor(Math.random() * 60);
-
-    const date = new Date(Date.UTC(year, month, day, hour, minute, second));
-    const isoString = date.toISOString();
-    const timestamp = Math.floor(date.getTime() / 1000);
+  _generateDivisionQuestion() {
+    const a = Math.floor(Math.random() * 900000) + 100000; // 100000-999999
+    const b = Math.floor(Math.random() * 900) + 100;       // 100-999
+    const result = Math.floor(a / b);
 
     return {
       question: {
-        type: 'timestamp',
-        prompt: `Convert this ISO date to Unix timestamp (seconds): "${isoString}"`,
-        input: isoString
+        type: 'math',
+        expression: `${a} / ${b}`,
+        prompt: `Calculate (integer division): ${a} / ${b}`
       },
-      answer: String(timestamp)
+      answer: String(result)
     };
   }
 
   /**
-   * 字符串处理题
+   * 大数加减法题
+   * 例如: 123456 + 789012 = 912468
    */
-  _generateStringQuestion() {
+  _generateAdditionQuestion() {
     const operations = [
       () => {
-        const str = crypto.randomBytes(10).toString('hex');
+        const a = Math.floor(Math.random() * 900000) + 100000; // 100000-999999
+        const b = Math.floor(Math.random() * 900000) + 100000; // 100000-999999
         return {
-          prompt: `Reverse this string: "${str}"`,
-          input: { operation: 'reverse', string: str },
-          answer: str.split('').reverse().join('')
+          expression: `${a} + ${b}`,
+          result: a + b
         };
       },
       () => {
-        const str = crypto.randomBytes(8).toString('hex');
+        const a = Math.floor(Math.random() * 900000) + 500000; // 500000-1399999
+        const b = Math.floor(Math.random() * 400000) + 100000; // 100000-499999
         return {
-          prompt: `Count the occurrences of character 'a' in: "${str}"`,
-          input: { operation: 'count_char', string: str, char: 'a' },
-          answer: String((str.match(/a/g) || []).length)
-        };
-      },
-      () => {
-        const length = Math.floor(Math.random() * 20) + 10;
-        const str = crypto.randomBytes(length).toString('hex').slice(0, length);
-        return {
-          prompt: `What is the length of this string: "${str}"`,
-          input: { operation: 'length', string: str },
-          answer: String(str.length)
-        };
-      },
-      () => {
-        const str = crypto.randomBytes(6).toString('hex');
-        return {
-          prompt: `Convert to uppercase: "${str}"`,
-          input: { operation: 'uppercase', string: str },
-          answer: str.toUpperCase()
+          expression: `${a} - ${b}`,
+          result: a - b
         };
       }
     ];
@@ -315,11 +268,11 @@ class AgentChallengeService {
     const op = operations[Math.floor(Math.random() * operations.length)]();
     return {
       question: {
-        type: 'string',
-        prompt: op.prompt,
-        input: op.input
+        type: 'math',
+        expression: op.expression,
+        prompt: `Calculate: ${op.expression}`
       },
-      answer: op.answer
+      answer: String(op.result)
     };
   }
 }

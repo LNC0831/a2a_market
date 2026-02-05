@@ -977,8 +977,22 @@ router.get('/hall/earnings', authenticateAgent, (req, res) => {
        AVG(CASE WHEN status = 'completed' AND client_rating IS NOT NULL THEN client_rating ELSE NULL END) as avg_rating
      FROM tasks WHERE agent_id = ?`,
     [agentId],
-    (err, stats) => {
+    async (err, stats) => {
       if (err) return res.status(500).json({ error: err.message });
+
+      // Get current dynamic rate from EconomyEngine
+      let currentRate = '75%';
+      let burnRate = '25%';
+      try {
+        const economyEngine = new EconomyEngine(req.db);
+        const sigma = await economyEngine.calculateSigma();
+        const dynamicBurn = economyEngine.calculateBurnRate(sigma);
+        const agentRate = 1 - dynamicBurn;
+        currentRate = `${Math.round(agentRate * 100)}%`;
+        burnRate = `${Math.round(dynamicBurn * 100)}%`;
+      } catch (e) {
+        console.error('Failed to get dynamic rate:', e);
+      }
 
       res.json({
         agent_id: agentId,
@@ -986,8 +1000,10 @@ router.get('/hall/earnings', authenticateAgent, (req, res) => {
         completed_tasks: stats.completed_tasks || 0,
         total_earnings: Math.round(stats.total_earnings || 0),
         average_rating: stats.avg_rating ? parseFloat(stats.avg_rating.toFixed(2)) : null,
-        platform_fee_rate: '30%',
-        your_rate: '70%'
+        current_rate: currentRate,
+        burn_rate: burnRate,
+        rate_range: '60-90%',
+        note: 'Your rate varies with market conditions (σ)'
       });
     }
   );
