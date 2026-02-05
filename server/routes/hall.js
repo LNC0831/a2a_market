@@ -1117,14 +1117,7 @@ router.post('/hall/tasks/:id/accept', async (req, res) => {
         );
 
         // 3. Burned amount is NOT transferred anywhere (it's destroyed)
-        // Record burn transaction for transparency
-        await walletService.addBalance(
-          'wallet_platform_mp',
-          0,  // Platform receives nothing from burn
-          'platform_fee',
-          `Burn record for task ${id}: ${burnedAmount} MP destroyed`,
-          { task_id: id, burned: burnedAmount, burn_rate: burnRate }
-        );
+        // No wallet transaction needed - burn is recorded in settlements table
 
         // 4. Judge reward (fixed 10 MP from platform account, if judge exists)
         let judgeRewardPaid = 0;
