@@ -155,7 +155,8 @@ class EconomyEngine {
   async getEconomyMetrics() {
     const windowDays = ECONOMY.ACTIVE_WINDOW_DAYS;
 
-    return new Promise((resolve, reject) => {
+    // Run both queries in parallel for better performance
+    const activeUsersPromise = new Promise((resolve, reject) => {
       // Query to get active users and their total MP
       // Active = has wallet transaction in last N days
       const sql = `
@@ -176,31 +177,41 @@ class EconomyEngine {
         FROM active_wallets
       `;
 
-      this.db.get(sql, [], (err, activeResult) => {
+      this.db.get(sql, [], (err, result) => {
         if (err) {
           console.error('[EconomyEngine] Failed to get active metrics:', err);
           return reject(err);
         }
-
-        // Get total supply (all MP in circulation)
-        this.db.get(`
-          SELECT COALESCE(SUM(balance + frozen_balance), 0) as total_supply
-          FROM wallets
-          WHERE currency_code = 'MP' AND owner_type IN ('client', 'agent')
-        `, [], (err, supplyResult) => {
-          if (err) {
-            console.error('[EconomyEngine] Failed to get total supply:', err);
-            return reject(err);
-          }
-
-          resolve({
-            activeUsers: activeResult?.active_users || 0,
-            totalActiveMP: activeResult?.total_active_mp || 0,
-            totalSupply: supplyResult?.total_supply || 0
-          });
-        });
+        resolve(result);
       });
     });
+
+    const totalSupplyPromise = new Promise((resolve, reject) => {
+      // Get total supply (all MP in circulation)
+      this.db.get(`
+        SELECT COALESCE(SUM(balance + frozen_balance), 0) as total_supply
+        FROM wallets
+        WHERE currency_code = 'MP' AND owner_type IN ('client', 'agent')
+      `, [], (err, result) => {
+        if (err) {
+          console.error('[EconomyEngine] Failed to get total supply:', err);
+          return reject(err);
+        }
+        resolve(result);
+      });
+    });
+
+    // Execute both queries in parallel
+    const [activeResult, supplyResult] = await Promise.all([
+      activeUsersPromise,
+      totalSupplyPromise
+    ]);
+
+    return {
+      activeUsers: activeResult?.active_users || 0,
+      totalActiveMP: activeResult?.total_active_mp || 0,
+      totalSupply: supplyResult?.total_supply || 0
+    };
   }
 
   /**

@@ -160,7 +160,10 @@ router.post('/hall/client/register', async (req, res) => {
       [clientId, name || '', email, passwordHash, apiKey],
       async function(err) {
         if (err) {
-          if (err.message.includes('UNIQUE')) {
+          // Handle unique constraint violations from different databases
+          if (err.message.includes('UNIQUE') ||
+              err.message.includes('duplicate key') ||
+              err.code === '23505') {  // PostgreSQL unique constraint error code
             return res.status(400).json({ error: 'Email already registered' });
           }
           return res.status(500).json({ error: err.message });
@@ -468,8 +471,15 @@ router.post('/hall/register', (req, res) => {
 router.post('/hall/post', optionalAuth, async (req, res) => {
   const { title, description, category, budget, contact_email, deadline_hours, skip_payment, source } = req.body;
 
-  if (!title || !description || !budget) {
+  // Validate required fields
+  if (!title || !description) {
     return res.status(400).json({ error: 'Required: title, description, budget' });
+  }
+
+  // Validate budget is a positive number
+  const budgetNumber = parseFloat(budget);
+  if (!budget || isNaN(budgetNumber) || budgetNumber <= 0) {
+    return res.status(400).json({ error: 'Budget must be a positive number' });
   }
 
   const taskId = uuidv4();
@@ -989,50 +999,75 @@ router.get('/hall/my-tasks', authenticateAgent, (req, res) => {
 });
 
 /**
+ * Wrap a promise with a timeout
+ * @param {Promise} promise - The promise to wrap
+ * @param {number} timeoutMs - Timeout in milliseconds
+ * @returns {Promise} - Promise that rejects if timeout is reached
+ */
+function withTimeout(promise, timeoutMs = 3000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Operation timeout')), timeoutMs)
+    )
+  ]);
+}
+
+/**
  * Agent 查看收益统计
  *
  * GET /api/hall/earnings
  */
-router.get('/hall/earnings', authenticateAgent, (req, res) => {
+router.get('/hall/earnings', authenticateAgent, async (req, res) => {
   const agentId = req.agent.id;
 
-  req.db.get(
-    `SELECT
-       COUNT(*) as total_tasks,
-       SUM(CASE WHEN status = 'completed' THEN budget * ${SETTLEMENT.AGENT_RATIO} ELSE 0 END) as total_earnings,
-       SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_tasks,
-       AVG(CASE WHEN status = 'completed' AND client_rating IS NOT NULL THEN client_rating ELSE NULL END) as avg_rating
-     FROM tasks WHERE agent_id = ?`,
-    [agentId],
-    async (err, stats) => {
-      if (err) return res.status(500).json({ error: err.message });
+  try {
+    // Query agent's task statistics
+    const stats = await new Promise((resolve, reject) => {
+      req.db.get(
+        `SELECT
+           COUNT(*) as total_tasks,
+           SUM(CASE WHEN status = 'completed' THEN budget * ${SETTLEMENT.AGENT_RATIO} ELSE 0 END) as total_earnings,
+           SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_tasks,
+           AVG(CASE WHEN status = 'completed' AND client_rating IS NOT NULL THEN client_rating ELSE NULL END) as avg_rating
+         FROM tasks WHERE agent_id = ?`,
+        [agentId],
+        (err, result) => {
+          if (err) return reject(err);
+          resolve(result);
+        }
+      );
+    });
 
-      // Get current dynamic rate from EconomyEngine
-      let currentRate = '75%';
-      let burnRate = '25%';
-      try {
-        const economyEngine = new EconomyEngine(req.db);
-        const params = await economyEngine.getEconomyParams();
-        const agentRate = 1 - params.burnRate;
-        currentRate = `${Math.round(agentRate * 100)}%`;
-        burnRate = `${Math.round(params.burnRate * 100)}%`;
-      } catch (e) {
-        console.error('Failed to get dynamic rate:', e);
-      }
-
-      res.json({
-        agent_id: agentId,
-        total_tasks: stats.total_tasks || 0,
-        completed_tasks: stats.completed_tasks || 0,
-        total_earnings: Math.round(stats.total_earnings || 0),
-        average_rating: stats.avg_rating ? parseFloat(stats.avg_rating.toFixed(2)) : null,
-        current_rate: currentRate,
-        burn_rate: burnRate,
-        rate_range: '60-90%',
-        note: 'Your rate varies with market conditions (σ)'
-      });
+    // Get current dynamic rate from EconomyEngine with timeout
+    let currentRate = '75%';
+    let burnRate = '25%';
+    try {
+      const economyEngine = new EconomyEngine(req.db);
+      const params = await withTimeout(economyEngine.getEconomyParams(), 3000);
+      const agentRate = 1 - params.burnRate;
+      currentRate = `${Math.round(agentRate * 100)}%`;
+      burnRate = `${Math.round(params.burnRate * 100)}%`;
+    } catch (e) {
+      console.error('Failed to get dynamic rate (using defaults):', e.message);
+      // Use default values on timeout or error
     }
-  );
+
+    res.json({
+      agent_id: agentId,
+      total_tasks: stats.total_tasks || 0,
+      completed_tasks: stats.completed_tasks || 0,
+      total_earnings: Math.round(stats.total_earnings || 0),
+      average_rating: stats.avg_rating ? parseFloat(stats.avg_rating.toFixed(2)) : null,
+      current_rate: currentRate,
+      burn_rate: burnRate,
+      rate_range: '60-90%',
+      note: 'Your rate varies with market conditions (σ)'
+    });
+  } catch (err) {
+    console.error('[Earnings] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ==================== 客户操作 ====================
