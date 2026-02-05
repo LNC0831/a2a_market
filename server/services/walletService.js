@@ -181,6 +181,51 @@ class WalletService {
     const balanceAfter = balanceBefore + amount;
     const txId = `tx_${uuidv4()}`;
 
+    // Use PostgreSQL transaction if available
+    if (this.db.type === 'postgres' && this.db.beginTransaction) {
+      const trx = await this.db.beginTransaction();
+      try {
+        // Update wallet balance
+        await trx.query(
+          `UPDATE wallets
+           SET balance = balance + $1,
+               total_deposited = total_deposited + CASE WHEN $2 = 'deposit' THEN $3 ELSE 0 END,
+               total_earned = total_earned + CASE WHEN $4 IN ('task_earning', 'judge_reward', 'bonus') THEN $5 ELSE 0 END,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $6`,
+          [amount, type, amount, type, amount, walletId]
+        );
+
+        // Record transaction
+        await trx.query(
+          `INSERT INTO wallet_transactions
+           (id, wallet_id, type, amount, balance_before, balance_after, currency_code,
+            counterparty_id, counterparty_type, status, description, metadata,
+            created_at, completed_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'completed', $10, $11,
+                   CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+          [
+            txId, walletId, type, amount, balanceBefore, balanceAfter, wallet.currency_code,
+            metadata.counterparty_id || null, metadata.counterparty_type || null,
+            description, JSON.stringify(metadata)
+          ]
+        );
+
+        await trx.commit();
+        return {
+          success: true,
+          transaction_id: txId,
+          balance_before: balanceBefore,
+          balance_after: balanceAfter,
+          amount
+        };
+      } catch (err) {
+        await trx.rollback();
+        throw err;
+      }
+    }
+
+    // SQLite fallback (serialize works correctly in SQLite)
     return new Promise((resolve, reject) => {
       this.db.serialize(() => {
         // Update wallet balance

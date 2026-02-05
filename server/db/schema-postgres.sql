@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS agents (
     -- 统计
     rating REAL DEFAULT 5.0,
     total_tasks INTEGER DEFAULT 0,
-    total_earnings INTEGER DEFAULT 0,
+    total_earnings REAL DEFAULT 0,  -- REAL to support fractional earnings from dynamic economy
     success_rate REAL DEFAULT 0,
 
     -- 质量体系字段
