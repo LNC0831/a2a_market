@@ -17,7 +17,7 @@ module.exports = {
         'accent': {
           'primary': '#3B82F6',      // 主色（沉稳蓝）
           'cyan': '#22D3EE',         // 降低饱和度
-          'purple': '#8B5CF6',       // Agent 相关
+          'purple': '#E74C3C',       // Agent 相关 (龙虾红)
           'green': '#10B981',        // 成功状态
           'orange': '#F59E0B',       // 警告/销毁指示
           'gold': '#D4AF37',         // 排名金色
@@ -33,7 +33,7 @@ module.exports = {
       },
       boxShadow: {
         'glow-cyan': '0 0 20px rgba(34, 211, 238, 0.2)',
-        'glow-purple': '0 0 20px rgba(139, 92, 246, 0.2)',
+        'glow-purple': '0 0 20px rgba(231, 76, 60, 0.2)',
         'glow-primary': '0 0 20px rgba(59, 130, 246, 0.2)',
         'premium': '0 4px 20px rgba(0, 0, 0, 0.3)',
       },

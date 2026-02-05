@@ -10,6 +10,7 @@ import {
 } from '../components/Icons';
 import AgentCarousel from '../components/AgentCarousel';
 import ActivityFeed from '../components/ActivityFeed';
+import AgentQuickList from '../components/AgentQuickList';
 
 function Home() {
   const navigate = useNavigate();
@@ -20,6 +21,18 @@ function Home() {
   const [agentsLoading, setAgentsLoading] = useState(true);
   const [activitiesLoading, setActivitiesLoading] = useState(true);
 
+  const loadFeaturedAgents = () => {
+    setAgentsLoading(true);
+    api.getFeaturedAgents(12)
+      .then(data => setFeaturedAgents(data.agents || []))
+      .catch(() => setFeaturedAgents([]))
+      .finally(() => setAgentsLoading(false));
+  };
+
+  const refreshSidebarAgents = () => {
+    loadFeaturedAgents();
+  };
+
   useEffect(() => {
     // Load stats
     api.getStats()
@@ -28,10 +41,7 @@ function Home() {
       .finally(() => setLoading(false));
 
     // Load featured agents
-    api.getFeaturedAgents(12)
-      .then(data => setFeaturedAgents(data.agents || []))
-      .catch(() => setFeaturedAgents([]))
-      .finally(() => setAgentsLoading(false));
+    loadFeaturedAgents();
 
     // Load activity feed
     api.getRecentActivity(15)
@@ -125,56 +135,13 @@ function Home() {
             maxItems={8}
           />
         </div>
-        <div className="space-y-4">
-          {/* Quick Actions */}
-          <div className="bg-dark-card border border-dark-border rounded-xl p-6">
-            <h3 className="text-lg font-bold text-dark-text-primary mb-4">Quick Actions</h3>
-            <div className="space-y-3">
-              <Link
-                to="/post"
-                className="flex items-center justify-between p-3 bg-accent-cyan/10 border border-accent-cyan/20 rounded-lg hover:bg-accent-cyan/20 transition-colors group"
-              >
-                <div className="flex items-center">
-                  <TaskIcon className="w-5 h-5 text-accent-cyan mr-3" />
-                  <span className="text-dark-text-primary">Post a Task</span>
-                </div>
-                <span className="text-accent-cyan group-hover:translate-x-1 transition-transform">&rarr;</span>
-              </Link>
-              <Link
-                to="/hall"
-                className="flex items-center justify-between p-3 bg-accent-purple/10 border border-accent-purple/20 rounded-lg hover:bg-accent-purple/20 transition-colors group"
-              >
-                <div className="flex items-center">
-                  <AgentIcon className="w-5 h-5 text-accent-purple mr-3" />
-                  <span className="text-dark-text-primary">Browse Tasks</span>
-                </div>
-                <span className="text-accent-purple group-hover:translate-x-1 transition-transform">&rarr;</span>
-              </Link>
-              <Link
-                to="/leaderboard"
-                className="flex items-center justify-between p-3 bg-dark-elevated border border-dark-border rounded-lg hover:border-dark-text-muted transition-colors group"
-              >
-                <div className="flex items-center">
-                  <MoneyIcon className="w-5 h-5 text-accent-gold mr-3" />
-                  <span className="text-dark-text-primary">Leaderboard</span>
-                </div>
-                <span className="text-dark-text-muted group-hover:translate-x-1 transition-transform">&rarr;</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* Market Health */}
-          {stats && (
-            <div className="bg-dark-card border border-dark-border rounded-xl p-6">
-              <h3 className="text-sm font-medium text-dark-text-secondary mb-3">Market Health</h3>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-dark-text-muted">Open / Active Ratio</span>
-                <span className="text-accent-green font-medium">
-                  {stats.orders?.open || 0} / {stats.agents?.active || 0}
-                </span>
-              </div>
-            </div>
-          )}
+        <div>
+          <AgentQuickList
+            agents={featuredAgents.slice(0, 6)}
+            loading={agentsLoading}
+            onRefresh={refreshSidebarAgents}
+            onViewAll={() => navigate('/leaderboard')}
+          />
         </div>
       </section>
 

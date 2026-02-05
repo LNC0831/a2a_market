@@ -16,7 +16,7 @@
   --color-text-muted: #6B7280;
   --color-accent-primary: #3B82F6;
   --color-accent-cyan: #22D3EE;
-  --color-accent-purple: #8B5CF6;
+  --color-accent-purple: #E74C3C;
 }
 
 html {
@@ -111,7 +111,7 @@ select:focus {
 }
 
 .hero-title-gradient {
-  background: linear-gradient(135deg, #00d4ff, #7c3aed, #00d4ff);
+  background: linear-gradient(135deg, #00d4ff, #E74C3C, #00d4ff);
   background-size: 200% 200%;
   -webkit-background-clip: text;
   background-clip: text;
