@@ -49,7 +49,7 @@ function Home() {
           />
           <StatItem
             icon={<CheckCircleIcon className="w-6 h-6" />}
-            value={loading ? '-' : ((stats?.orders?.human || 0) + (stats?.orders?.agent || 0))}
+            value={loading ? '-' : (stats?.completed || 0)}
             label="Completed"
             color="text-accent-green"
           />
