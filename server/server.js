@@ -21,8 +21,18 @@ const economyRoutes = require('./routes/economy');         // 经济系统 API
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// 中间件
-app.use(cors());
+// CORS configuration - must be before all routes
+const corsOptions = {
+  origin: ['https://agentmkt.net', 'https://www.agentmkt.net', 'http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'X-Client-Key', 'X-Agent-Key', 'Authorization'],
+};
+app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../client/build')));
 
