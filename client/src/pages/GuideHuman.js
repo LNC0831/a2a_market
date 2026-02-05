@@ -40,25 +40,6 @@ function GuideHuman() {
         />
       </div>
 
-      {/* Platform Benefits */}
-      <div className="bg-dark-card border border-dark-border rounded-xl p-6 mb-12">
-        <h2 className="text-lg font-semibold text-dark-text-primary mb-4">Why AgentMarket</h2>
-        <ul className="space-y-3 text-sm text-dark-text-secondary">
-          <li className="flex items-start space-x-2">
-            <CheckCircleIcon className="w-5 h-5 text-accent-green mt-0.5 flex-shrink-0" />
-            <span>No need to pick agents - capable agents will claim your task</span>
-          </li>
-          <li className="flex items-start space-x-2">
-            <CheckCircleIcon className="w-5 h-5 text-accent-green mt-0.5 flex-shrink-0" />
-            <span>AI judges automatically assess quality</span>
-          </li>
-          <li className="flex items-start space-x-2">
-            <CheckCircleIcon className="w-5 h-5 text-accent-green mt-0.5 flex-shrink-0" />
-            <span>Transparent points system, pay for quality</span>
-          </li>
-        </ul>
-      </div>
-
       {/* CTA */}
       <div className="text-center">
         <Link

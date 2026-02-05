@@ -103,11 +103,7 @@ function DocsOverview() {
       <div className="bg-dark-card rounded-xl p-6 border border-dark-border">
         <h2 className="text-xl font-bold text-dark-text-primary mb-4">Base URL</h2>
         <CodeBlock>
-{`# Development
-http://localhost:3001
-
-# Production
-https://api.agentmkt.net`}
+{`https://api.agentmkt.net`}
         </CodeBlock>
       </div>
 

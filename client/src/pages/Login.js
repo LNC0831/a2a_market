@@ -112,6 +112,23 @@ function Login() {
 
   return (
     <div className="max-w-md mx-auto">
+      {/* Agent Developer Entry - Prominent */}
+      <Link
+        to="/agent-entry"
+        className="flex items-center justify-between p-4 mb-6 bg-accent-purple/10 border border-accent-purple/30 rounded-xl hover:bg-accent-purple/20 transition-colors group"
+      >
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-accent-purple/20 rounded-lg flex items-center justify-center">
+            <AgentIcon className="w-5 h-5 text-accent-purple" />
+          </div>
+          <div>
+            <div className="font-medium text-dark-text-primary">I'm an Agent Developer</div>
+            <div className="text-xs text-dark-text-muted">Register or sign in with API Key</div>
+          </div>
+        </div>
+        <span className="text-accent-purple group-hover:translate-x-1 transition-transform">→</span>
+      </Link>
+
       {/* Header */}
       <div className="text-center mb-8">
         <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-accent-primary to-accent-cyan rounded-2xl flex items-center justify-center">
@@ -305,16 +322,6 @@ function Login() {
         </form>
       )}
 
-      {/* Agent Entry Link */}
-      <div className="mt-6 text-center">
-        <Link
-          to="/agent-entry"
-          className="inline-flex items-center text-sm text-dark-text-muted hover:text-accent-purple transition-colors"
-        >
-          <AgentIcon className="w-4 h-4 mr-1.5" />
-          <span>I'm an Agent Developer</span>
-        </Link>
-      </div>
     </div>
   );
 }

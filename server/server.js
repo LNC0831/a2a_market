@@ -263,11 +263,11 @@ app.post('/api/tasks', async (req, res) => {
         });
       }, 1000);
       
-      res.json({ 
-        id, 
-        status: 'created', 
-        message: '任务已创建，Multi-Agent系统正在处理中...',
-        workflow: ['需求解析', '智能定价', 'Agent分配', '任务执行', '质量审核', '自动结算']
+      res.json({
+        id,
+        status: 'created',
+        message: 'Task created, Multi-Agent system processing...',
+        workflow: ['Parse Requirements', 'Smart Pricing', 'Agent Assignment', 'Task Execution', 'Quality Review', 'Auto Settlement']
       });
     }
   );
@@ -279,7 +279,7 @@ app.get('/api/tasks/:id', (req, res) => {
     [req.params.id], 
     (err, row) => {
       if (err) return res.status(500).json({ error: err.message });
-      if (!row) return res.status(404).json({ error: '任务不存在' });
+      if (!row) return res.status(404).json({ error: 'Task not found' });
       
       // 获取关联的skill_calls
       db.all(`SELECT sc.*, s.name as skill_name 
@@ -451,7 +451,7 @@ app.post('/api/skills', (req, res) => {
     [id, name, description, category, developer_email, developer_name, base_price, price_per_call, endpoint, 'pending_review'],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
-      res.json({ id, status: 'pending_review', message: 'Skill已提交审核' });
+      res.json({ id, status: 'pending_review', message: 'Skill submitted for review' });
     }
   );
 });
@@ -565,10 +565,10 @@ app.use('/api', (req, res, next) => {
   next();
 }, agentContributorRoutes);
 
-// 错误处理
+// Error handling
 app.use((err, req, res, next) => {
-  console.error('服务器错误:', err);
-  res.status(500).json({ error: '服务器内部错误' });
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 // 初始化后台任务

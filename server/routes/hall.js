@@ -125,12 +125,12 @@ function logTaskEvent(db, taskId, event, actor, actorType, details = {}) {
 router.post('/hall/client/register', async (req, res) => {
   const { name, email, password, recaptchaToken } = req.body;
 
-  // 验证必填字段
+  // Validate required fields
   if (!email) {
-    return res.status(400).json({ error: '请输入邮箱' });
+    return res.status(400).json({ error: 'Please enter email' });
   }
   if (!password) {
-    return res.status(400).json({ error: '请输入密码' });
+    return res.status(400).json({ error: 'Please enter password' });
   }
 
   const authService = new AuthService(req.db);
@@ -161,7 +161,7 @@ router.post('/hall/client/register', async (req, res) => {
       async function(err) {
         if (err) {
           if (err.message.includes('UNIQUE')) {
-            return res.status(400).json({ error: '该邮箱已注册' });
+            return res.status(400).json({ error: 'Email already registered' });
           }
           return res.status(500).json({ error: err.message });
         }
@@ -194,7 +194,7 @@ router.post('/hall/client/register', async (req, res) => {
           success: true,
           client_id: clientId,
           api_key: apiKey,
-          message: '注册成功',
+          message: 'Registration successful',
           bonus: bonusGranted ? {
             granted: true,
             amount: ECONOMY.HUMAN_REGISTRATION_BONUS,
@@ -205,7 +205,7 @@ router.post('/hall/client/register', async (req, res) => {
     );
   } catch (err) {
     console.error('Registration error:', err);
-    res.status(500).json({ error: '注册失败，请稍后重试' });
+    res.status(500).json({ error: 'Registration failed, please try again later' });
   }
 });
 
@@ -219,7 +219,7 @@ router.post('/hall/client/login', async (req, res) => {
   const { email, password, recaptchaToken } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ error: '请输入邮箱和密码' });
+    return res.status(400).json({ error: 'Please enter email and password' });
   }
 
   const authService = new AuthService(req.db);
@@ -237,7 +237,7 @@ router.post('/hall/client/login', async (req, res) => {
     }
 
     if (!client) {
-      return res.status(401).json({ error: '邮箱或密码错误' });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     // 检查账户锁定
@@ -246,10 +246,10 @@ router.post('/hall/client/login', async (req, res) => {
       return res.status(423).json({ error: lockStatus.message });
     }
 
-    // 检查是否有密码（兼容旧用户）
+    // Check if password exists (for legacy users)
     if (!client.password_hash) {
       return res.status(400).json({
-        error: '该账户需要设置密码',
+        error: 'This account needs to set a password',
         needsPasswordReset: true
       });
     }
@@ -258,15 +258,15 @@ router.post('/hall/client/login', async (req, res) => {
     const isValid = await authService.verifyPassword(password, client.password_hash);
 
     if (!isValid) {
-      // 记录失败尝试
+      // Record failed attempt
       const failResult = await authService.recordFailedLogin(client.id);
       if (failResult.locked) {
         return res.status(423).json({
-          error: `密码错误次数过多，账户已锁定 15 分钟`
+          error: 'Too many failed attempts, account locked for 15 minutes'
         });
       }
       return res.status(401).json({
-        error: `邮箱或密码错误，还剩 ${failResult.remainingAttempts} 次尝试机会`
+        error: `Invalid email or password, ${failResult.remainingAttempts} attempts remaining`
       });
     }
 
@@ -278,7 +278,7 @@ router.post('/hall/client/login', async (req, res) => {
       client_id: client.id,
       api_key: client.api_key,
       name: client.name,
-      message: '登录成功'
+      message: 'Login successful'
     });
   });
 });

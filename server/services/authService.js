@@ -45,7 +45,7 @@ class AuthService {
    */
   async verifyRecaptcha(token) {
     if (!token) {
-      return { success: false, error: '请完成验证码验证' };
+      return { success: false, error: 'Please complete the captcha verification' };
     }
 
     // 如果使用的是 Google 测试密钥，直接通过（避免网络问题影响测试）
@@ -69,11 +69,11 @@ class AuthService {
       if (data.success) {
         return { success: true };
       } else {
-        return { success: false, error: '验证码验证失败，请重试' };
+        return { success: false, error: 'Captcha verification failed, please try again' };
       }
     } catch (err) {
       console.error('reCAPTCHA verification error:', err);
-      return { success: false, error: '验证码服务异常' };
+      return { success: false, error: 'Captcha service error' };
     }
   }
 
@@ -87,7 +87,7 @@ class AuthService {
         const remainingMinutes = Math.ceil((lockUntil - new Date()) / 60000);
         return {
           locked: true,
-          message: `账户已锁定，请 ${remainingMinutes} 分钟后重试`
+          message: `Account locked, please try again in ${remainingMinutes} minutes`
         };
       }
     }
