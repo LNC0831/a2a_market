@@ -1,6 +1,6 @@
--- Migration 015: Fix wallets table column types from INTEGER to REAL
+-- Migration 015: Fix all money-related column types from INTEGER to REAL
 -- Issue: Dynamic economy produces fractional amounts (e.g., 10.84 MP)
---        but some wallet columns may be INTEGER in production
+--        but several columns were INTEGER in production
 -- Date: 2026-02-05
 
 -- Fix wallets table columns
@@ -18,6 +18,15 @@ ALTER COLUMN amount TYPE REAL USING amount::REAL,
 ALTER COLUMN balance_before TYPE REAL USING balance_before::REAL,
 ALTER COLUMN balance_after TYPE REAL USING balance_after::REAL;
 
+-- Fix transactions table (legacy, but still used)
+ALTER TABLE transactions
+ALTER COLUMN amount TYPE REAL USING amount::REAL;
+
+-- Fix agents table
+ALTER TABLE agents
+ALTER COLUMN total_earnings TYPE REAL USING total_earnings::REAL;
+
 -- Verify
--- SELECT column_name, data_type FROM information_schema.columns
--- WHERE table_name = 'wallets';
+-- SELECT table_name, column_name, data_type FROM information_schema.columns
+-- WHERE column_name IN ('amount', 'balance', 'total_earnings', 'total_earned')
+-- ORDER BY table_name;

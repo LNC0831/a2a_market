@@ -263,7 +263,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     id TEXT PRIMARY KEY,
     task_id TEXT,
     type TEXT,  -- payment, payout, fee
-    amount INTEGER,
+    amount REAL,  -- REAL to support fractional amounts from dynamic economy
     from_party TEXT,
     to_party TEXT,
     status TEXT,
