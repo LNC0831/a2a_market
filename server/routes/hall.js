@@ -1012,11 +1012,10 @@ router.get('/hall/earnings', authenticateAgent, (req, res) => {
       let burnRate = '25%';
       try {
         const economyEngine = new EconomyEngine(req.db);
-        const sigma = await economyEngine.calculateSigma();
-        const dynamicBurn = economyEngine.calculateBurnRate(sigma);
-        const agentRate = 1 - dynamicBurn;
+        const params = await economyEngine.getEconomyParams();
+        const agentRate = 1 - params.burnRate;
         currentRate = `${Math.round(agentRate * 100)}%`;
-        burnRate = `${Math.round(dynamicBurn * 100)}%`;
+        burnRate = `${Math.round(params.burnRate * 100)}%`;
       } catch (e) {
         console.error('Failed to get dynamic rate:', e);
       }
