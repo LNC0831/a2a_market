@@ -1,6 +1,6 @@
 /**
- * 结算预览组件
- * 显示任务结算时 Agent 获得金额和销毁金额
+ * Settlement Preview component
+ * Shows the amount Agent earns and the amount burned when a task is settled
  */
 
 import React, { useState, useEffect } from 'react';
@@ -14,11 +14,11 @@ import {
 } from './Icons';
 
 /**
- * 结算预览组件
- * @param {number} taskPrice - 任务价格
- * @param {boolean} showBreakdown - 是否显示详细分解
- * @param {boolean} compact - 紧凑模式
- * @param {object} economy - 可选，外部传入经济数据
+ * Settlement Preview component
+ * @param {number} taskPrice - Task price
+ * @param {boolean} showBreakdown - Whether to show detailed breakdown
+ * @param {boolean} compact - Compact mode
+ * @param {object} economy - Optional, externally provided economy data
  */
 function SettlementPreview({
   taskPrice,
@@ -42,7 +42,7 @@ function SettlementPreview({
         setEconomy(data);
       } catch (err) {
         console.error('Failed to fetch economy status:', err);
-        // 使用默认值
+        // Use default values
         setEconomy({ burnRate: 0.25, sigma: 1.0 });
       } finally {
         setLoading(false);
@@ -84,7 +84,7 @@ function SettlementPreview({
   return (
     <div className="bg-dark-card rounded-lg border border-dark-border p-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-dark-text-secondary">结算预览</span>
+        <span className="text-sm font-medium text-dark-text-secondary">Settlement Preview</span>
         {!showBreakdown && (
           <button
             type="button"
@@ -101,11 +101,11 @@ function SettlementPreview({
       </div>
 
       <div className="mt-3 space-y-2">
-        {/* 主要数据 */}
+        {/* Main data */}
         <div className="flex items-center justify-between">
           <span className="flex items-center text-sm text-dark-text-muted">
             <AgentIcon className="w-4 h-4 mr-2 text-accent-green" />
-            Agent 获得
+            Agent Earns
           </span>
           <span className="font-bold text-accent-green text-lg">
             +{agentEarnings} MP
@@ -115,38 +115,38 @@ function SettlementPreview({
         <div className="flex items-center justify-between">
           <span className="flex items-center text-sm text-dark-text-muted">
             <BurnIcon className="w-4 h-4 mr-2 text-accent-orange" />
-            销毁
+            Burned
           </span>
           <span className="font-medium text-accent-orange">
             -{burnAmount} MP
           </span>
         </div>
 
-        {/* 详细分解 */}
+        {/* Detailed breakdown */}
         {(expanded || showBreakdown) && (
           <div className="mt-3 pt-3 border-t border-dark-border space-y-2">
             <div className="flex items-center justify-between text-xs text-dark-text-muted">
-              <span>任务价格</span>
+              <span>Task Price</span>
               <span>{price} MP</span>
             </div>
             <div className="flex items-center justify-between text-xs text-dark-text-muted">
-              <span>Agent 比例</span>
+              <span>Agent Rate</span>
               <span>{(agentRate * 100).toFixed(1)}%</span>
             </div>
             <div className="flex items-center justify-between text-xs text-dark-text-muted">
-              <span>销毁比例 (B)</span>
+              <span>Burn Rate (B)</span>
               <span>{(burnRate * 100).toFixed(1)}%</span>
             </div>
             <div className="flex items-center justify-between text-xs text-dark-text-muted">
-              <span>当前 σ</span>
+              <span>Current σ</span>
               <span>{economy?.sigma?.toFixed(2) || '1.00'}</span>
             </div>
 
             <div className="flex items-start space-x-2 text-xs text-dark-text-muted mt-2 pt-2 border-t border-dark-border/50">
               <InfoIcon className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
               <p>
-                销毁率 B 根据市场供给比率 σ 动态调整。
-                σ 越高表示市场供给越充足，销毁率越高。
+                Burn rate B adjusts dynamically based on market supply ratio σ.
+                Higher σ means more supply, higher burn rate.
               </p>
             </div>
           </div>
@@ -157,8 +157,8 @@ function SettlementPreview({
 }
 
 /**
- * 简单的 Agent 预期收益显示
- * 用于任务列表卡片等场景
+ * Simple Agent expected earnings display
+ * Used for task list cards and similar scenarios
  */
 function AgentEarningsPreview({ taskPrice, className = '' }) {
   const [economy, setEconomy] = useState(null);
@@ -176,7 +176,7 @@ function AgentEarningsPreview({ taskPrice, className = '' }) {
   return (
     <span className={`flex items-center text-accent-green ${className}`}>
       <AgentIcon className="w-4 h-4 mr-1" />
-      预期 +{agentEarnings} MP
+      Expected +{agentEarnings} MP
     </span>
   );
 }

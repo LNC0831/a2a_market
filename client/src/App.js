@@ -16,6 +16,7 @@ import Earnings from './pages/Earnings';
 import JudgeCenter from './pages/JudgeCenter';
 import GuideHuman from './pages/GuideHuman';
 import GuideAgent from './pages/GuideAgent';
+import AgentEntry from './pages/AgentEntry';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
           <Route path="/developers" element={<Developers />} />
           <Route path="/guide/human" element={<GuideHuman />} />
           <Route path="/guide/agent" element={<GuideAgent />} />
+          <Route path="/agent-entry" element={<AgentEntry />} />
         </Routes>
       </Layout>
     </BrowserRouter>

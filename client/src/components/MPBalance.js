@@ -1,6 +1,6 @@
 /**
- * MP 余额显示组件
- * 显示 MP 余额、冻结金额、每日恢复进度
+ * MP Balance Display Component
+ * Shows MP balance, frozen amount, daily regen progress
  */
 
 import React, { useState, useEffect } from 'react';
@@ -16,7 +16,7 @@ import {
 } from './Icons';
 
 /**
- * 计算下次恢复倒计时
+ * Calculate next regen countdown
  */
 function getNextRegenCountdown() {
   const now = new Date();
@@ -32,7 +32,7 @@ function getNextRegenCountdown() {
 }
 
 /**
- * Mini 变体 - 仅显示余额数字
+ * Mini variant - Shows balance number only
  */
 function MPBalanceMini({ balance }) {
   return (
@@ -49,7 +49,7 @@ function MPBalanceMini({ balance }) {
 }
 
 /**
- * Compact 变体 - 显示余额和冻结
+ * Compact variant - Shows balance and frozen amount
  */
 function MPBalanceCompact({ balance, showLink = true }) {
   const available = balance?.available || 0;
@@ -65,7 +65,7 @@ function MPBalanceCompact({ balance, showLink = true }) {
       </div>
       {frozen > 0 && (
         <span className="text-xs text-dark-text-muted">
-          (冻结 {frozen.toLocaleString()})
+          (Frozen {frozen.toLocaleString()})
         </span>
       )}
       {showLink && (
@@ -78,7 +78,7 @@ function MPBalanceCompact({ balance, showLink = true }) {
 }
 
 /**
- * Full 变体 - 完整钱包卡片
+ * Full variant - Complete wallet card
  */
 function MPBalanceFull({ balance, economy, showRegen = true }) {
   const [countdown, setCountdown] = useState(getNextRegenCountdown());
@@ -88,15 +88,15 @@ function MPBalanceFull({ balance, economy, showRegen = true }) {
   const progress = Math.min((available / cap) * 100, 100);
   const dailyRegen = economy?.dailyRegen || 20;
 
-  // 更新倒计时
+  // Update countdown
   useEffect(() => {
     const interval = setInterval(() => {
       setCountdown(getNextRegenCountdown());
-    }, 60000); // 每分钟更新
+    }, 60000); // Update every minute
     return () => clearInterval(interval);
   }, []);
 
-  // 判断是否可以获得恢复
+  // Check if eligible for regen
   const canRegen = available < cap;
   const regenAmount = canRegen ? Math.min(dailyRegen, cap - available) : 0;
 
@@ -105,18 +105,18 @@ function MPBalanceFull({ balance, economy, showRegen = true }) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
           <CoinsSolidIcon className="w-6 h-6 text-accent-cyan" />
-          <span className="font-semibold text-dark-text-primary">MP 余额</span>
+          <span className="font-semibold text-dark-text-primary">MP Balance</span>
         </div>
         <Link
           to="/wallet"
           className="text-sm text-accent-cyan hover:text-accent-cyan/80 flex items-center"
         >
-          钱包详情
+          Wallet Details
           <ChevronRightIcon className="w-4 h-4 ml-0.5" />
         </Link>
       </div>
 
-      {/* 主余额 */}
+      {/* Main balance */}
       <div className="text-center mb-4">
         <div className="text-4xl font-bold text-dark-text-primary">
           {available.toLocaleString()}
@@ -124,16 +124,16 @@ function MPBalanceFull({ balance, economy, showRegen = true }) {
         </div>
         {frozen > 0 && (
           <div className="text-sm text-dark-text-muted mt-1">
-            冻结中: {frozen.toLocaleString()} MP
+            Frozen: {frozen.toLocaleString()} MP
           </div>
         )}
       </div>
 
-      {/* 进度条 */}
+      {/* Progress bar */}
       <div className="mb-4">
         <div className="flex justify-between text-xs text-dark-text-muted mb-1">
-          <span>余额进度</span>
-          <span>{available} / {cap} (上限)</span>
+          <span>Balance Progress</span>
+          <span>{available} / {cap} (cap)</span>
         </div>
         <div className="h-2 bg-dark-elevated rounded-full overflow-hidden">
           <div
@@ -143,16 +143,16 @@ function MPBalanceFull({ balance, economy, showRegen = true }) {
         </div>
       </div>
 
-      {/* 恢复信息 */}
+      {/* Regen info */}
       {showRegen && (
         <div className="bg-dark-card/60 rounded-lg p-3 space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center text-dark-text-muted">
               <GiftIcon className="w-4 h-4 mr-1.5 text-accent-green" />
-              每日恢复
+              Daily Regen
             </span>
             <span className="font-medium text-accent-green">
-              +{dailyRegen} MP/天
+              +{dailyRegen} MP/day
             </span>
           </div>
 
@@ -160,16 +160,16 @@ function MPBalanceFull({ balance, economy, showRegen = true }) {
             <div className="flex items-center justify-between text-sm">
               <span className="flex items-center text-dark-text-muted">
                 <ClockIcon className="w-4 h-4 mr-1.5 text-accent-cyan" />
-                下次恢复
+                Next Regen
               </span>
               <span className="text-dark-text-secondary">
-                {countdown.hours}小时{countdown.minutes}分后 +{regenAmount} MP
+                {countdown.hours}h {countdown.minutes}m later +{regenAmount} MP
               </span>
             </div>
           ) : (
             <div className="flex items-center text-sm text-dark-text-muted">
               <InfoIcon className="w-4 h-4 mr-1.5" />
-              余额已达上限，不会获得恢复
+              Balance at cap, no daily regen
             </div>
           )}
         </div>
@@ -179,10 +179,10 @@ function MPBalanceFull({ balance, economy, showRegen = true }) {
 }
 
 /**
- * MP 余额主组件
+ * MP Balance main component
  * @param {string} variant - 'mini' | 'compact' | 'full'
- * @param {boolean} showRegen - 是否显示恢复信息 (仅 full 变体)
- * @param {boolean} showLink - 是否显示详情链接
+ * @param {boolean} showRegen - Whether to show regen info (full variant only)
+ * @param {boolean} showLink - Whether to show details link
  */
 function MPBalance({ variant = 'compact', showRegen = true, showLink = true }) {
   const [balance, setBalance] = useState(null);

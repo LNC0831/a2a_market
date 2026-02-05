@@ -1,6 +1,6 @@
 /**
- * 经济状态指示器组件
- * 显示平台经济参数 σ (供给比率), R (每日恢复), B (销毁率)
+ * Economy Status Indicator Component
+ * Displays platform economic parameters σ (Supply Ratio), R (Daily Regen), B (Burn Rate)
  */
 
 import React, { useState, useEffect } from 'react';
@@ -16,54 +16,54 @@ import {
 } from './Icons';
 
 /**
- * 根据 σ 值获取状态配置 (dark theme)
+ * Get status configuration based on σ value (dark theme)
  */
 function getStatusConfig(sigma) {
   if (sigma < 0.8) {
     return {
       status: 'shortage',
-      label: '供给不足',
+      label: 'Low Supply',
       color: 'text-accent-orange',
       bgColor: 'bg-accent-orange/10',
       borderColor: 'border-accent-orange/30',
       dotColor: 'bg-accent-orange',
-      description: '市场需求大于供给，Agent 收益率高',
+      description: 'Market demand exceeds supply, high Agent earnings rate',
     };
   } else if (sigma <= 1.2) {
     return {
       status: 'balanced',
-      label: '平衡',
+      label: 'Balanced',
       color: 'text-accent-green',
       bgColor: 'bg-accent-green/10',
       borderColor: 'border-accent-green/30',
       dotColor: 'bg-accent-green',
-      description: '市场供需平衡',
+      description: 'Market supply and demand are balanced',
     };
   } else if (sigma <= 1.5) {
     return {
       status: 'surplus',
-      label: '轻微过剩',
+      label: 'Slight Surplus',
       color: 'text-yellow-500',
       bgColor: 'bg-yellow-500/10',
       borderColor: 'border-yellow-500/30',
       dotColor: 'bg-yellow-500',
-      description: '市场供给略大于需求',
+      description: 'Market supply slightly exceeds demand',
     };
   } else {
     return {
       status: 'oversupply',
-      label: '供给过剩',
+      label: 'Oversupply',
       color: 'text-red-500',
       bgColor: 'bg-red-500/10',
       borderColor: 'border-red-500/30',
       dotColor: 'bg-red-500',
-      description: '市场供给过剩，销毁率升高',
+      description: 'Market oversupply, higher burn rate',
     };
   }
 }
 
 /**
- * Mini 变体 - 仅显示 σ 状态点
+ * Mini variant - shows only σ status dot
  */
 function EconomyIndicatorMini({ economy }) {
   if (!economy) return null;
@@ -83,7 +83,7 @@ function EconomyIndicatorMini({ economy }) {
 }
 
 /**
- * Compact 变体 - 显示 σ 和关键参数
+ * Compact variant - shows σ and key parameters
  */
 function EconomyIndicatorCompact({ economy, showLink = true }) {
   if (!economy) return null;
@@ -117,7 +117,7 @@ function EconomyIndicatorCompact({ economy, showLink = true }) {
 }
 
 /**
- * Full 变体 - 完整经济状态面板
+ * Full variant - complete economy status panel
  */
 function EconomyIndicatorFull({ economy, showDetails = true }) {
   if (!economy) return null;
@@ -138,7 +138,7 @@ function EconomyIndicatorFull({ economy, showDetails = true }) {
         <div className="text-center">
           <div className="flex items-center justify-center space-x-1 text-dark-text-muted mb-1">
             <TrendingIcon className="w-4 h-4" />
-            <span className="text-xs">供给比率</span>
+            <span className="text-xs">Supply Ratio</span>
           </div>
           <div className="text-2xl font-bold text-dark-text-primary">
             {economy.sigma?.toFixed(2)}
@@ -147,7 +147,7 @@ function EconomyIndicatorFull({ economy, showDetails = true }) {
         <div className="text-center">
           <div className="flex items-center justify-center space-x-1 text-dark-text-muted mb-1">
             <GiftIcon className="w-4 h-4" />
-            <span className="text-xs">每日恢复</span>
+            <span className="text-xs">Daily Regen</span>
           </div>
           <div className="text-2xl font-bold text-accent-green">
             +{economy.dailyRegen} MP
@@ -156,7 +156,7 @@ function EconomyIndicatorFull({ economy, showDetails = true }) {
         <div className="text-center">
           <div className="flex items-center justify-center space-x-1 text-dark-text-muted mb-1">
             <BurnIcon className="w-4 h-4" />
-            <span className="text-xs">销毁率</span>
+            <span className="text-xs">Burn Rate</span>
           </div>
           <div className="text-2xl font-bold text-accent-orange">
             {burnRate}%
@@ -171,8 +171,8 @@ function EconomyIndicatorFull({ economy, showDetails = true }) {
             <div>
               <p>{config.description}</p>
               <p className="mt-1">
-                任务完成时，Agent 获得 <span className="font-medium text-accent-green">{agentRate}%</span>，
-                <span className="font-medium text-accent-orange">{burnRate}%</span> 被销毁。
+                When a task is completed, Agent earns <span className="font-medium text-accent-green">{agentRate}%</span>,
+                <span className="font-medium text-accent-orange">{burnRate}%</span> is burned.
               </p>
             </div>
           </div>
@@ -183,11 +183,11 @@ function EconomyIndicatorFull({ economy, showDetails = true }) {
 }
 
 /**
- * 经济指示器主组件
+ * Economy Indicator main component
  * @param {string} variant - 'mini' | 'compact' | 'full'
- * @param {boolean} showDetails - 是否显示详细说明 (仅 full 变体)
- * @param {boolean} showLink - 是否显示详情链接
- * @param {object} economy - 可选，外部传入经济数据
+ * @param {boolean} showDetails - Whether to show detailed explanation (full variant only)
+ * @param {boolean} showLink - Whether to show details link
+ * @param {object} economy - Optional, externally provided economy data
  */
 function EconomyIndicator({ variant = 'compact', showDetails = true, showLink = true, economy: externalEconomy = null }) {
   const [economy, setEconomy] = useState(externalEconomy);

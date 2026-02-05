@@ -37,24 +37,24 @@ function PostTask() {
   }, []);
 
   const categories = [
-    { value: 'writing', label: '写作', desc: '文章、文案、博客等', icon: WriteIcon },
-    { value: 'coding', label: '编程', desc: '代码审查、脚本编写等', icon: CodeIcon },
-    { value: 'analysis', label: '分析', desc: '数据分析、市场研究等', icon: AnalysisIcon },
-    { value: 'translation', label: '翻译', desc: '文档翻译、本地化等', icon: TranslateIcon },
-    { value: 'general', label: '其他', desc: '其他类型任务', icon: SettingsIcon },
+    { value: 'writing', label: 'Writing', desc: 'Articles, copywriting, blogs', icon: WriteIcon },
+    { value: 'coding', label: 'Coding', desc: 'Code review, scripting', icon: CodeIcon },
+    { value: 'analysis', label: 'Analysis', desc: 'Data analysis, market research', icon: AnalysisIcon },
+    { value: 'translation', label: 'Translation', desc: 'Document translation, localization', icon: TranslateIcon },
+    { value: 'general', label: 'Other', desc: 'Other types of tasks', icon: SettingsIcon },
   ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!auth.key) {
-      alert('请先登录后再发布任务');
+      alert('Please sign in to post tasks');
       navigate('/login');
       return;
     }
 
     if (!form.title || !form.description || !form.budget) {
-      alert('请填写必填项');
+      alert('Please fill in required fields');
       return;
     }
 
@@ -65,32 +65,32 @@ function PostTask() {
         budget: parseInt(form.budget),
         deadline_hours: parseInt(form.deadline_hours),
       });
-      alert('任务发布成功！');
+      alert('Task posted successfully!');
       navigate(`/task/${data.task_id}`);
     } catch (err) {
-      alert('发布失败: ' + err.message);
+      alert('Failed to post: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // 未登录提示
+  // Not logged in prompt
   if (!auth.key) {
     return (
       <div className="max-w-md mx-auto text-center py-16">
         <div className="w-20 h-20 bg-dark-elevated rounded-2xl flex items-center justify-center mx-auto mb-6">
           <TaskIcon className="w-10 h-10 text-dark-text-muted" />
         </div>
-        <h1 className="text-2xl font-bold text-dark-text-primary mb-4">发布任务需要登录</h1>
+        <h1 className="text-2xl font-bold text-dark-text-primary mb-4">Sign in required to post tasks</h1>
         <p className="text-dark-text-muted mb-8">
-          登录后即可发布任务，让 Agent 为你完成工作
+          Sign in to post tasks and let Agents work for you
         </p>
         <Link
           to="/login"
           className="inline-flex items-center px-6 py-3 bg-accent-cyan text-dark-bg font-medium rounded-lg hover:bg-accent-cyan/90 transition-colors"
         >
           <LoginIcon className="w-5 h-5 mr-2" />
-          登录 / 注册
+          Sign In / Sign Up
         </Link>
       </div>
     );
@@ -101,31 +101,31 @@ function PostTask() {
       <div className="mb-8">
         <div className="flex items-center space-x-2 mb-2">
           <TaskIcon className="w-6 h-6 text-accent-cyan" />
-          <h1 className="text-2xl font-bold text-dark-text-primary">发布任务</h1>
+          <h1 className="text-2xl font-bold text-dark-text-primary">Post Task</h1>
         </div>
-        <p className="text-dark-text-muted">描述你的需求，等待 Agent 接单执行</p>
+        <p className="text-dark-text-muted">Describe your needs, wait for Agents to claim and execute</p>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-dark-card border border-dark-border rounded-xl p-6 space-y-6">
-        {/* 任务标题 */}
+        {/* Task Title */}
         <div>
           <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-            任务标题 <span className="text-red-400">*</span>
+            Task Title <span className="text-red-400">*</span>
           </label>
           <input
             type="text"
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
-            placeholder="例如：写一篇关于 AI 的文章"
+            placeholder="e.g. Write an article about AI"
             className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-cyan focus:border-transparent"
             required
           />
         </div>
 
-        {/* 任务类型 */}
+        {/* Task Type */}
         <div>
           <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-            任务类型 <span className="text-red-400">*</span>
+            Task Type <span className="text-red-400">*</span>
           </label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {categories.map((cat) => {
@@ -161,28 +161,28 @@ function PostTask() {
           </div>
         </div>
 
-        {/* 任务描述 */}
+        {/* Task Description */}
         <div>
           <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-            详细描述 <span className="text-red-400">*</span>
+            Detailed Description <span className="text-red-400">*</span>
           </label>
           <textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
-            placeholder={`详细描述你的需求，越清晰越好...\n\n例如：\n- 文章主题：AI 在医疗领域的应用\n- 字数要求：2000字左右\n- 风格要求：专业但易懂`}
+            placeholder={`Describe your requirements in detail, the clearer the better...\n\nExample:\n- Topic: AI applications in healthcare\n- Word count: Around 2000 words\n- Style: Professional but accessible`}
             rows={6}
             className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary placeholder-dark-text-muted focus:outline-none focus:ring-2 focus:ring-accent-cyan focus:border-transparent resize-none"
             required
           />
         </div>
 
-        {/* 预算和截止时间 */}
+        {/* Budget and Deadline */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-dark-text-secondary mb-2">
               <span className="flex items-center">
                 <MoneyIcon className="w-4 h-4 mr-1 text-dark-text-muted" />
-                预算 (MP) <span className="text-red-400 ml-1">*</span>
+                Budget (MP) <span className="text-red-400 ml-1">*</span>
               </span>
             </label>
             <input
@@ -199,7 +199,7 @@ function PostTask() {
             <label className="block text-sm font-medium text-dark-text-secondary mb-2">
               <span className="flex items-center">
                 <ClockIcon className="w-4 h-4 mr-1 text-dark-text-muted" />
-                截止时间
+                Deadline
               </span>
             </label>
             <select
@@ -207,17 +207,17 @@ function PostTask() {
               onChange={(e) => setForm({ ...form, deadline_hours: e.target.value })}
               className="w-full px-4 py-3 bg-dark-elevated border border-dark-border rounded-lg text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-accent-cyan focus:border-transparent"
             >
-              <option value="6">6 小时</option>
-              <option value="12">12 小时</option>
-              <option value="24">24 小时</option>
-              <option value="48">48 小时</option>
-              <option value="72">72 小时</option>
-              <option value="168">7 天</option>
+              <option value="6">6 hours</option>
+              <option value="12">12 hours</option>
+              <option value="24">24 hours</option>
+              <option value="48">48 hours</option>
+              <option value="72">72 hours</option>
+              <option value="168">7 days</option>
             </select>
           </div>
         </div>
 
-        {/* 结算预览 */}
+        {/* Settlement Preview */}
         {form.budget && (
           <SettlementPreview
             taskPrice={form.budget}
@@ -226,14 +226,14 @@ function PostTask() {
           />
         )}
 
-        {/* 提交按钮 */}
+        {/* Submit Button */}
         <div className="flex justify-end space-x-3 pt-4 border-t border-dark-border">
           <button
             type="button"
             onClick={() => navigate(-1)}
             className="px-6 py-3 border border-dark-border text-dark-text-secondary font-medium rounded-lg hover:bg-dark-elevated transition-colors"
           >
-            取消
+            Cancel
           </button>
           <button
             type="submit"
@@ -241,10 +241,10 @@ function PostTask() {
             className="flex items-center px-6 py-3 bg-accent-cyan text-dark-bg font-medium rounded-lg hover:bg-accent-cyan/90 disabled:opacity-50 transition-colors"
           >
             {loading ? (
-              '发布中...'
+              'Posting...'
             ) : (
               <>
-                发布任务
+                Post Task
                 <ChevronRightIcon className="w-4 h-4 ml-1" />
               </>
             )}

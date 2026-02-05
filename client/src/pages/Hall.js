@@ -8,7 +8,7 @@ import {
   ClockIcon,
   CheckCircleIcon,
   RefreshIcon,
-  FilterIcon,
+  SearchIcon,
   ChevronRightIcon,
   AgentIcon,
 } from '../components/Icons';
@@ -19,13 +19,13 @@ function Hall() {
   const [completedTasks, setCompletedTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState({ category: '', showCompleted: false });
+  const [filter, setFilter] = useState({ keyword: '', showCompleted: false });
   const [economy, setEconomy] = useState(null);
   const auth = getAuth();
 
   useEffect(() => {
     loadTasks();
-  }, [filter.category]);
+  }, []);
 
   useEffect(() => {
     api.getEconomyStatus()
@@ -37,11 +37,9 @@ function Hall() {
     setLoading(true);
     setError(null);
     try {
-      const params = {};
-      if (filter.category) params.category = filter.category;
       const [openData, completedData] = await Promise.all([
-        api.getOpenTasks(params),
-        api.getCompletedTasks ? api.getCompletedTasks(params).catch(() => ({ tasks: [] })) : Promise.resolve({ tasks: [] })
+        api.getOpenTasks(),
+        api.getCompletedTasks ? api.getCompletedTasks().catch(() => ({ tasks: [] })) : Promise.resolve({ tasks: [] })
       ]);
       setTasks(openData.tasks || []);
       setCompletedTasks(completedData.tasks || []);
@@ -54,71 +52,74 @@ function Hall() {
 
   const handleClaim = async (taskId) => {
     if (!auth.key || auth.type !== 'agent') {
-      alert('请先以 Agent 身份登录');
+      alert('Please sign in as an Agent first');
       return;
     }
     try {
       await api.claimTask(taskId);
-      alert('接单成功！');
+      alert('Task claimed successfully!');
       loadTasks();
     } catch (err) {
-      alert('接单失败: ' + err.message);
+      alert('Failed to claim: ' + err.message);
     }
   };
 
-  const categories = [
-    { value: '', label: '全部类型' },
-    { value: 'writing', label: '写作' },
-    { value: 'coding', label: '编程' },
-    { value: 'analysis', label: '分析' },
-    { value: 'translation', label: '翻译' },
-    { value: 'general', label: '其他' },
-  ];
+  // 根据关键词过滤任务
+  const filterByKeyword = (taskList) => {
+    if (!filter.keyword.trim()) return taskList;
+    const kw = filter.keyword.toLowerCase();
+    return taskList.filter(task =>
+      task.title?.toLowerCase().includes(kw) ||
+      task.description?.toLowerCase().includes(kw) ||
+      task.category?.toLowerCase().includes(kw)
+    );
+  };
 
-  const displayTasks = filter.showCompleted ? completedTasks : tasks;
+  const displayTasks = filterByKeyword(filter.showCompleted ? completedTasks : tasks);
 
   return (
     <div className="space-y-6">
-      {/* 页头 */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <div className="flex items-center space-x-2 mb-1">
+          <div className="flex items-center space-x-2">
             <HallIcon className="w-6 h-6 text-accent-cyan" />
-            <h1 className="text-2xl font-bold text-dark-text-primary">任务大厅</h1>
+            <h1 className="text-2xl font-bold text-dark-text-primary">Task Hall</h1>
           </div>
-          <p className="text-dark-text-muted">浏览所有任务，选择你擅长的接单</p>
         </div>
         <Link
           to="/post"
           className="inline-flex items-center px-4 py-2 bg-accent-cyan text-dark-bg font-medium rounded-lg hover:bg-accent-cyan/90 transition-colors"
         >
           <TaskIcon className="w-4 h-4 mr-2" />
-          发布任务
+          Post Task
         </Link>
       </div>
 
-      {/* 筛选器 */}
+      {/* Filters */}
       <div className="bg-dark-card border border-dark-border rounded-xl p-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div className="flex items-center space-x-2 text-dark-text-muted">
-            <FilterIcon className="w-4 h-4" />
-            <span className="text-sm">筛选：</span>
+          {/* Search Box */}
+          <div className="flex items-center flex-1 max-w-md bg-dark-elevated border border-dark-border rounded-lg px-3 py-2">
+            <SearchIcon className="w-4 h-4 text-dark-text-muted mr-2 flex-shrink-0" />
+            <input
+              type="text"
+              value={filter.keyword}
+              onChange={(e) => setFilter({ ...filter, keyword: e.target.value })}
+              placeholder="Search tasks..."
+              className="flex-1 bg-transparent border-none text-dark-text-primary placeholder-dark-text-muted focus:outline-none text-sm"
+            />
+            {filter.keyword && (
+              <button
+                onClick={() => setFilter({ ...filter, keyword: '' })}
+                className="text-dark-text-muted hover:text-dark-text-secondary ml-2"
+              >
+                ×
+              </button>
+            )}
           </div>
 
-          {/* 类型筛选 */}
-          <select
-            value={filter.category}
-            onChange={(e) => setFilter({ ...filter, category: e.target.value })}
-            className="bg-dark-elevated border border-dark-border rounded-lg px-3 py-2 text-sm text-dark-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-cyan"
-          >
-            {categories.map((cat) => (
-              <option key={cat.value} value={cat.value}>
-                {cat.label}
-              </option>
-            ))}
-          </select>
-
-          {/* 状态切换 */}
+          {/* Status Toggle */}
           <div className="flex bg-dark-elevated rounded-lg p-1">
             <button
               onClick={() => setFilter({ ...filter, showCompleted: false })}
@@ -128,7 +129,7 @@ function Hall() {
                   : 'text-dark-text-muted hover:text-dark-text-secondary'
               }`}
             >
-              开放中 ({tasks.length})
+              Open ({tasks.length})
             </button>
             <button
               onClick={() => setFilter({ ...filter, showCompleted: true })}
@@ -138,7 +139,7 @@ function Hall() {
                   : 'text-dark-text-muted hover:text-dark-text-secondary'
               }`}
             >
-              已完成 ({completedTasks.length})
+              Completed ({completedTasks.length})
             </button>
           </div>
 
@@ -147,12 +148,12 @@ function Hall() {
             className="flex items-center space-x-1 text-sm text-accent-cyan hover:text-accent-cyan/80 ml-auto"
           >
             <RefreshIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>刷新</span>
+            <span>Refresh</span>
           </button>
         </div>
       </div>
 
-      {/* 任务列表 */}
+      {/* Task List */}
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3].map(i => (
@@ -176,17 +177,17 @@ function Hall() {
         <div className="bg-dark-card border border-dark-border rounded-xl p-12 text-center">
           <TaskIcon className="w-16 h-16 mx-auto text-dark-text-muted mb-4" />
           <h3 className="text-lg font-medium text-dark-text-primary mb-2">
-            {filter.showCompleted ? '暂无已完成任务' : '暂无开放任务'}
+            {filter.showCompleted ? 'No completed tasks yet' : 'No open tasks'}
           </h3>
           <p className="text-dark-text-muted mb-4">
-            {filter.category ? '该类型下暂无任务' : (filter.showCompleted ? '还没有任务被完成' : '成为第一个发布任务的人')}
+            {filter.keyword ? 'No matching tasks found' : (filter.showCompleted ? 'No tasks have been completed yet' : 'Be the first to post a task')}
           </p>
           {!filter.showCompleted && (
             <Link
               to="/post"
               className="inline-flex items-center text-accent-cyan font-medium hover:underline"
             >
-              发布第一个任务
+              Post the first task
               <ChevronRightIcon className="w-4 h-4 ml-1" />
             </Link>
           )}
@@ -209,7 +210,7 @@ function Hall() {
   );
 }
 
-// 任务卡片组件
+// Task card component
 function TaskCard({ task, isAgent, onClaim, economy, isCompleted }) {
   const SkillIcon = getSkillIcon(task.category);
   const burnRate = economy?.burnRate || 0.25;
@@ -219,7 +220,7 @@ function TaskCard({ task, isAgent, onClaim, economy, isCompleted }) {
     <div className="bg-dark-card border border-dark-border rounded-xl p-6 hover:border-dark-elevated transition-colors">
       <div className="flex flex-col md:flex-row justify-between gap-4">
         <div className="flex-1 min-w-0">
-          {/* 标题行 */}
+          {/* Title row */}
           <div className="flex items-center flex-wrap gap-2 mb-2">
             <Link
               to={`/task/${task.id}`}
@@ -234,32 +235,32 @@ function TaskCard({ task, isAgent, onClaim, economy, isCompleted }) {
             {isCompleted && (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-accent-green/10 text-accent-green border border-accent-green/20">
                 <CheckCircleIcon className="w-3 h-3 mr-1" />
-                已完成
+                Completed
               </span>
             )}
             {task.skill_match && !isCompleted && (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-accent-green/10 text-accent-green border border-accent-green/20">
                 <CheckCircleIcon className="w-3 h-3 mr-1" />
-                匹配技能
+                Skill Match
               </span>
             )}
           </div>
 
-          {/* 描述 */}
+          {/* Description */}
           <p className="text-dark-text-secondary text-sm line-clamp-2 mb-3">
             {task.description}
           </p>
 
-          {/* 元信息 */}
+          {/* Meta info */}
           <div className="flex flex-wrap items-center gap-4 text-sm text-dark-text-muted">
             <span className="flex items-center">
               <MoneyIcon className="w-4 h-4 mr-1" />
-              任务价 {task.budget} MP
+              Budget {task.budget} MP
             </span>
             {!isCompleted && (
               <span className="flex items-center text-accent-green font-medium">
                 <AgentIcon className="w-4 h-4 mr-1" />
-                预期 +{expectedEarnings} MP
+                Expected +{expectedEarnings} MP
               </span>
             )}
             {task.deadline && (
@@ -271,7 +272,7 @@ function TaskCard({ task, isAgent, onClaim, economy, isCompleted }) {
           </div>
         </div>
 
-        {/* 右侧操作区 */}
+        {/* Right action area */}
         <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-start gap-2">
           <div>
             <div className="text-2xl font-bold text-accent-cyan">
@@ -288,7 +289,7 @@ function TaskCard({ task, isAgent, onClaim, economy, isCompleted }) {
               to={`/task/${task.id}`}
               className="inline-flex items-center px-4 py-2 border border-dark-border text-dark-text-secondary text-sm font-medium rounded-lg hover:bg-dark-elevated transition-colors"
             >
-              查看详情
+              View Details
               <ChevronRightIcon className="w-4 h-4 ml-1" />
             </Link>
           ) : isAgent ? (
@@ -297,14 +298,14 @@ function TaskCard({ task, isAgent, onClaim, economy, isCompleted }) {
               className="inline-flex items-center px-4 py-2 bg-accent-purple text-white text-sm font-medium rounded-lg hover:bg-accent-purple/90 transition-colors"
             >
               <AgentIcon className="w-4 h-4 mr-1" />
-              接单
+              Claim
             </button>
           ) : (
             <Link
               to={`/task/${task.id}`}
               className="inline-flex items-center px-4 py-2 border border-dark-border text-dark-text-secondary text-sm font-medium rounded-lg hover:bg-dark-elevated transition-colors"
             >
-              查看详情
+              View Details
               <ChevronRightIcon className="w-4 h-4 ml-1" />
             </Link>
           )}

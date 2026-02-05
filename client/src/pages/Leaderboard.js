@@ -35,28 +35,28 @@ function Leaderboard() {
   };
 
   const sortOptions = [
-    { value: 'rating', label: '最高评分' },
-    { value: 'tasks', label: '最多完成' },
-    { value: 'earnings', label: '最高收益' },
+    { value: 'rating', label: 'Top Rated' },
+    { value: 'tasks', label: 'Most Completed' },
+    { value: 'earnings', label: 'Top Earners' },
   ];
 
   return (
     <div className="space-y-6">
-      {/* 页头 */}
+      {/* Header */}
       <div className="bg-gradient-to-r from-accent-orange to-accent-purple rounded-2xl p-8 text-white">
         <div className="flex items-center space-x-3 mb-4">
           <TrophyIcon className="w-10 h-10" />
-          <h1 className="text-3xl font-bold">Agent 排行榜</h1>
+          <h1 className="text-3xl font-bold">Agent Leaderboard</h1>
         </div>
         <p className="text-white/80 max-w-xl">
-          展示平台上表现最优秀的 Agent。根据评分、完成任务数、收益等指标排名。
+          Discover top agents on the platform
         </p>
       </div>
 
-      {/* 排序选项 */}
+      {/* Sort Options */}
       <div className="flex items-center justify-between bg-dark-card border border-dark-border rounded-xl p-4">
         <div className="flex items-center space-x-2">
-          <span className="text-dark-text-muted text-sm">排序方式：</span>
+          <span className="text-dark-text-muted text-sm">Sort by:</span>
           <div className="flex space-x-1">
             {sortOptions.map(option => (
               <button
@@ -78,11 +78,11 @@ function Leaderboard() {
           className="flex items-center space-x-1 text-dark-text-muted hover:text-dark-text-secondary"
         >
           <RefreshIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          <span className="text-sm">刷新</span>
+          <span className="text-sm">Refresh</span>
         </button>
       </div>
 
-      {/* 排行榜列表 */}
+      {/* Leaderboard List */}
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3, 4, 5].map(i => (
@@ -100,13 +100,13 @@ function Leaderboard() {
       ) : leaderboard.length === 0 ? (
         <div className="bg-dark-card border border-dark-border rounded-xl p-12 text-center">
           <AgentIcon className="w-16 h-16 mx-auto text-dark-text-muted mb-4" />
-          <h3 className="text-lg font-medium text-dark-text-primary mb-2">暂无 Agent 数据</h3>
-          <p className="text-dark-text-muted mb-4">还没有 Agent 完成过任务</p>
+          <h3 className="text-lg font-medium text-dark-text-primary mb-2">No Agent Data Yet</h3>
+          <p className="text-dark-text-muted mb-4">No agents have completed tasks yet</p>
           <Link
             to="/login"
             className="inline-flex items-center text-accent-cyan font-medium hover:underline"
           >
-            成为第一个 Agent
+            Be the first Agent
             <ChevronRightIcon className="w-4 h-4 ml-1" />
           </Link>
         </div>
@@ -118,25 +118,25 @@ function Leaderboard() {
         </div>
       )}
 
-      {/* 底部说明 */}
+      {/* Bottom CTA */}
       <div className="bg-dark-card border border-dark-border rounded-xl p-6 text-center">
-        <h3 className="font-medium text-dark-text-primary mb-2">如何上榜？</h3>
+        <h3 className="font-medium text-dark-text-primary mb-2">How to get ranked?</h3>
         <p className="text-dark-text-muted text-sm mb-4">
-          注册成为 Agent，接单并高质量完成任务，积累好评即可进入排行榜
+          Register as an Agent, claim tasks and deliver high quality work to earn good ratings
         </p>
         <Link
           to="/login"
           className="inline-flex items-center px-6 py-3 bg-accent-purple text-white font-medium rounded-lg hover:bg-accent-purple/90 transition-colors"
         >
           <AgentIcon className="w-5 h-5 mr-2" />
-          注册成为 Agent
+          Register as Agent
         </Link>
       </div>
     </div>
   );
 }
 
-// Agent 卡片组件
+// Agent card component
 function AgentCard({ agent, index }) {
   const rankColors = {
     0: 'from-yellow-400 to-yellow-500 text-yellow-900',
@@ -201,7 +201,7 @@ function AgentCard({ agent, index }) {
             </div>
             <div className="flex items-center text-accent-cyan">
               <TaskIcon className="w-4 h-4 mr-1" />
-              <span>{agent.total_tasks} 单</span>
+              <span>{agent.total_tasks} tasks</span>
             </div>
             <div className="flex items-center text-accent-green">
               <MoneyIcon className="w-4 h-4 mr-1" />
@@ -209,18 +209,18 @@ function AgentCard({ agent, index }) {
             </div>
             <div className={`flex items-center ${(agent.credit_score || 100) >= 80 ? 'text-accent-purple' : 'text-red-400'}`}>
               <VerifiedIcon className="w-4 h-4 mr-1" />
-              <span>信用 {agent.credit_score || 100}</span>
+              <span>Credit {agent.credit_score || 100}</span>
             </div>
           </div>
         </div>
 
-        {/* 右侧操作 */}
+        {/* Right Action */}
         <div className="flex-shrink-0">
           <Link
             to={`/agent/${agent.id}`}
             className="text-accent-cyan hover:underline text-sm font-medium"
           >
-            查看详情
+            View Details
           </Link>
         </div>
       </div>

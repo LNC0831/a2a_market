@@ -1,6 +1,6 @@
 /**
- * MP 钱包页面
- * 显示余额、恢复进度、交易历史
+ * MP Wallet Page
+ * Display balance, regen progress, transaction history
  */
 
 import React, { useState, useEffect } from 'react';
@@ -24,64 +24,64 @@ import {
   LoginIcon,
 } from '../components/Icons';
 
-// 交易类型配置 (dark theme)
+// Transaction type config (dark theme)
 const txTypeConfig = {
   task_payment: {
-    label: '任务支付',
+    label: 'Task Payment',
     icon: ExpenseIcon,
     color: 'text-red-400',
     bgColor: 'bg-red-500/20',
   },
   task_earning: {
-    label: '任务收入',
+    label: 'Task Earnings',
     icon: IncomeIcon,
     color: 'text-accent-green',
     bgColor: 'bg-accent-green/20',
   },
   task_freeze: {
-    label: '任务冻结',
+    label: 'Task Freeze',
     icon: ClockIcon,
     color: 'text-accent-cyan',
     bgColor: 'bg-accent-cyan/20',
   },
   task_unfreeze: {
-    label: '任务解冻',
+    label: 'Task Unfreeze',
     icon: CoinsIcon,
     color: 'text-accent-cyan',
     bgColor: 'bg-accent-cyan/20',
   },
   burn: {
-    label: '销毁',
+    label: 'Burned',
     icon: BurnIcon,
     color: 'text-accent-orange',
     bgColor: 'bg-accent-orange/20',
   },
   daily_regen: {
-    label: '每日恢复',
+    label: 'Daily Regen',
     icon: GiftIcon,
     color: 'text-accent-green',
     bgColor: 'bg-accent-green/20',
   },
   bonus: {
-    label: '奖励',
+    label: 'Bonus',
     icon: GiftIcon,
     color: 'text-accent-purple',
     bgColor: 'bg-accent-purple/20',
   },
   refund: {
-    label: '退款',
+    label: 'Refund',
     icon: IncomeIcon,
     color: 'text-accent-cyan',
     bgColor: 'bg-accent-cyan/20',
   },
   register_bonus: {
-    label: '注册赠送',
+    label: 'Registration Bonus',
     icon: GiftIcon,
     color: 'text-accent-green',
     bgColor: 'bg-accent-green/20',
   },
   rating_bonus: {
-    label: '评价奖励',
+    label: 'Rating Bonus',
     icon: GiftIcon,
     color: 'text-accent-purple',
     bgColor: 'bg-accent-purple/20',
@@ -100,7 +100,7 @@ function Wallet() {
   const [hasMore, setHasMore] = useState(true);
   const [countdown, setCountdown] = useState({ hours: 0, minutes: 0 });
 
-  // 计算下次恢复倒计时
+  // Calculate next regen countdown
   useEffect(() => {
     const updateCountdown = () => {
       const now = new Date();
@@ -120,7 +120,7 @@ function Wallet() {
     return () => clearInterval(interval);
   }, []);
 
-  // 加载余额和经济数据
+  // Load balance and economy data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -140,7 +140,7 @@ function Wallet() {
     fetchData();
   }, []);
 
-  // 加载交易历史
+  // Load transaction history
   useEffect(() => {
     loadTransactions(1);
   }, [filter]);
@@ -176,14 +176,14 @@ function Wallet() {
     return (
       <div className="text-center py-12">
         <WalletIcon className="w-16 h-16 mx-auto text-dark-text-muted mb-4" />
-        <h2 className="text-xl font-bold text-dark-text-primary mb-2">请先登录</h2>
-        <p className="text-dark-text-muted mb-4">登录后可查看钱包余额和交易历史</p>
+        <h2 className="text-xl font-bold text-dark-text-primary mb-2">Please sign in first</h2>
+        <p className="text-dark-text-muted mb-4">Sign in to view wallet balance and transaction history</p>
         <Link
           to="/login"
           className="inline-flex items-center px-6 py-3 bg-accent-cyan text-dark-bg font-medium rounded-lg hover:bg-accent-cyan/90 transition-colors"
         >
           <LoginIcon className="w-5 h-5 mr-2" />
-          登录 / 注册
+          Sign In / Sign Up
         </Link>
       </div>
     );
@@ -199,13 +199,13 @@ function Wallet() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {/* 页头 */}
+      {/* Header */}
       <div className="flex items-center space-x-2 mb-2">
         <WalletIcon className="w-6 h-6 text-accent-cyan" />
-        <h1 className="text-2xl font-bold text-dark-text-primary">MP 钱包</h1>
+        <h1 className="text-2xl font-bold text-dark-text-primary">MP Wallet</h1>
       </div>
 
-      {/* 余额卡片 */}
+      {/* Balance Card */}
       {loading ? (
         <div className="bg-gradient-to-br from-accent-cyan/10 via-accent-purple/5 to-accent-orange/10 rounded-xl border border-dark-border p-6 animate-pulse">
           <div className="h-8 bg-dark-elevated rounded w-32 mb-4"></div>
@@ -217,11 +217,11 @@ function Wallet() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
               <CoinsSolidIcon className="w-6 h-6 text-accent-cyan" />
-              <span className="font-semibold text-dark-text-primary">可用余额</span>
+              <span className="font-semibold text-dark-text-primary">Available Balance</span>
             </div>
           </div>
 
-          {/* 主余额 */}
+          {/* Main Balance */}
           <div className="text-center mb-6">
             <div className="text-5xl font-bold text-dark-text-primary">
               {available.toLocaleString()}
@@ -230,15 +230,15 @@ function Wallet() {
             {frozen > 0 && (
               <div className="flex items-center justify-center text-sm text-dark-text-muted mt-2">
                 <ClockIcon className="w-4 h-4 mr-1" />
-                冻结中: {frozen.toLocaleString()} MP
+                Frozen: {frozen.toLocaleString()} MP
               </div>
             )}
           </div>
 
-          {/* 进度条 */}
+          {/* Progress Bar */}
           <div className="mb-4">
             <div className="flex justify-between text-xs text-dark-text-muted mb-1">
-              <span>余额上限进度</span>
+              <span>Balance Cap Progress</span>
               <span>{available} / {cap}</span>
             </div>
             <div className="h-3 bg-dark-elevated rounded-full overflow-hidden">
@@ -249,15 +249,15 @@ function Wallet() {
             </div>
           </div>
 
-          {/* 恢复信息 */}
+          {/* Regen Info */}
           <div className="bg-dark-card/60 rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="flex items-center text-sm text-dark-text-muted">
                 <GiftIcon className="w-4 h-4 mr-2 text-accent-green" />
-                每日恢复额度
+                Daily Regen Allowance
               </span>
               <span className="font-medium text-accent-green">
-                +{dailyRegen} MP/天
+                +{dailyRegen} MP/day
               </span>
             </div>
 
@@ -265,30 +265,30 @@ function Wallet() {
               <div className="flex items-center justify-between">
                 <span className="flex items-center text-sm text-dark-text-muted">
                   <ClockIcon className="w-4 h-4 mr-2 text-accent-cyan" />
-                  下次恢复
+                  Next Regen
                 </span>
                 <span className="text-dark-text-secondary">
-                  <span className="font-medium">{countdown.hours}</span>小时
-                  <span className="font-medium ml-1">{countdown.minutes}</span>分后
+                  <span className="font-medium">{countdown.hours}</span>h
+                  <span className="font-medium ml-1">{countdown.minutes}</span>m later
                   <span className="text-accent-green ml-2">+{regenAmount} MP</span>
                 </span>
               </div>
             ) : (
               <div className="flex items-center text-sm text-dark-text-muted">
                 <InfoIcon className="w-4 h-4 mr-2" />
-                余额已达上限 ({cap} MP)，不会获得每日恢复
+                Balance at cap ({cap} MP), no daily regen
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* 交易历史 */}
+      {/* Transaction History */}
       <div className="bg-dark-card rounded-xl border border-dark-border overflow-hidden">
         <div className="p-4 border-b border-dark-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h2 className="font-bold text-dark-text-primary flex items-center">
             <TaskIcon className="w-5 h-5 mr-2 text-dark-text-muted" />
-            交易记录
+            Transaction History
           </h2>
           <div className="flex items-center space-x-2">
             <FilterIcon className="w-4 h-4 text-dark-text-muted" />
@@ -297,12 +297,12 @@ function Wallet() {
               onChange={(e) => setFilter(e.target.value)}
               className="border border-dark-border bg-dark-elevated rounded-lg px-3 py-1.5 text-sm text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-accent-cyan"
             >
-              <option value="all">全部</option>
-              <option value="task_earning">任务收入</option>
-              <option value="task_payment">任务支付</option>
-              <option value="daily_regen">每日恢复</option>
-              <option value="burn">销毁</option>
-              <option value="bonus">奖励</option>
+              <option value="all">All</option>
+              <option value="task_earning">Task Earnings</option>
+              <option value="task_payment">Task Payment</option>
+              <option value="daily_regen">Daily Regen</option>
+              <option value="burn">Burned</option>
+              <option value="bonus">Bonus</option>
             </select>
             <button
               onClick={() => loadTransactions(1)}
@@ -313,7 +313,7 @@ function Wallet() {
           </div>
         </div>
 
-        {/* 交易列表 */}
+        {/* Transaction List */}
         {txLoading && transactions.length === 0 ? (
           <div className="p-4 space-y-4">
             {[1, 2, 3, 4, 5].map(i => (
@@ -332,7 +332,7 @@ function Wallet() {
         ) : transactions.length === 0 ? (
           <div className="p-8 text-center">
             <CoinsIcon className="w-12 h-12 mx-auto text-dark-text-muted mb-3" />
-            <p className="text-dark-text-muted">暂无交易记录</p>
+            <p className="text-dark-text-muted">No transactions yet</p>
           </div>
         ) : (
           <div className="divide-y divide-dark-border">
@@ -356,7 +356,7 @@ function Wallet() {
                       <div>
                         <div className="font-medium text-dark-text-primary">{config.label}</div>
                         <div className="text-sm text-dark-text-muted">
-                          {tx.description || (tx.task_id ? `任务 #${tx.task_id}` : '')}
+                          {tx.description || (tx.task_id ? `Task #${tx.task_id}` : '')}
                           {tx.created_at && (
                             <span className="ml-2">
                               {new Date(tx.created_at).toLocaleString()}
@@ -375,7 +375,7 @@ function Wallet() {
           </div>
         )}
 
-        {/* 加载更多 */}
+        {/* Load More */}
         {hasMore && transactions.length > 0 && (
           <div className="p-4 border-t border-dark-border text-center">
             <button
@@ -383,23 +383,23 @@ function Wallet() {
               disabled={txLoading}
               className="text-sm text-accent-cyan hover:text-accent-cyan/80 disabled:text-dark-text-muted"
             >
-              {txLoading ? '加载中...' : '加载更多'}
+              {txLoading ? 'Loading...' : 'Load More'}
             </button>
           </div>
         )}
       </div>
 
-      {/* 说明卡片 */}
+      {/* Info Card */}
       <div className="bg-accent-cyan/10 rounded-xl p-4 border border-accent-cyan/20">
         <div className="flex items-start space-x-3">
           <InfoIcon className="w-5 h-5 text-accent-cyan mt-0.5" />
           <div className="text-sm text-dark-text-secondary">
-            <div className="font-medium text-dark-text-primary mb-1">关于 MP (Marketplace Points)</div>
+            <div className="font-medium text-dark-text-primary mb-1">About MP (Marketplace Points)</div>
             <ul className="space-y-1">
-              <li>MP 是平台内部积分，用于任务支付和收益</li>
-              <li>余额上限 200 MP，每日 UTC 0:00 自动恢复</li>
-              <li>恢复额度 R 根据市场供给比率 σ 动态调整</li>
-              <li>余额达上限时不会获得恢复</li>
+              <li>MP is the platform's internal currency for task payments and earnings</li>
+              <li>Balance cap is 200 MP, auto-regen daily at UTC 0:00</li>
+              <li>Regen amount R dynamically adjusts based on market supply ratio (sigma)</li>
+              <li>No regen when balance is at cap</li>
             </ul>
           </div>
         </div>

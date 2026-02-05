@@ -56,7 +56,7 @@ function AgentDetail() {
     return (
       <div className="max-w-4xl mx-auto text-center py-12">
         <AgentIcon className="w-16 h-16 mx-auto text-dark-text-muted mb-4" />
-        <h2 className="text-xl font-bold text-dark-text-primary mb-2">加载失败</h2>
+        <h2 className="text-xl font-bold text-dark-text-primary mb-2">Failed to Load</h2>
         <p className="text-red-400">{error}</p>
       </div>
     );
@@ -66,7 +66,7 @@ function AgentDetail() {
     return (
       <div className="max-w-4xl mx-auto text-center py-12">
         <AgentIcon className="w-16 h-16 mx-auto text-dark-text-muted mb-4" />
-        <h2 className="text-xl font-bold text-dark-text-primary mb-2">Agent 不存在</h2>
+        <h2 className="text-xl font-bold text-dark-text-primary mb-2">Agent Not Found</h2>
       </div>
     );
   }
@@ -75,10 +75,10 @@ function AgentDetail() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Agent 头部信息 */}
+      {/* Agent Header Info */}
       <div className="bg-dark-card rounded-xl p-6 border border-dark-border">
         <div className="flex flex-col md:flex-row gap-6">
-          {/* 头像和基本信息 */}
+          {/* Avatar and Basic Info */}
           <div className="flex items-start space-x-4">
             <div className="w-20 h-20 bg-gradient-to-br from-accent-purple to-accent-cyan rounded-2xl flex items-center justify-center flex-shrink-0">
               <AgentIcon className="w-10 h-10 text-white" />
@@ -96,10 +96,10 @@ function AgentDetail() {
                 <StarSolidIcon className="w-5 h-5" />
                 <span className="font-bold text-lg">{agent.rating?.toFixed(1) || '5.0'}</span>
                 <span className="text-dark-text-muted text-sm">
-                  ({agent.rating_stats?.total || 0} 条评价)
+                  ({agent.rating_stats?.total || 0} reviews)
                 </span>
               </div>
-              {/* 技能标签 */}
+              {/* Skill Tags */}
               <div className="flex flex-wrap gap-2">
                 {agent.skills.map(skill => {
                   const Icon = getSkillIcon(skill);
@@ -117,61 +117,61 @@ function AgentDetail() {
             </div>
           </div>
 
-          {/* 统计数据 */}
+          {/* Stats */}
           <div className="flex-1 grid grid-cols-3 gap-4 md:ml-auto md:max-w-xs">
             <StatBox
               icon={TaskIcon}
               value={agent.total_tasks}
-              label="完成任务"
+              label="Completed"
               color="text-accent-cyan"
             />
             <StatBox
               icon={MoneyIcon}
               value={`${(agent.total_earnings || 0).toLocaleString()} MP`}
-              label="总收益"
+              label="Earnings"
               color="text-accent-green"
             />
             <StatBox
               icon={CheckCircleIcon}
               value={agent.rating_stats?.total || 0}
-              label="获得评价"
+              label="Reviews"
               color="text-accent-purple"
             />
           </div>
         </div>
 
-        {/* 简介 */}
+        {/* Description */}
         {agent.description && (
           <div className="mt-6 pt-6 border-t border-dark-border">
-            <h3 className="text-sm font-medium text-dark-text-secondary mb-2">Agent 简介</h3>
+            <h3 className="text-sm font-medium text-dark-text-secondary mb-2">About</h3>
             <p className="text-dark-text-secondary">{agent.description}</p>
           </div>
         )}
       </div>
 
-      {/* 评价分布 */}
+      {/* Rating Distribution */}
       <div className="bg-dark-card rounded-xl p-6 border border-dark-border">
         <h2 className="text-lg font-bold text-dark-text-primary mb-4 flex items-center">
           <StarIcon className="w-5 h-5 mr-2 text-yellow-500" />
-          评价分布
+          Rating Distribution
         </h2>
         <div className="space-y-3">
-          <RatingBar label="5 星" count={agent.rating_stats?.distribution?.[5] || 0} total={agent.rating_stats?.total || 1} color="bg-accent-green" />
-          <RatingBar label="4 星" count={agent.rating_stats?.distribution?.[4] || 0} total={agent.rating_stats?.total || 1} color="bg-accent-cyan" />
-          <RatingBar label="3 星" count={agent.rating_stats?.distribution?.[3] || 0} total={agent.rating_stats?.total || 1} color="bg-yellow-500" />
-          <RatingBar label="1-2 星" count={agent.rating_stats?.distribution?.['1-2'] || 0} total={agent.rating_stats?.total || 1} color="bg-red-500" />
+          <RatingBar label="5 Star" count={agent.rating_stats?.distribution?.[5] || 0} total={agent.rating_stats?.total || 1} color="bg-accent-green" />
+          <RatingBar label="4 Star" count={agent.rating_stats?.distribution?.[4] || 0} total={agent.rating_stats?.total || 1} color="bg-accent-cyan" />
+          <RatingBar label="3 Star" count={agent.rating_stats?.distribution?.[3] || 0} total={agent.rating_stats?.total || 1} color="bg-yellow-500" />
+          <RatingBar label="1-2 Star" count={agent.rating_stats?.distribution?.['1-2'] || 0} total={agent.rating_stats?.total || 1} color="bg-red-500" />
         </div>
       </div>
 
-      {/* 最近完成的任务 */}
+      {/* Recent Completed Tasks */}
       <div className="bg-dark-card rounded-xl border border-dark-border overflow-hidden">
         <div className="p-4 border-b border-dark-border flex items-center justify-between">
           <h2 className="font-bold text-dark-text-primary flex items-center">
             <TrophyIcon className="w-5 h-5 mr-2 text-dark-text-muted" />
-            最近完成的任务
+            Recent Completed Tasks
           </h2>
           <span className="text-sm text-dark-text-muted">
-            共 {agent.total_tasks} 个
+            Total: {agent.total_tasks}
           </span>
         </div>
         {agent.recent_tasks && agent.recent_tasks.length > 0 ? (
@@ -223,25 +223,25 @@ function AgentDetail() {
         ) : (
           <div className="p-8 text-center text-dark-text-muted">
             <TaskIcon className="w-12 h-12 mx-auto text-dark-text-muted mb-3" />
-            <p>暂无完成的任务</p>
+            <p>No completed tasks yet</p>
           </div>
         )}
       </div>
 
-      {/* 返回 */}
+      {/* Navigation */}
       <div className="flex justify-center space-x-4">
         <Link
           to="/leaderboard"
           className="inline-flex items-center text-dark-text-muted hover:text-dark-text-secondary transition-colors"
         >
           <ChevronRightIcon className="w-4 h-4 mr-1 rotate-180" />
-          返回排行榜
+          Back to Leaderboard
         </Link>
         <Link
           to="/hall"
           className="inline-flex items-center text-accent-cyan hover:text-accent-cyan/80 transition-colors"
         >
-          去任务大厅
+          Go to Task Hall
           <ChevronRightIcon className="w-4 h-4 ml-1" />
         </Link>
       </div>
@@ -249,7 +249,7 @@ function AgentDetail() {
   );
 }
 
-// 统计盒子组件
+// Stats box component
 function StatBox({ icon: Icon, value, label, color }) {
   return (
     <div className="text-center p-3 bg-dark-elevated rounded-lg">
@@ -262,7 +262,7 @@ function StatBox({ icon: Icon, value, label, color }) {
   );
 }
 
-// 评价条组件
+// Rating bar component
 function RatingBar({ label, count, total, color }) {
   const percentage = total > 0 ? (count / total) * 100 : 0;
 

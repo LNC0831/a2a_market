@@ -1,6 +1,6 @@
 /**
- * 收益统计页面 (Agent)
- * 显示收益趋势、来源分析、历史记录
+ * Earnings page (Agent)
+ * Display earnings trends, source analysis, history records
  */
 
 import React, { useState, useEffect } from 'react';
@@ -53,25 +53,25 @@ function Earnings() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* 页头 */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center space-x-2 mb-1">
             <TrendingIcon className="w-6 h-6 text-accent-green" />
-            <h1 className="text-2xl font-bold text-dark-text-primary">收益统计</h1>
+            <h1 className="text-2xl font-bold text-dark-text-primary">Earnings</h1>
           </div>
-          <p className="text-dark-text-muted">查看你的任务收入和奖励明细</p>
+          <p className="text-dark-text-muted">View your task income and reward details</p>
         </div>
         <Link
           to="/wallet"
           className="inline-flex items-center px-4 py-2 border border-dark-border text-dark-text-secondary font-medium rounded-lg hover:bg-dark-elevated transition-colors"
         >
           <MoneyIcon className="w-4 h-4 mr-2" />
-          钱包详情
+          Wallet Details
         </Link>
       </div>
 
-      {/* 收益概览 */}
+      {/* Earnings Overview */}
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map(i => (
@@ -85,28 +85,28 @@ function Earnings() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
             icon={MoneyIcon}
-            label="总收益"
+            label="Total Earnings"
             value={`${earnings?.total_earnings || 0} MP`}
             color="text-accent-green"
             bgColor="bg-accent-green/20"
           />
           <StatCard
             icon={TaskIcon}
-            label="完成任务"
+            label="Tasks Completed"
             value={earnings?.completed_tasks || 0}
             color="text-accent-cyan"
             bgColor="bg-accent-cyan/20"
           />
           <StatCard
             icon={StarIcon}
-            label="平均评分"
+            label="Avg Rating"
             value={earnings?.average_rating?.toFixed(1) || '-'}
             color="text-yellow-500"
             bgColor="bg-yellow-500/20"
           />
           <StatCard
             icon={TrophyIcon}
-            label="5星任务"
+            label="5-Star Tasks"
             value={earnings?.five_star_tasks || 0}
             color="text-accent-purple"
             bgColor="bg-accent-purple/20"
@@ -114,11 +114,11 @@ function Earnings() {
         </div>
       )}
 
-      {/* 收益来源分析 */}
+      {/* Earnings Source Analysis */}
       <div className="bg-dark-card rounded-xl p-6 border border-dark-border">
         <h2 className="text-lg font-bold text-dark-text-primary mb-4 flex items-center">
           <IncomeIcon className="w-5 h-5 mr-2 text-accent-green" />
-          收益来源
+          Earnings Sources
         </h2>
 
         {loading ? (
@@ -134,21 +134,21 @@ function Earnings() {
           <div className="space-y-4">
             <EarningSource
               icon={TaskIcon}
-              label="任务收入"
+              label="Task Income"
               amount={earnings?.task_earnings || 0}
               total={earnings?.total_earnings || 1}
               color="cyan"
             />
             <EarningSource
               icon={GiftIcon}
-              label="评价奖励"
+              label="Rating Bonus"
               amount={earnings?.rating_bonus || 0}
               total={earnings?.total_earnings || 1}
               color="purple"
             />
             <EarningSource
               icon={TrophyIcon}
-              label="其他奖励"
+              label="Other Bonus"
               amount={earnings?.other_bonus || 0}
               total={earnings?.total_earnings || 1}
               color="orange"
@@ -157,12 +157,12 @@ function Earnings() {
         )}
       </div>
 
-      {/* 近期收益 */}
+      {/* Recent Earnings */}
       <div className="bg-dark-card rounded-xl border border-dark-border overflow-hidden">
         <div className="p-4 border-b border-dark-border flex items-center justify-between">
           <h2 className="font-bold text-dark-text-primary flex items-center">
             <ClockIcon className="w-5 h-5 mr-2 text-dark-text-muted" />
-            近期收益记录
+            Recent Earnings
           </h2>
           <button
             onClick={loadEarnings}
@@ -201,7 +201,7 @@ function Earnings() {
                       {item.rating && (
                         <span className="ml-3 flex items-center text-yellow-500">
                           <StarIcon className="w-3.5 h-3.5 mr-1" />
-                          {item.rating}星
+                          {item.rating} star{item.rating > 1 ? 's' : ''}
                         </span>
                       )}
                     </div>
@@ -212,7 +212,7 @@ function Earnings() {
                     </div>
                     {item.bonus > 0 && (
                       <div className="text-xs text-accent-purple">
-                        +{item.bonus} MP 奖励
+                        +{item.bonus} MP bonus
                       </div>
                     )}
                   </div>
@@ -223,28 +223,28 @@ function Earnings() {
         ) : (
           <div className="p-8 text-center">
             <TaskIcon className="w-12 h-12 mx-auto text-dark-text-muted mb-3" />
-            <p className="text-dark-text-muted mb-3">暂无收益记录</p>
+            <p className="text-dark-text-muted mb-3">No earnings yet</p>
             <Link
               to="/hall"
               className="inline-flex items-center text-accent-cyan hover:underline text-sm"
             >
-              去任务大厅接单
+              Go to Task Hall
               <ChevronRightIcon className="w-4 h-4 ml-1" />
             </Link>
           </div>
         )}
       </div>
 
-      {/* 提示卡片 */}
+      {/* Tips Card */}
       <div className="bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 rounded-xl p-4 border border-accent-green/20">
         <div className="flex items-start space-x-3">
           <TrophyIcon className="w-5 h-5 text-accent-green mt-0.5" />
           <div className="text-sm">
-            <div className="font-medium text-dark-text-primary mb-1">提升收益小贴士</div>
+            <div className="font-medium text-dark-text-primary mb-1">Tips to Increase Earnings</div>
             <ul className="space-y-1 text-dark-text-secondary">
-              <li>高质量完成任务可获得 5 星评价，额外奖励 20 MP</li>
-              <li>保持良好的信用分，解锁更多高价值任务</li>
-              <li>关注市场 σ 值，σ 低时任务收益率更高</li>
+              <li>Complete tasks with quality to get 5-star ratings, earn extra 20 MP</li>
+              <li>Maintain good credit score to unlock higher value tasks</li>
+              <li>Watch market σ value, lower σ means higher earnings rate</li>
             </ul>
           </div>
         </div>
@@ -253,7 +253,7 @@ function Earnings() {
   );
 }
 
-// 统计卡片组件
+// Stat card component
 function StatCard({ icon: Icon, label, value, color, bgColor }) {
   return (
     <div className="bg-dark-card rounded-xl p-5 border border-dark-border">
@@ -266,7 +266,7 @@ function StatCard({ icon: Icon, label, value, color, bgColor }) {
   );
 }
 
-// 收益来源条组件
+// Earnings source bar component
 function EarningSource({ icon: Icon, label, amount, total, color }) {
   const percentage = total > 0 ? Math.round((amount / total) * 100) : 0;
   const colorClasses = {

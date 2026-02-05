@@ -78,6 +78,7 @@ export {
   CodeBracketIcon as CodeIcon,
   LanguageIcon as TranslateIcon,
   MagnifyingGlassIcon as AnalysisIcon,
+  MagnifyingGlassIcon as SearchIcon,
 
   // 状态相关
   CheckCircleIcon,
@@ -140,7 +141,7 @@ export {
   ArrowTrendingDownIcon as TrendingDownIcon,
 };
 
-// 技能图标映射
+// Skill icon mapping
 export const skillIcons = {
   writing: PencilSquareIcon,
   coding: CodeBracketIcon,
@@ -149,12 +150,12 @@ export const skillIcons = {
   general: Cog6ToothIcon,
 };
 
-// 获取技能图标
+// Get skill icon
 export function getSkillIcon(skill) {
   return skillIcons[skill] || Cog6ToothIcon;
 }
 
-// 技能标签颜色
+// Skill tag colors
 export const skillColors = {
   writing: 'bg-blue-100 text-blue-700 border-blue-200',
   coding: 'bg-green-100 text-green-700 border-green-200',
@@ -163,68 +164,68 @@ export const skillColors = {
   general: 'bg-gray-100 text-gray-700 border-gray-200',
 };
 
-// 技能中文名
+// Skill labels
 export const skillLabels = {
-  writing: '写作',
-  coding: '编程',
-  translation: '翻译',
-  analysis: '分析',
-  general: '通用',
+  writing: 'Writing',
+  coding: 'Coding',
+  translation: 'Translation',
+  analysis: 'Analysis',
+  general: 'General',
 };
 
-// 状态配置
+// Status configuration
 export const statusConfig = {
   open: {
-    label: '待接单',
+    label: 'Open',
     color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     icon: ClockIcon,
   },
   claimed: {
-    label: '执行中',
+    label: 'In Progress',
     color: 'bg-blue-100 text-blue-800 border-blue-200',
     icon: BoltIcon,
   },
   submitted: {
-    label: '待验收',
+    label: 'Pending Review',
     color: 'bg-purple-100 text-purple-800 border-purple-200',
     icon: MagnifyingGlassIcon,
   },
   completed: {
-    label: '已完成',
+    label: 'Completed',
     color: 'bg-green-100 text-green-800 border-green-200',
     icon: CheckCircleIcon,
   },
   rejected: {
-    label: '已拒绝',
+    label: 'Rejected',
     color: 'bg-red-100 text-red-800 border-red-200',
     icon: XCircleIcon,
   },
   cancelled: {
-    label: '已取消',
+    label: 'Cancelled',
     color: 'bg-gray-100 text-gray-800 border-gray-200',
     icon: XCircleIcon,
   },
 };
 
-// 徽章配置
+// Badge configuration
 export const badgeConfig = {
   gold: {
-    label: '金牌',
+    label: 'Gold',
     color: 'bg-yellow-400 text-yellow-900',
     gradient: 'from-yellow-300 to-yellow-500',
   },
   silver: {
-    label: '银牌',
+    label: 'Silver',
     color: 'bg-gray-300 text-gray-800',
     gradient: 'from-gray-200 to-gray-400',
   },
   bronze: {
-    label: '铜牌',
+    label: 'Bronze',
     color: 'bg-orange-400 text-orange-900',
     gradient: 'from-orange-300 to-orange-500',
   },
   blue: {
-    label: '新星',
+    label: 'Rising Star',
     color: 'bg-blue-400 text-blue-900',
     gradient: 'from-blue-300 to-blue-500',
   },
