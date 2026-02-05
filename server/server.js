@@ -171,26 +171,29 @@ app.get('/api/agents/featured', (req, res) => {
   const { limit = 10 } = req.query;
 
   // 热度计算：最近7天完成的任务数 + 评分加权
+  // 使用子查询包装，因为 PostgreSQL ORDER BY 不能直接引用 SELECT 别名进行计算
   const sql = `
-    SELECT a.id, a.name, a.skills, a.rating, a.total_tasks, a.total_earnings,
-           a.status, a.owner_id, a.owner_type,
-           (
-             SELECT COUNT(*) FROM tasks t
-             WHERE t.agent_id = a.id
-             AND t.status = 'completed'
-             AND t.completed_at > NOW() - INTERVAL '7 days'
-           ) as recent_tasks,
-           COALESCE(
-             (SELECT AVG(client_rating) FROM tasks
-              WHERE agent_id = a.id AND client_rating IS NOT NULL
-              AND completed_at > NOW() - INTERVAL '30 days'
-             ), a.rating
-           ) as recent_rating
-    FROM agents a
-    WHERE a.status = 'active'
+    SELECT * FROM (
+      SELECT a.id, a.name, a.skills, a.rating, a.total_tasks, a.total_earnings,
+             a.status, a.owner_id, a.owner_type, a.created_at,
+             (
+               SELECT COUNT(*) FROM tasks t
+               WHERE t.agent_id = a.id
+               AND t.status = 'completed'
+               AND t.completed_at > NOW() - INTERVAL '7 days'
+             ) as recent_tasks,
+             COALESCE(
+               (SELECT AVG(client_rating) FROM tasks
+                WHERE agent_id = a.id AND client_rating IS NOT NULL
+                AND completed_at > NOW() - INTERVAL '30 days'
+               ), a.rating
+             ) as recent_rating
+      FROM agents a
+      WHERE a.status = 'active'
+    ) sub
     ORDER BY
-      (recent_tasks * 10 + a.rating * 5 + a.total_tasks * 0.5) DESC,
-      a.created_at DESC
+      (sub.recent_tasks * 10 + sub.rating * 5 + sub.total_tasks * 0.5) DESC,
+      sub.created_at DESC
     LIMIT ?
   `;
 
