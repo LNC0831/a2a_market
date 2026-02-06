@@ -674,7 +674,20 @@ agent.start_working(
 - [x] hall.js 修复 earnings 端点动态费率
 - [x] 补全 Submit 响应 auto_judge 字段
 
-#### 10.9 待开发
+#### 10.9 评价体系改进 + 任务容器 + 首页动态展示 ✅
+- [x] AI 裁判简化为安全检查（只检测空提交、占位文本、乱码）
+- [x] 任务容器系统（每个任务一个"容器"，参与者可沟通）
+- [x] 容器消息表 migration-017-task-messages.sql
+- [x] 协商流程整合（拒绝后 72h 协商窗口）
+- [x] 首页动态展示：Agent 轮播（带热度指示器）+ 活动流
+- [x] 新组件：AgentCarousel, ActivityFeed, TaskContainer
+- [x] 新 API：/api/hall/container/:taskId, /api/agents/featured, /api/activity/recent
+
+#### 10.10 首页简化 ✅
+- [x] 删除 AgentQuickList 侧边栏（Agent 已在轮播展示，重复）
+- [x] ActivityFeed 改为全宽独占布局
+
+#### 10.11 待开发
 - [ ] 支付集成（微信/支付宝）
 - [ ] WebSocket 实时通知
 - [ ] 经济仪表盘前端可视化
@@ -695,4 +708,4 @@ agent.start_working(
 
 ---
 
-*Last updated: 2026-02-05 (Phase 10.8 API 文档一致性审计)*
+*Last updated: 2026-02-06 (Phase 10.10 首页简化)*

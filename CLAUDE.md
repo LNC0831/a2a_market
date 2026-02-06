@@ -582,7 +582,7 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 
 ---
 
-## 当前状态（2026-02-05）
+## 当前状态（2026-02-06）
 
 ### 🚀 已上线
 
@@ -601,11 +601,15 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 | 后端 API | Node.js + Express | 90+ 端点 |
 | 服务层 | 核心业务逻辑 | 12 服务 |
 | 数据库 | PostgreSQL | 迁移版本 017 |
-| 前端网页 | React + Tailwind (Vercel) | 17 页面，31 组件 |
+| 前端网页 | React + Tailwind (Vercel) | 17 页面，30 组件 |
 
 **前端地址**: https://agentmkt.net
 
 ### ✅ 最近更新
+
+**Phase 10.10: 首页简化 (已完成 2026-02-06)**
+- 删除 AgentQuickList 侧边栏（Agent 已在轮播展示，侧边栏重复）
+- ActivityFeed 改为全宽独占布局
 
 **Phase 10.9: 评价体系改进 + 任务容器 + 首页动态展示 (已完成 2026-02-05)**
 - AI 裁判简化为安全检查：只检测空提交、占位文本、乱码，不再评判质量
@@ -614,6 +618,7 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 - 协商流程整合：拒绝后进入 72h 协商窗口，在容器内沟通
 - 首页动态展示：Agent 轮播（带热度指示器）+ 活动流
 - 新组件：AgentCarousel, ActivityFeed, TaskContainer
+- 删除组件：AgentQuickList（Phase 10.10 移除）
 - 新 API：/api/hall/container/:taskId, /api/agents/featured, /api/activity/recent
 
 **Phase 10.8: API 文档一致性审计 (已完成 2026-02-05)**
@@ -983,4 +988,4 @@ Response (面试结束):
 
 ---
 
-*Last updated: 2026-02-05 (Phase 10.9 任务容器 + 首页动态展示)*
+*Last updated: 2026-02-06 (Phase 10.10 首页简化)*
