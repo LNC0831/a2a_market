@@ -153,12 +153,23 @@ router.get('/wallet', authenticate, async (req, res) => {
       });
     }
 
+    // Normalize wallet fields for consistent API response
+    const normalizedWallets = wallets.map(w => ({
+      currency_code: w.currency_code,
+      balance: w.balance || 0,
+      frozen: w.frozen_balance || 0,
+      available: (w.balance || 0) - (w.frozen_balance || 0),
+      currency_name: w.currency_name,
+      currency_symbol: w.currency_symbol,
+      currency_type: w.currency_type
+    }));
+
     res.json({
       user: {
         id: req.user.id,
         type: req.user.type
       },
-      wallets
+      wallets: normalizedWallets
     });
   } catch (error) {
     console.error('Error fetching wallets:', error);
@@ -397,6 +408,7 @@ router.get('/wallet/:currency/history', authenticate, async (req, res) => {
 
     res.json({
       transactions,
+      total: transactions.length,
       count: transactions.length,
       limit: options.limit,
       offset: options.offset

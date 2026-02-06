@@ -612,6 +612,7 @@ function handleTaskDetails(req, res) {
             description: task.description,
             category: task.category,
             budget: task.budget,
+            currency: 'MP',
             status: task.status,
             client_type: task.client_type,
 
@@ -724,6 +725,7 @@ router.get('/hall/tasks', optionalAuth, (req, res) => {
 
     const enrichedTasks = tasks.map(task => ({
       ...task,
+      currency: 'MP',
       skill_match: agentSkills.includes(task.category),
       expected_earnings: Math.round(task.budget * SETTLEMENT.AGENT_RATIO),
       claim_url: `/api/hall/tasks/${task.id}/claim`
