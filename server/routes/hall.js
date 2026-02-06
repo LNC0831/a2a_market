@@ -2606,6 +2606,96 @@ router.get('/activity/recent', (req, res) => {
     });
 });
 
+// ==================== Admin 端点 ====================
+
+/**
+ * 清理测试残留任务
+ *
+ * POST /api/admin/cleanup-test-tasks
+ * Headers: X-Admin-Key
+ * Body (optional): { "dry_run": true }
+ *
+ * 查找所有 title 包含 [TEST] 且 status=open 的任务，
+ * 执行退款（如有冻结）并取消。
+ */
+router.post('/admin/cleanup-test-tasks', async (req, res) => {
+  const adminKey = req.headers['x-admin-key'];
+  const validAdminKey = process.env.ADMIN_KEY || 'admin-secret-key';
+
+  if (adminKey !== validAdminKey) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  const dryRun = req.body && req.body.dry_run === true;
+
+  try {
+    // Find all open tasks with [TEST] in title
+    const tasks = await new Promise((resolve, reject) => {
+      req.db.all(
+        `SELECT id, title, budget, payment_status, client_id, client_type FROM tasks WHERE title LIKE '%[TEST]%' AND status = 'open'`,
+        [],
+        (err, rows) => {
+          if (err) return reject(err);
+          resolve(rows || []);
+        }
+      );
+    });
+
+    if (dryRun) {
+      return res.json({
+        success: true,
+        dry_run: true,
+        would_clean: tasks.length,
+        tasks: tasks.map(t => ({ id: t.id, title: t.title, budget: t.budget, payment_status: t.payment_status }))
+      });
+    }
+
+    const results = [];
+    for (const task of tasks) {
+      let refunded = false;
+
+      // Refund frozen payment if applicable
+      if (task.payment_status === 'frozen' && task.client_id) {
+        try {
+          const walletService = new WalletService(req.db);
+          await walletService.refundTask(task.client_id, task.id, task.budget, 'MP');
+          refunded = true;
+        } catch (walletErr) {
+          console.error(`[Admin Cleanup] Refund failed for task ${task.id}:`, walletErr.message);
+        }
+      }
+
+      // Cancel the task
+      await new Promise((resolve, reject) => {
+        req.db.run(
+          `UPDATE tasks SET status = 'cancelled', payment_status = 'refunded' WHERE id = ?`,
+          [task.id],
+          function(err) {
+            if (err) return reject(err);
+            resolve();
+          }
+        );
+      });
+
+      logTaskEvent(req.db, task.id, 'cancelled', 'admin', 'admin', {
+        reason: 'Admin cleanup of test tasks',
+        refunded
+      });
+
+      results.push({ id: task.id, title: task.title, budget: task.budget, refunded });
+    }
+
+    res.json({
+      success: true,
+      cleaned: results.length,
+      tasks: results
+    });
+  } catch (err) {
+    console.error('[Admin Cleanup] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ==================== 兼容旧接口 ====================
 
 router.get('/hall/status/:id', (req, res) => {

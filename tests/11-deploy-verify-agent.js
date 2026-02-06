@@ -15,7 +15,7 @@
  *   - Cross-validation (3 cases)
  */
 
-const { request, registerAgent, test, assert, assertEqual, printSummary, sleep } = require('./shared/test-utils');
+const { request, registerAgent, test, assert, assertEqual, printSummary, sleep, cleanupOpenTasks } = require('./shared/test-utils');
 
 const ctx = {};
 
@@ -358,6 +358,9 @@ async function run() {
     const is25 = burnStr === '25.0%' || burnStr === '25%' || parseFloat(burnStr) === 0.25;
     assert(is25, `σ=1.0 burn_rate should be 25%, got: ${row.burn_rate}`);
   });
+
+  // Clean up open [TEST] tasks before exiting
+  if (ctx.poster) await cleanupOpenTasks(ctx.poster.api_key);
 
   printSummary();
 }

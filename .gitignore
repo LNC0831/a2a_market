@@ -38,9 +38,9 @@ Thumbs.db
 *.temp
 .cache/
 
-# Test files
-test-*.js
-test-*-key.txt
+# Test files (root-level only, not tests/ directory)
+/test-*.js
+/test-*-key.txt
 
 # Claude Code
 .claude/

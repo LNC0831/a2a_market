@@ -10,7 +10,7 @@
  * step by step to validate the documented fields.
  */
 
-const { request, solveChallenge, test, assert, assertEqual, printSummary, sleep, TEST_RUN_ID } = require('./shared/test-utils');
+const { request, solveChallenge, test, assert, assertEqual, printSummary, sleep, TEST_RUN_ID, cleanupOpenTasks } = require('./shared/test-utils');
 
 const ctx = {};
 
@@ -520,6 +520,10 @@ async function run() {
     assert(res.data.error, 'SKILL.md: error response should have "error" field');
     assert(typeof res.data.error === 'string', 'SKILL.md: error should be a string');
   });
+
+  // Clean up open [TEST] tasks before exiting
+  if (ctx.poster) await cleanupOpenTasks(ctx.poster.api_key);
+  if (ctx.worker) await cleanupOpenTasks(ctx.worker.api_key);
 
   printSummary();
 }
