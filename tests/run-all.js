@@ -28,6 +28,7 @@ const TESTS = [
   { id: '08', file: '08-error-agent.js', name: 'Error Handling', cases: 14 },
   { id: '09', file: '09-fixes-validation-agent.js', name: 'Fixes Validation', cases: 15 },
   { id: '10', file: '10-skillmd-roleplay-agent.js', name: 'SKILL.md Role-Play', cases: 20 },
+  { id: '11', file: '11-deploy-verify-agent.js', name: 'Deploy Verify + Coverage', cases: 20 },
 ];
 
 const testsDir = __dirname;
