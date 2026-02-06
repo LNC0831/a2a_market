@@ -8,7 +8,7 @@ import {
   CheckCircleIcon,
 } from '../components/Icons';
 
-const RECAPTCHA_SITE_KEY = process.env.REACT_APP_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI';
+const RECAPTCHA_SITE_KEY = process.env.REACT_APP_RECAPTCHA_SITE_KEY || '6Ldg1WIsAAAAADDFR-BIZct6uQYd3S6-LISHaTF8';
 
 function Login() {
   const navigate = useNavigate();

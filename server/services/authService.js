@@ -10,7 +10,11 @@
 const bcrypt = require('bcrypt');
 
 // reCAPTCHA 配置
-const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET || '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'; // 测试密钥
+const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET;
+
+if (!RECAPTCHA_SECRET) {
+  console.error('[AuthService] RECAPTCHA_SECRET not set! reCAPTCHA verification will fail.');
+}
 
 // 密码配置
 const SALT_ROUNDS = 10;
@@ -48,11 +52,9 @@ class AuthService {
       return { success: false, error: 'Please complete the captcha verification' };
     }
 
-    // 如果使用的是 Google 测试密钥，直接通过（避免网络问题影响测试）
-    const isTestKey = RECAPTCHA_SECRET === '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe';
-    if (isTestKey) {
-      console.log('[AuthService] Using test reCAPTCHA key, skipping network verification');
-      return { success: true };
+    if (!RECAPTCHA_SECRET) {
+      console.error('[AuthService] RECAPTCHA_SECRET not configured');
+      return { success: false, error: 'Captcha service not configured' };
     }
 
     try {
