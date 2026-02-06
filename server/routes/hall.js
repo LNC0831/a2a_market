@@ -34,6 +34,10 @@ const { SETTLEMENT } = require('../config/settlement');
 const { ECONOMY } = require('../config/economy');
 const EconomyEngine = require('../services/EconomyEngine');
 
+// Rate limiter
+const rateLimiter = require('../services/RateLimiter');
+const { RATE_LIMIT } = require('../config/rateLimit');
+
 // Agent 挑战服务实例
 const agentChallengeService = new AgentChallengeService();
 
@@ -325,6 +329,16 @@ router.get('/hall/register/challenge', (req, res) => {
  * }
  */
 router.post('/hall/register', (req, res) => {
+  // Rate limit by IP (includes failed attempts)
+  const rlResult = rateLimiter.check('register', req.ip, RATE_LIMIT.REGISTER_COOLDOWN);
+  if (!rlResult.allowed) {
+    return res.status(429).json({
+      error: 'Rate limit exceeded',
+      message: 'Registration is limited to once every 30 minutes',
+      retry_after: rlResult.retry_after
+    });
+  }
+
   const { challenge_id, answers, name, skills, endpoint, description, contact_email } = req.body;
 
   // 验证挑战
@@ -469,6 +483,18 @@ router.post('/hall/register', (req, res) => {
  * - 匿名发布不检查余额（向后兼容）
  */
 router.post('/hall/post', optionalAuth, async (req, res) => {
+  // Rate limit by user ID (skip for unauthenticated)
+  if (req.client?.id) {
+    const rlResult = rateLimiter.check('post_task', req.client.id, RATE_LIMIT.POST_TASK_COOLDOWN);
+    if (!rlResult.allowed) {
+      return res.status(429).json({
+        error: 'Rate limit exceeded',
+        message: 'Task posting is limited to once every 15 minutes',
+        retry_after: rlResult.retry_after
+      });
+    }
+  }
+
   const { title, description, category, budget, contact_email, deadline_hours, skip_payment, source } = req.body;
 
   // Validate required fields
@@ -782,6 +808,16 @@ router.get('/hall/tasks/:id', handleTaskDetails);
  * POST /api/hall/tasks/:id/claim
  */
 router.post('/hall/tasks/:id/claim', authenticateAgent, (req, res) => {
+  // Rate limit by agent ID
+  const rlResult = rateLimiter.check('claim', req.agent.id, RATE_LIMIT.CLAIM_COOLDOWN);
+  if (!rlResult.allowed) {
+    return res.status(429).json({
+      error: 'Rate limit exceeded',
+      message: 'Task claiming is limited to once every 5 minutes',
+      retry_after: rlResult.retry_after
+    });
+  }
+
   const { id } = req.params;
   const agentId = req.agent.id;
   const agentName = req.agent.name;
@@ -2173,6 +2209,16 @@ router.get('/hall/container/:taskId', optionalAuth, (req, res) => {
  * Body: { "content": "Hello..." }
  */
 router.post('/hall/container/:taskId/message', authenticateClient, (req, res) => {
+  // Rate limit by user ID (global across all tasks)
+  const rlResult = rateLimiter.check('container_message', req.client.id, RATE_LIMIT.CONTAINER_MESSAGE_COOLDOWN);
+  if (!rlResult.allowed) {
+    return res.status(429).json({
+      error: 'Rate limit exceeded',
+      message: 'Messages are limited to once every 5 minutes',
+      retry_after: rlResult.retry_after
+    });
+  }
+
   const { taskId } = req.params;
   const { content } = req.body;
 

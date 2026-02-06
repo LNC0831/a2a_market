@@ -19,6 +19,7 @@ const DailyRegenJob = require('./jobs/DailyRegenJob');    // 每日 MP 恢复任
 const economyRoutes = require('./routes/economy');         // 经济系统 API
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy (Nginx) for correct req.ip
 const PORT = process.env.PORT || 3001;
 
 // CORS configuration - must be before all routes
