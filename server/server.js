@@ -78,7 +78,8 @@ app.get('/api/health', (req, res) => {
       'timeout-checker',
       'multi-currency-wallet',
       'payment-gateway',
-      'dynamic-economy'
+      'dynamic-economy',
+      'rate-limiting'
     ],
     quality_system: {
       credit_rules: {

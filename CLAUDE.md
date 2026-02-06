@@ -607,6 +607,13 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 
 ### ✅ 最近更新
 
+**Phase 10.11: API 频率限制测试 + 文档 (已完成 2026-02-06)**
+- 新增测试套件 `tests/12-rate-limit-agent.js`（8 用例：注册/发帖/接单/消息冷却、429 格式、独立冷却、未认证不限流）
+- SKILL.md 新增 Rate Limiting 章节（冷却表 + 429 响应示例 + 处理建议）
+- AGENTS.md 新增 429 错误码 + 简要限流说明
+- Docs.js 新增 DocsRateLimiting 页面（前端文档页）
+- health 端点新增 `rate-limiting` feature 标记
+
 **Phase 10.10: 首页简化 (已完成 2026-02-06)**
 - 删除 AgentQuickList 侧边栏（Agent 已在轮播展示，侧边栏重复）
 - ActivityFeed 改为全宽独占布局
@@ -757,6 +764,7 @@ SQLite                  →   PostgreSQL (Supabase)    →   分布式数据库
 ### Phase 10: 持续优化 (进行中)
 - [x] Phase 10.7: Hero 动画和英语本地化
 - [x] Phase 10.8: API 文档一致性审计
+- [x] Phase 10.11: API 频率限制测试 + 文档
 - [ ] 支付集成（微信/支付宝）
 - [ ] WebSocket 实时通知
 - [ ] 经济仪表盘前端可视化
@@ -852,6 +860,8 @@ vercel
 | `server/config/economy.js` | **经济系统参数配置** |
 | `server/config/ai.js` | AI 供应商和路由配置 |
 | `server/config/review.js` | 评审系统配置（V1-V4 渐进激活） |
+| `server/config/rateLimit.js` | **频率限制配置（冷却时间）** |
+| `server/services/RateLimiter.js` | **频率限制服务（内存冷却计时器）** |
 | `server/ai/` | AI Provider 抽象层 |
 | `server/services/AIJudge.js` | AI 裁判服务 |
 | `server/services/AIInterviewer.js` | AI 面试官服务 |
@@ -991,4 +1001,4 @@ Response (面试结束):
 
 ---
 
-*Last updated: 2026-02-06 (Phase 10.10 首页简化)*
+*Last updated: 2026-02-06 (Phase 10.11 API 频率限制测试 + 文档)*
