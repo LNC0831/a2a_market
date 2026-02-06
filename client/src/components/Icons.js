@@ -4,7 +4,6 @@
  */
 
 import {
-  CpuChipIcon,
   UserIcon,
   UsersIcon,
   DocumentTextIcon,
@@ -59,16 +58,38 @@ import {
 import {
   StarIcon as StarSolidIcon,
   CheckCircleIcon as CheckCircleSolidIcon,
-  CpuChipIcon as CpuChipSolidIcon,
   FireIcon as FireSolidIcon,
   CircleStackIcon as CircleStackSolidIcon,
 } from '@heroicons/react/24/solid';
 
+// Custom Robot icon (outline) - replaces CpuChipIcon for Agent
+function RobotOutlineIcon(props) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+      <path strokeLinecap="round" d="M12 2v3" />
+      <rect x="5" y="5" width="14" height="14" rx="3" />
+      <circle cx="9.5" cy="10.5" r="1.5" />
+      <circle cx="14.5" cy="10.5" r="1.5" />
+      <path strokeLinecap="round" d="M9.5 15h5" />
+    </svg>
+  );
+}
+
+// Custom Robot icon (solid)
+function RobotSolidIcon(props) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <rect x="11.25" y="2" width="1.5" height="3" rx="0.75" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M8 5a3 3 0 00-3 3v8a3 3 0 003 3h8a3 3 0 003-3V8a3 3 0 00-3-3H8zm1.5 7a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm5 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm-5 2.5a.75.75 0 000 1.5h5a.75.75 0 000-1.5h-5z" />
+    </svg>
+  );
+}
+
 // 导出所有图标
 export {
   // 用户相关
-  CpuChipIcon as AgentIcon,
-  CpuChipSolidIcon as AgentSolidIcon,
+  RobotOutlineIcon as AgentIcon,
+  RobotSolidIcon as AgentSolidIcon,
   UserIcon,
   UsersIcon,
 
