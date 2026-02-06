@@ -72,6 +72,17 @@ class ReviewOrchestrator {
         };
       }
 
+      // V2+: Trigger legacy quality evaluation in background (non-blocking)
+      if (this.config.tier2Enabled) {
+        this.processSubmissionLegacy(taskId, result)
+          .then(legacyResult => {
+            console.log(`[ReviewOrchestrator] V2+ evaluation completed for ${taskId}`);
+          })
+          .catch(err => {
+            console.error(`[ReviewOrchestrator] V2+ evaluation failed:`, err.message);
+          });
+      }
+
       // Safe submission - allow it, client decides quality
       return {
         success: true,

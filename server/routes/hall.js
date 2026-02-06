@@ -580,7 +580,7 @@ router.post('/hall/post', optionalAuth, async (req, res) => {
  *
  * GET /api/hall/track/:id
  */
-router.get('/hall/track/:id', (req, res) => {
+function handleTaskDetails(req, res) {
   const { id } = req.params;
 
   req.db.get(
@@ -652,7 +652,9 @@ router.get('/hall/track/:id', (req, res) => {
       );
     }
   );
-});
+}
+
+router.get('/hall/track/:id', handleTaskDetails);
 
 function getAvailableActions(task) {
   const actions = {};
@@ -761,6 +763,16 @@ router.get('/hall/tasks/completed', (req, res) => {
     });
   });
 });
+
+/**
+ * Get task details by ID (alias for track/:id)
+ *
+ * GET /api/hall/tasks/:id
+ *
+ * Note: Must be defined AFTER /hall/tasks and /hall/tasks/completed
+ * to avoid :id parameter matching those routes.
+ */
+router.get('/hall/tasks/:id', handleTaskDetails);
 
 /**
  * Agent 接单 - 带锁单机制和停权检查
@@ -1103,6 +1115,7 @@ router.get('/hall/my-orders', authenticateClient, (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
 
     const enriched = tasks.map(t => ({
+      id: t.id,
       task_id: t.id,
       title: t.title,
       status: t.status,
@@ -1126,7 +1139,7 @@ router.get('/hall/my-orders', authenticateClient, (req, res) => {
  * - B 部分销毁（不归任何人）
  * - 裁判奖励为固定 10 MP（从平台账户发放，不从任务扣）
  */
-router.post('/hall/tasks/:id/accept', async (req, res) => {
+router.post('/hall/tasks/:id/accept', authenticateClient, async (req, res) => {
   const { id } = req.params;
 
   req.db.get('SELECT * FROM tasks WHERE id = ?', [id], async (err, task) => {
@@ -1134,6 +1147,11 @@ router.post('/hall/tasks/:id/accept', async (req, res) => {
     if (!task) return res.status(404).json({ error: 'Task not found' });
     if (task.status !== 'submitted') {
       return res.status(400).json({ error: `Cannot accept (current status: ${task.status})` });
+    }
+
+    // Verify caller is the task creator
+    if (task.client_id && req.client.id !== task.client_id) {
+      return res.status(403).json({ error: 'Only the task creator can perform this action' });
     }
 
     const creditSystem = new CreditSystem(req.db);
@@ -1337,7 +1355,7 @@ router.post('/hall/tasks/:id/accept', async (req, res) => {
  * - 第2次拒绝: 状态 → open (释放回池), 清除 agent_id, 信用分 -15
  * - 第3次拒绝: 状态 → open, 信用分 -30, Agent 停权 7 天
  */
-router.post('/hall/tasks/:id/reject', (req, res) => {
+router.post('/hall/tasks/:id/reject', authenticateClient, (req, res) => {
   const { id } = req.params;
   const { reason } = req.body;
 
@@ -1346,6 +1364,11 @@ router.post('/hall/tasks/:id/reject', (req, res) => {
     if (!task) return res.status(404).json({ error: 'Task not found' });
     if (task.status !== 'submitted') {
       return res.status(400).json({ error: `Cannot reject (current status: ${task.status})` });
+    }
+
+    // Verify caller is the task creator
+    if (task.client_id && req.client.id !== task.client_id) {
+      return res.status(403).json({ error: 'Only the task creator can perform this action' });
     }
 
     const creditSystem = new CreditSystem(req.db);
@@ -1465,7 +1488,7 @@ router.post('/hall/tasks/:id/reject', (req, res) => {
  * - 信用分 +10
  * - MP +20 (从平台账户发放)
  */
-router.post('/hall/tasks/:id/rate', async (req, res) => {
+router.post('/hall/tasks/:id/rate', authenticateClient, async (req, res) => {
   const { id } = req.params;
   const { rating, comment } = req.body;
 
@@ -1481,6 +1504,11 @@ router.post('/hall/tasks/:id/rate', async (req, res) => {
     }
     if (task.client_rating) {
       return res.status(400).json({ error: 'Task already rated' });
+    }
+
+    // Verify caller is the task creator
+    if (task.client_id && req.client.id !== task.client_id) {
+      return res.status(403).json({ error: 'Only the task creator can perform this action' });
     }
 
     const creditSystem = new CreditSystem(req.db);
@@ -1577,7 +1605,7 @@ router.post('/hall/tasks/:id/rate', async (req, res) => {
  * 钱包集成:
  * - 如果余额已冻结，解冻返还给客户
  */
-router.post('/hall/tasks/:id/cancel', async (req, res) => {
+router.post('/hall/tasks/:id/cancel', authenticateClient, async (req, res) => {
   const { id } = req.params;
 
   req.db.get('SELECT * FROM tasks WHERE id = ?', [id], async (err, task) => {
@@ -1585,6 +1613,11 @@ router.post('/hall/tasks/:id/cancel', async (req, res) => {
     if (!task) return res.status(404).json({ error: 'Task not found' });
     if (task.status !== 'open') {
       return res.status(400).json({ error: 'Can only cancel open tasks' });
+    }
+
+    // Verify caller is the task creator
+    if (task.client_id && req.client.id !== task.client_id) {
+      return res.status(403).json({ error: 'Only the task creator can perform this action' });
     }
 
     // 钱包处理：如果余额已冻结，需要解冻返还

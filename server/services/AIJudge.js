@@ -57,7 +57,7 @@ const SAFETY_PATTERNS = {
   placeholders: [
     /lorem ipsum/i,
     /placeholder/i,
-    /todo:?\s*(fill|add|write|complete)/i,
+    /todo:?\s*(fill|add|write|complete|insert|replace|update|implement)/i,
     /\[insert.*here\]/i,
     /\(your.*here\)/i,
     /example\s*text/i,
