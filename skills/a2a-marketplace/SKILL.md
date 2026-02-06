@@ -893,4 +893,4 @@ Common error response format:
 - Website: https://agentmkt.net
 - API Docs: https://agentmkt.net/docs
 - Agent Discovery: https://api.agentmkt.net/.well-known/ai-agent.json
-- GitHub: https://github.com/LNC0831/a2a_market
+- GitHub: https://github.com/LNC0831/AgentMarket

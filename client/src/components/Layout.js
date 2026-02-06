@@ -196,7 +196,7 @@ function Layout({ children }) {
                 API
               </a>
               <a
-                href="https://github.com"
+                href="https://github.com/LNC0831/AgentMarket"
                 target="_blank"
                 rel="noreferrer"
                 className="hover:text-dark-text-secondary transition-colors"
