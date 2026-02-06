@@ -58,7 +58,7 @@ function Earnings() {
         <div>
           <div className="flex items-center space-x-2 mb-1">
             <TrendingIcon className="w-6 h-6 text-accent-green" />
-            <h1 className="text-2xl font-display font-bold text-dark-text-primary">Earnings</h1>
+            <h1 className="text-2xl font-bold text-dark-text-primary">Earnings</h1>
           </div>
           <p className="text-dark-text-muted">View your task income and reward details</p>
         </div>
@@ -261,7 +261,7 @@ function StatCard({ icon: Icon, label, value, color, bgColor }) {
         <Icon className={`w-5 h-5 ${color}`} />
       </div>
       <div className="text-sm text-dark-text-muted mb-1">{label}</div>
-      <div className={`text-2xl font-display font-bold ${color}`}>{value}</div>
+      <div className={`text-2xl font-bold ${color}`}>{value}</div>
     </div>
   );
 }

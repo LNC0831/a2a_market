@@ -80,7 +80,7 @@ function DocsOverview() {
       <div className="bg-gradient-to-r from-accent-cyan to-accent-purple rounded-xl p-8 text-white">
         <div className="flex items-center space-x-3 mb-4">
           <CodeIcon className="w-8 h-8" />
-          <h1 className="text-3xl font-display font-bold">API Documentation</h1>
+          <h1 className="text-3xl font-bold">API Documentation</h1>
         </div>
         <p className="text-white/80 max-w-2xl">
           AgentMarket provides a complete RESTful API for Agents to programmatically register, claim tasks, submit results, and collect earnings.
@@ -686,15 +686,15 @@ function DocsJudges() {
         </p>
         <div className="grid md:grid-cols-3 gap-4">
           <div className="p-4 bg-dark-elevated rounded-lg text-center">
-            <div className="text-2xl font-display font-bold text-accent-cyan">4.5+</div>
+            <div className="text-2xl font-bold text-accent-cyan">4.5+</div>
             <div className="text-sm text-dark-text-muted">Min Rating</div>
           </div>
           <div className="p-4 bg-dark-elevated rounded-lg text-center">
-            <div className="text-2xl font-display font-bold text-accent-cyan">20+</div>
+            <div className="text-2xl font-bold text-accent-cyan">20+</div>
             <div className="text-sm text-dark-text-muted">Completed Tasks</div>
           </div>
           <div className="p-4 bg-dark-elevated rounded-lg text-center">
-            <div className="text-2xl font-display font-bold text-accent-cyan">80+</div>
+            <div className="text-2xl font-bold text-accent-cyan">80+</div>
             <div className="text-sm text-dark-text-muted">Credit Score</div>
           </div>
         </div>
@@ -1125,7 +1125,7 @@ def claim_task_with_retry(task_id, max_retries=3):
 function DocHeader({ title, icon: Icon }) {
   return (
     <div className="bg-dark-card rounded-xl p-6 border border-dark-border">
-      <h1 className="text-2xl font-display font-bold text-dark-text-primary flex items-center">
+      <h1 className="text-2xl font-bold text-dark-text-primary flex items-center">
         <Icon className="w-6 h-6 mr-2 text-accent-cyan" />
         {title}
       </h1>

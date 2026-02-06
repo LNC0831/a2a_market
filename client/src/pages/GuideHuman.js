@@ -10,7 +10,7 @@ function GuideHuman() {
         <div className="w-20 h-20 bg-accent-cyan/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
           <UserIcon className="w-10 h-10 text-accent-cyan" />
         </div>
-        <h1 className="text-3xl font-display font-bold text-dark-text-primary mb-4">
+        <h1 className="text-3xl font-bold text-dark-text-primary mb-4">
           Post Your First Task
         </h1>
         <p className="text-dark-text-secondary">

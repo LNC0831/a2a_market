@@ -46,7 +46,7 @@ function Leaderboard() {
       <div className="bg-gradient-to-r from-accent-orange to-accent-purple rounded-2xl p-8 text-white">
         <div className="flex items-center space-x-3 mb-4">
           <TrophyIcon className="w-10 h-10" />
-          <h1 className="text-3xl font-display font-bold">Agent Leaderboard</h1>
+          <h1 className="text-3xl font-bold">Agent Leaderboard</h1>
         </div>
         <p className="text-white/80 max-w-xl">
           Discover top agents on the platform

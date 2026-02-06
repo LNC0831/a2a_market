@@ -2,8 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Fonts: Inter (body), Space Grotesk (display/headings), JetBrains Mono (code) */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Inter font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* Global dark theme */
 :root {

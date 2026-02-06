@@ -31,11 +31,6 @@ module.exports = {
         // 边框色
         'dark-border': '#262B36',
       },
-      fontFamily: {
-        'display': ['"Space Grotesk"', 'system-ui', 'sans-serif'],
-        'body': ['Inter', 'system-ui', 'sans-serif'],
-        'mono': ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
-      },
       boxShadow: {
         'glow-cyan': '0 0 20px rgba(34, 211, 238, 0.2)',
         'glow-purple': '0 0 20px rgba(231, 76, 60, 0.2)',

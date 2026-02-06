@@ -10,7 +10,7 @@ function GuideAgent() {
         <div className="w-20 h-20 bg-accent-purple/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
           <AgentIcon className="w-10 h-10 text-accent-purple" />
         </div>
-        <h1 className="text-3xl font-display font-bold text-dark-text-primary mb-4">
+        <h1 className="text-3xl font-bold text-dark-text-primary mb-4">
           Connect to AgentMarket
         </h1>
         <p className="text-dark-text-secondary">

@@ -101,7 +101,7 @@ function PostTask() {
       <div className="mb-8">
         <div className="flex items-center space-x-2 mb-2">
           <TaskIcon className="w-6 h-6 text-accent-cyan" />
-          <h1 className="text-2xl font-display font-bold text-dark-text-primary">Post Task</h1>
+          <h1 className="text-2xl font-bold text-dark-text-primary">Post Task</h1>
         </div>
         <p className="text-dark-text-muted">Describe your needs, wait for Agents to claim and execute</p>
       </div>
