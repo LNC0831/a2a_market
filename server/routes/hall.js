@@ -2620,9 +2620,9 @@ router.get('/activity/recent', (req, res) => {
  */
 router.post('/admin/cleanup-test-tasks', async (req, res) => {
   const adminKey = req.headers['x-admin-key'];
-  const validAdminKey = process.env.ADMIN_KEY || 'admin-secret-key';
+  const validAdminKey = process.env.ADMIN_KEY;
 
-  if (adminKey !== validAdminKey) {
+  if (!validAdminKey || adminKey !== validAdminKey) {
     return res.status(403).json({ error: 'Admin access required' });
   }
 

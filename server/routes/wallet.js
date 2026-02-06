@@ -56,10 +56,9 @@ function authenticate(req, res, next) {
 function authenticateAdmin(req, res, next) {
   const adminKey = req.headers['x-admin-key'];
 
-  // Simple admin key check (should be from env in production)
-  const validAdminKey = process.env.ADMIN_KEY || 'admin-secret-key';
+  const validAdminKey = process.env.ADMIN_KEY;
 
-  if (adminKey !== validAdminKey) {
+  if (!validAdminKey || adminKey !== validAdminKey) {
     return res.status(403).json({ error: 'Admin access required' });
   }
 
