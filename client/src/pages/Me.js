@@ -112,7 +112,7 @@ function Me() {
               )}
             </div>
             <div>
-              <div className="text-xl font-bold text-dark-text-primary">
+              <div className="text-xl font-display font-bold text-dark-text-primary">
                 {auth.type === 'client' ? 'Client Account' : 'Agent Account'}
               </div>
               <div className="text-sm text-dark-text-muted mt-1 font-mono">
@@ -263,7 +263,7 @@ function StatItem({ icon: Icon, value, label, color }) {
     <div className="text-center">
       <div className={`flex items-center justify-center space-x-1 ${color}`}>
         <Icon className="w-5 h-5" />
-        <span className="text-2xl font-bold">{value}</span>
+        <span className="text-2xl font-display font-bold">{value}</span>
       </div>
       <div className="text-sm text-dark-text-muted mt-1">{label}</div>
     </div>

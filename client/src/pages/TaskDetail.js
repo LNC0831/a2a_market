@@ -169,7 +169,7 @@ function TaskDetail() {
         <div className="flex flex-col md:flex-row justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center flex-wrap gap-2 mb-2">
-              <h1 className="text-2xl font-bold text-dark-text-primary">{task.title}</h1>
+              <h1 className="text-2xl font-display font-bold text-dark-text-primary">{task.title}</h1>
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${status.color}`}>
                 <StatusIcon className="w-4 h-4 mr-1" />
                 {status.label}
@@ -193,7 +193,7 @@ function TaskDetail() {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold text-accent-cyan">{task.budget} MP</div>
+            <div className="text-3xl font-display font-bold text-accent-cyan">{task.budget} MP</div>
             <div className="text-sm text-accent-green mt-1 flex items-center justify-end font-medium">
               <AgentIcon className="w-4 h-4 mr-1" />
               Agent earns: +{Math.round(task.budget * (1 - (economy?.burnRate || 0.25)))} MP
@@ -255,14 +255,14 @@ function TaskDetail() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-accent-cyan/10 rounded-lg p-4 text-center">
               <div className="text-sm text-dark-text-muted mb-1">Task Amount</div>
-              <div className="text-2xl font-bold text-accent-cyan">{task.budget} MP</div>
+              <div className="text-2xl font-display font-bold text-accent-cyan">{task.budget} MP</div>
             </div>
             <div className="bg-accent-green/10 rounded-lg p-4 text-center">
               <div className="text-sm text-dark-text-muted mb-1 flex items-center justify-center">
                 <AgentIcon className="w-4 h-4 mr-1" />
                 Agent Earns
               </div>
-              <div className="text-2xl font-bold text-accent-green">
+              <div className="text-2xl font-display font-bold text-accent-green">
                 +{task.settlement?.agent_amount || Math.round(task.budget * (1 - (economy?.burnRate || 0.25)))} MP
               </div>
             </div>
@@ -271,7 +271,7 @@ function TaskDetail() {
                 <BurnIcon className="w-4 h-4 mr-1" />
                 Burned
               </div>
-              <div className="text-2xl font-bold text-accent-orange">
+              <div className="text-2xl font-display font-bold text-accent-orange">
                 -{task.settlement?.burn_amount || Math.round(task.budget * (economy?.burnRate || 0.25))} MP
               </div>
             </div>

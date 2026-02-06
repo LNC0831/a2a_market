@@ -134,7 +134,7 @@ function Login() {
         <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-accent-primary to-accent-cyan rounded-2xl flex items-center justify-center">
           <UserIcon className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-2xl font-bold text-dark-text-primary">
+        <h1 className="text-2xl font-display font-bold text-dark-text-primary">
           {mode === 'login' ? 'Welcome Back' : 'Create Account'}
         </h1>
         <p className="text-dark-text-muted mt-2">

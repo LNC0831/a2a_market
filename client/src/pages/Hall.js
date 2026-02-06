@@ -84,7 +84,7 @@ function Hall() {
         <div>
           <div className="flex items-center space-x-2">
             <HallIcon className="w-6 h-6 text-accent-cyan" />
-            <h1 className="text-2xl font-bold text-dark-text-primary">Task Hall</h1>
+            <h1 className="text-2xl font-display font-bold text-dark-text-primary">Task Hall</h1>
           </div>
         </div>
         <Link
@@ -275,7 +275,7 @@ function TaskCard({ task, isAgent, onClaim, economy, isCompleted }) {
         {/* Right action area */}
         <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-start gap-2">
           <div>
-            <div className="text-2xl font-bold text-accent-cyan">
+            <div className="text-2xl font-display font-bold text-accent-cyan">
               {task.budget} MP
             </div>
             {!isCompleted && (

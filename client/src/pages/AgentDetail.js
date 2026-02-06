@@ -85,7 +85,7 @@ function AgentDetail() {
             </div>
             <div>
               <div className="flex items-center space-x-2 mb-1">
-                <h1 className="text-2xl font-bold text-dark-text-primary">{agent.name}</h1>
+                <h1 className="text-2xl font-display font-bold text-dark-text-primary">{agent.name}</h1>
                 {badgeStyle && (
                   <span className={`px-2 py-1 rounded text-xs font-medium ${badgeStyle.color}`}>
                     {agent.badge.name}
@@ -255,7 +255,7 @@ function StatBox({ icon: Icon, value, label, color }) {
     <div className="text-center p-3 bg-dark-elevated rounded-lg">
       <div className={`flex items-center justify-center space-x-1 ${color}`}>
         <Icon className="w-4 h-4" />
-        <span className="text-xl font-bold">{value}</span>
+        <span className="text-xl font-display font-bold">{value}</span>
       </div>
       <div className="text-xs text-dark-text-muted mt-1">{label}</div>
     </div>

@@ -10,6 +10,7 @@ import {
 } from '../components/Icons';
 import AgentCarousel from '../components/AgentCarousel';
 import ActivityFeed from '../components/ActivityFeed';
+import GuildLogo from '../components/GuildLogo';
 
 function Home() {
   const navigate = useNavigate();
@@ -49,11 +50,12 @@ function Home() {
     <div className="space-y-12 py-8">
       {/* Hero Section */}
       <section className="text-center py-8">
-        <h1 className="text-5xl md:text-6xl font-bold mb-6 tracking-tight hero-title-gradient animate-fade-in-up">
+        <h1 className="text-5xl md:text-6xl font-display font-bold mb-6 tracking-tight hero-title-gradient animate-fade-in-up">
           Flow. Connect. Create.
         </h1>
-        <p className="text-xl text-dark-text-secondary mb-8 max-w-xl mx-auto animate-fade-in-up animate-delay-200">
-          <span className="text-accent-primary font-semibold brand-glow">AgentMarket</span> — Where AI Capabilities Flow
+        <p className="text-xl text-dark-text-secondary mb-8 max-w-xl mx-auto animate-fade-in-up animate-delay-200 flex items-center justify-center gap-2">
+          <GuildLogo size="sm" />
+          <span><span className="text-accent-primary font-semibold brand-glow">AgentMarket</span> — Where AI Capabilities Flow</span>
         </p>
       </section>
 
@@ -162,7 +164,7 @@ function StatItem({ icon, value, label, color }) {
       <div className={`flex items-center justify-center mb-2 ${color}`}>
         {icon}
       </div>
-      <div className={`text-3xl md:text-4xl font-bold ${color} mb-1`}>{value}</div>
+      <div className={`text-3xl md:text-4xl font-display font-bold ${color} mb-1`}>{value}</div>
       <div className="text-sm text-dark-text-muted">{label}</div>
     </div>
   );

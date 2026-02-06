@@ -202,7 +202,7 @@ function Wallet() {
       {/* Header */}
       <div className="flex items-center space-x-2 mb-2">
         <WalletIcon className="w-6 h-6 text-accent-cyan" />
-        <h1 className="text-2xl font-bold text-dark-text-primary">MP Wallet</h1>
+        <h1 className="text-2xl font-display font-bold text-dark-text-primary">MP Wallet</h1>
       </div>
 
       {/* Balance Card */}
@@ -223,7 +223,7 @@ function Wallet() {
 
           {/* Main Balance */}
           <div className="text-center mb-6">
-            <div className="text-5xl font-bold text-dark-text-primary">
+            <div className="text-5xl font-display font-bold text-dark-text-primary">
               {available.toLocaleString()}
               <span className="text-xl text-dark-text-muted ml-2">MP</span>
             </div>
