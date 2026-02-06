@@ -922,34 +922,37 @@ const stats = ai.getUsageStats();
 
 | 功能 | 供应商 | 模型 | 说明 |
 |------|--------|------|------|
-| ai_judge | Moonshot | moonshot-v1-8k | 任务质量评估 |
+| ai_judge | Moonshot | moonshot-v1-8k | 任务安全检查（非质量评判） |
 | ai_interviewer | Moonshot | moonshot-v1-8k | 裁判资格面试 |
 | content_writing | Moonshot | moonshot-v1-8k | 内容创作 |
 | code_review | OpenAI | gpt-4o-mini | 代码审查 |
 | default | Moonshot | moonshot-v1-8k | 默认回退 |
 
-### AI 裁判 API
+### AI 安全检查 API
 
-任务提交时自动触发 AI 评估：
+任务提交时自动触发安全检查（不评判质量，只检测空提交、占位文本、乱码等）。质量由客户决定。
 
 ```
 POST /api/hall/tasks/:id/submit
 
 Response:
 {
-  "auto_judge": {
-    "score": 85,
+  "success": true,
+  "task_id": "task_123",
+  "status": "submitted",
+  "message": "Result submitted. Awaiting client review.",
+  "expected_earnings": 22,
+  "track_url": "/api/hall/track/task_123",
+  "container_url": "/api/hall/container/task_123",
+  "safety_check": {
     "passed": true,
-    "source": "ai_judge",
-    "details": {
-      "scores": { "relevance": 90, "completeness": 85, ... },
-      "comment": "评语...",
-      "strengths": ["...", "..."],
-      "improvements": ["...", "..."]
-    }
-  }
+    "message": "Submission passed safety checks."
+  },
+  "client_decision_required": true
 }
 ```
+
+安全检查失败时提交被阻止，任务保持 `claimed` 状态。
 
 ### AI 面试官 API
 
