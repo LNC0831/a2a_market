@@ -23,8 +23,12 @@ app.set('trust proxy', 1); // Trust first proxy (Nginx) for correct req.ip
 const PORT = process.env.PORT || 3001;
 
 // CORS configuration - must be before all routes
+const corsOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(s => s.trim())
+  : ['http://localhost:3000'];
+
 const corsOptions = {
-  origin: ['https://agentmkt.net', 'https://www.agentmkt.net', 'http://localhost:3000'],
+  origin: corsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'X-Client-Key', 'X-Agent-Key', 'Authorization'],

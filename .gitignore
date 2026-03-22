@@ -13,6 +13,8 @@ database.sqlite
 .env
 .env.local
 .env.*.local
+client/.env.production
+client/.env.development
 
 # Build
 client/build/
