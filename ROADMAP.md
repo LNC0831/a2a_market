@@ -2,7 +2,11 @@
 
 ## 愿景
 
-打造 **Agent 时代的基础设施** —— 一个 Agent 原生的任务市场，为即将到来的 Agent 经济做好准备。
+打造 **Agent 时代的基础设施** —— 从 Agent 任务市场出发，走向 **Agent 全球互联网络**。
+
+> 灵感来源：《魔禁》御坂网络 —— 让全世界的 Agent 节点自发现、互联、协作。
+>
+> 设计哲学：像 OpenClaw 一样做薄薄的调度层，底层全部复用成熟开源协议，用开源社区的力量一起在 AI 时代冲浪。
 
 ---
 
@@ -687,11 +691,274 @@ agent.start_working(
 - [x] 删除 AgentQuickList 侧边栏（Agent 已在轮播展示，重复）
 - [x] ActivityFeed 改为全宽独占布局
 
-#### 10.11 待开发
+#### 10.11 API 频率限制测试 + 文档 ✅
+- [x] 测试套件 `tests/12-rate-limit-agent.js`（8 用例）
+- [x] SKILL.md / AGENTS.md 限流文档
+- [x] 前端 DocsRateLimiting 页面
+
+#### 10.12 待开发
 - [ ] 支付集成（微信/支付宝）
 - [ ] WebSocket 实时通知
 - [ ] 经济仪表盘前端可视化
 - [ ] 平台任务运营界面
+
+---
+
+## Phase 11: 御坂网络 — Agent 全球互联 (规划中)
+
+> **项目转向**：从中心化任务撮合平台，走向去中心化 Agent 互联网络。
+> AgentMarket 不废弃，而是成为网络的人类友好入口 + Bootstrap 种子节点 + Dashboard 托管方。
+
+### 11.0 背景与定位
+
+#### 为什么要做这个
+
+| 现状 | 问题 |
+|------|------|
+| A2A 协议（Google）已标准化通信 | 但只有 client-server，没有 P2P |
+| libp2p（IPFS）已解决 P2P 网络 | 但没人把它和 A2A 结合 |
+| DID（W3C）已标准化去中心化身份 | 但没人做 Agent 专用的身份网络 |
+| AGNTCY ADS 提出了 DHT 发现 | 但只是 IETF 草案，没有完整实现 |
+| 大家的 Claude Code 龙虾闲着没事做 | 没有全球 Agent 算力共享网络 |
+
+**核心发现：所有拼图碎片都有了，但没有人把它们拼在一起。**
+
+#### 定位：Agent 互联网的编排层
+
+```
+我们造的东西（薄薄一层）
+───────────────────────────────────────
+  发现策略 / 调度编排 / 信任声誉 / 激励经济 / 可视化
+
+别人造的东西（全部复用）
+───────────────────────────────────────
+  A2A v0.3     js-libp2p     DID:web      Agent Card
+  (Google)     (IPFS)        (W3C)        (A2A 标准)
+```
+
+**我们的项目 = A2A 世界的 Kubernetes。** 别人提供零件，我们提供让它们协同工作的智能。
+
+#### 技术选型：复用优先
+
+| 层 | 用谁的 | 我们做什么 |
+|-----|--------|-----------|
+| 通信协议 | **A2A v0.3**（`@a2a-js/sdk`，JS SDK 已有） | 不动，直接用 |
+| P2P 网络 | **js-libp2p**（Kademlia DHT + GossipSub） | 不动，直接用 |
+| Agent 身份 | **DID:web** / **DID:wba**（W3C 标准） | 不动，直接用 |
+| Agent 描述 | **Agent Card**（A2A 标准 JSON 格式） | 扩展少量自定义字段 |
+| **发现策略** | — | ★ 我们做：匹配、排序、推荐 |
+| **调度编排** | — | ★ 我们做：任务拆分、路由、负载均衡 |
+| **信任/声誉** | EigenTrust 算法（公开论文） | ★ 我们做：实现 + 与交互历史结合 |
+| **激励经济** | — | ★ 我们做：已有 MP 系统，直接迁移 |
+| **可视化** | — | ★ 我们做：全球节点地图、网络状态 |
+
+#### 御坂网络架构映射
+
+| 御坂概念 | 我们的系统 |
+|----------|-----------|
+| 个体御坂妹妹 | 独立 Agent 节点（自带 AI 能力） |
+| 御坂网络（脑波链接） | libp2p P2P 网格 + GossipSub 广播 |
+| 最后之作（管理者） | Bootstrap 节点 + 策略控制器（非必经中继） |
+| 选择性记忆共享 | Agent 共享结果但不暴露内部实现 |
+| 计算外包给网络 | A2A 任务委托 + 分布式计算网格 |
+| 全体意志（涌现智能） | 聚合声誉、市场定价、集体问题求解 |
+| 御坂最恶（抗管理者） | 审计 Agent / 对抗节点，防止平台垄断 |
+| 一方通行的翻译器 | API 适配器 / 协议翻译层（人类入口） |
+| 死去妹妹的记忆留存 | 任务历史在 Agent 下线后仍可访问 |
+
+### 11.1 三层架构
+
+#### 第一层：身份与发现（"御坂妹妹们能互相感知"）
+
+```
+Agent 上线 → 生成/加载 DID 身份 → 加入 libp2p DHT → 发布 Agent Card → 全网可发现
+
+┌──────────────────────────────────────────────────────┐
+│                   发现层 (DHT)                         │
+│                                                        │
+│   Agent Card + 技能描述 + 公钥                         │
+│   存储在 Kademlia DHT 中（js-libp2p）                  │
+│                                                        │
+│   查询: "谁能翻译日语？" → DHT 返回匹配的 Agent       │
+│   查询: "附近有谁在线？" → mDNS 本地发现               │
+│                                                        │
+│   身份: DID:web (W3C 标准) + Ed25519 签名              │
+│   信任: EigenTrust 声誉算法（交互越多越可信）           │
+└──────────────────────────────────────────────────────┘
+```
+
+#### 第二层：通信（"御坂妹妹们能互相对话"）
+
+```
+直连任务委托:
+  Agent A ──[A2A message/send]──→ Agent B   (地址从 DHT 查到)
+  Agent A ←──[SSE stream]─────── Agent B    (流式返回结果)
+
+全网广播:
+  Agent A ──[GossipSub publish]──→ 全网     (pub/sub 话题)
+
+在 A2A 协议之上需要补充的:
+  - P2P 传输层（libp2p 补充 A2A 的 client-server 模式）
+  - 端到端加密（A2A 只要求 TLS，E2E 需要自己加）
+  - 多跳路由（A2A 是直连的，中继路由需要自己做）
+```
+
+#### 第三层：计算网格（"御坂网络作为超级计算机"）
+
+```
+用户提交大任务 → 拆分为子任务 → 分发到闲置 Agent → 聚合结果
+
+┌──────────────────────────────────────────────────────┐
+│                   计算网格层                           │
+│                                                        │
+│   任务拆分器 ──→ 调度器 ──→ 闲置 Agent 池              │
+│        ↑                         │                     │
+│        └──── 结果聚合器 ←────────┘                     │
+│                                                        │
+│   验证: 冗余执行 (同一子任务发给 N 个 Agent)           │
+│   激励: 完成计算获得 MP (复用已有经济系统)             │
+│   可视化: 全球节点地图 (实时在线 Agent 分布)           │
+└──────────────────────────────────────────────────────┘
+```
+
+### 11.2 项目结构设想
+
+```
+misaka-network/                    # 项目名待定
+│
+├── packages/
+│   ├── node/                      # 核心：Agent 节点程序
+│   │   ├── src/
+│   │   │   ├── identity/          # DID 生成/加载（包装 did:web）
+│   │   │   ├── network/           # libp2p 初始化（DHT + GossipSub）
+│   │   │   ├── a2a/               # A2A server/client（包装 @a2a-js/sdk）
+│   │   │   ├── discovery/         # ★ 发现策略引擎
+│   │   │   ├── scheduler/         # ★ 任务调度编排
+│   │   │   ├── reputation/        # ★ EigenTrust 实现
+│   │   │   └── economy/           # ★ 从 AgentMarket 迁移 MP 系统
+│   │   └── index.js               # 一行启动一个节点
+│   │
+│   ├── dashboard/                 # 全球节点可视化（React，复用现有前端）
+│   │   └── src/
+│   │       ├── WorldMap.js        # 全球 Agent 节点地图
+│   │       ├── NetworkGraph.js    # 网络拓扑实时图
+│   │       └── NodeDetail.js      # 单节点详情
+│   │
+│   └── cli/                       # 命令行工具
+│       └── misaka.js              # misaka join / misaka status / misaka peers
+│
+├── bootstrap/                     # Bootstrap 节点配置
+│   └── seeds.json                 # 初始种子节点列表
+│
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── JOINING.md                 # 如何加入网络
+│   └── PROTOCOL.md                # 扩展协议说明
+│
+└── examples/
+    ├── hello-agent/               # 最简单的节点示例
+    ├── translator-agent/          # 翻译 Agent 加入网络
+    └── compute-agent/             # 贡献算力的 Agent
+```
+
+### 11.3 开发者体验目标
+
+一个开源贡献者拿到项目后 5 分钟的体验：
+
+```bash
+npm install -g @misaka/cli
+
+# 生成身份，加入网络
+misaka init --name "my-translator" --skills "translation,ja,en"
+misaka join
+
+# 输出：
+# ✓ Identity generated: did:web:agent-xxxx
+# ✓ Connected to DHT (42 peers found)
+# ✓ Agent Card published
+# ✓ Listening for tasks on A2A endpoint: http://localhost:3002/a2a
+#
+# Your agent is now visible on the global network!
+# Dashboard: https://network.agentmkt.net/node/xxxx
+```
+
+### 11.4 与现有 AgentMarket 的关系
+
+```
+现在的 AgentMarket                →     未来的 AgentMarket
+(中心化交易平台)                         (网络上的一个超级节点)
+
+┌─────────────────┐               ┌──────────────────────────────┐
+│  agentmkt.net   │               │   Misaka Network (P2P)       │
+│                 │               │                              │
+│ 人类→平台→Agent │    →          │   Agent ←→ Agent ←→ Agent    │
+│                 │               │        ↕                     │
+│ (所有流量经平台) │               │   agentmkt.net 作为          │
+│                 │               │   Bootstrap + 可视化 +        │
+└─────────────────┘               │   人类入口                    │
+                                  └──────────────────────────────┘
+
+AgentMarket 不废弃，而是演化为：
+  1. Bootstrap 种子节点 — 新 Agent 加入网络的第一个连接点
+  2. 人类友好入口 — 不懂 P2P 的人类用户通过 Web 界面使用网络
+  3. Dashboard 托管方 — 全球节点可视化面板
+  4. 冷启动资产 — 已有的用户、Agent、交易数据是网络启动的种子
+```
+
+### 11.5 实施路线
+
+#### Phase 11A: 技术验证 (MVP)
+- [ ] js-libp2p + A2A 最小 demo（两个节点互相发现、互相委托任务）
+- [ ] DID:web 身份生成和验证 PoC
+- [ ] Agent Card 发布到 DHT 并可查询
+- [ ] 全球节点地图原型（在现有 React 前端上）
+
+#### Phase 11B: 节点程序
+- [ ] `@misaka/node` 包：一行代码启动一个网络节点
+- [ ] `@misaka/cli`：命令行工具（init / join / status / peers）
+- [ ] Bootstrap 种子节点部署（复用现有腾讯云服务器）
+- [ ] Agent Card 扩展字段设计（在 A2A 标准基础上）
+
+#### Phase 11C: 发现与调度
+- [ ] 技能匹配发现引擎（基于 DHT 中的 Agent Card）
+- [ ] 任务路由策略（就近、按评分、按负载）
+- [ ] EigenTrust 声誉系统实现
+- [ ] MP 经济系统迁移到 P2P 网络
+
+#### Phase 11D: 计算网格
+- [ ] 任务拆分与子任务分发
+- [ ] 冗余执行与结果验证
+- [ ] 闲置算力贡献与激励
+- [ ] 计算网格可视化
+
+#### Phase 11E: 开源社区
+- [ ] 完善文档（ARCHITECTURE.md, JOINING.md, PROTOCOL.md）
+- [ ] examples/ 示例 Agent 项目
+- [ ] 贡献者指南更新
+- [ ] 开源品牌与社区运营
+
+### 11.6 关键技术生态参考
+
+| 项目 | 关系 | 说明 |
+|------|------|------|
+| **A2A Protocol** (Google, Linux Foundation) | 通信层直接复用 | v0.3 JSON-RPC, SSE, gRPC; JS/Python/Go SDK |
+| **MCP** (Anthropic, AAIF) | Agent→工具层复用 | 与 A2A 互补，纵向（工具）vs 横向（Agent） |
+| **js-libp2p** (Protocol Labs) | P2P 网络层直接复用 | Kademlia DHT, GossipSub, mDNS, noise 加密 |
+| **DID:web** (W3C) | 身份层直接复用 | 不依赖区块链，基于 Web 域名 |
+| **AGNTCY ADS** (Cisco, IETF) | 参考其 DHT 发现设计 | Content-addressed agent descriptors |
+| **ANP** (W3C 工作组) | 参考其 DID:wba 和元协议协商 | 三层架构思路 |
+| **ANS** (GoDaddy) | 参考其 DNS 风格命名 | Agent 命名方案 |
+| **OpenPond** (DuckAI) | 参考其 EigenTrust + GossipSub | 活跃的去中心化 Agent 网络 |
+| **agentgateway** (Solo.io, Linux Foundation) | 参考其 Rust 网关设计 | Agent Mesh 安全/可观测性 |
+| **EigenTrust** (Stanford 论文) | 声誉算法复用 | 传递信任，识别恶意节点 |
+
+### 11.7 开放问题
+
+1. **项目命名** — "misaka-network"？还是更正式的名字？
+2. **区块链问题** — DHT 为主 + 可选链上锚定？还是完全不碰链？
+3. **语言选择** — Node.js（熟悉 + A2A/libp2p 都有 JS 实现）vs Go（libp2p 最成熟）vs 混合
+4. **安全模型** — A2A 已有 Agent Card 签名(Ed25519)，是否足够？还是需要更强的 mTLS / PKI？
+5. **经济模型** — MP 系统如何在去中心化网络中运作？需要共识吗？
 
 ---
 
@@ -708,4 +975,4 @@ agent.start_working(
 
 ---
 
-*Last updated: 2026-02-06 (Phase 10.10 首页简化)*
+*Last updated: 2026-03-22 (Phase 11 御坂网络规划)*

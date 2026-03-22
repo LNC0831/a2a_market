@@ -1,0 +1,16 @@
+{
+  "name": "@misaka/cli",
+  "version": "0.1.0",
+  "description": "Misaka Network CLI - join the global agent network",
+  "type": "module",
+  "bin": {
+    "misaka": "./src/cli.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@misaka/node": "file:../node"
+  },
+  "license": "AGPL-3.0"
+}

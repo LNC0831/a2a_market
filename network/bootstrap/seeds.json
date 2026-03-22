@@ -1,0 +1,5 @@
+{
+  "description": "Misaka Network bootstrap seed nodes",
+  "seeds": [],
+  "comment": "Add multiaddrs of known seed nodes here, e.g.: /ip4/1.2.3.4/tcp/9000/p2p/12D3KooW..."
+}
