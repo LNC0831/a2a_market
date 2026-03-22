@@ -62,6 +62,15 @@ export class A2AServer {
     const app = express()
     app.use(express.json())
 
+    // CORS - allow dashboard and other frontends to connect
+    app.use((req, res, next) => {
+      res.header('Access-Control-Allow-Origin', '*')
+      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+      res.header('Access-Control-Allow-Headers', 'Content-Type')
+      if (req.method === 'OPTIONS') return res.sendStatus(204)
+      next()
+    })
+
     // Serve Agent Card at well-known path
     app.get('/.well-known/agent-card.json', (req, res) => {
       res.json(this.agentCard)
