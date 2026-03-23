@@ -66,9 +66,12 @@ export class Discovery {
       this._handlePubsubMessage(msg)
     })
 
-    // Handle peer connect/disconnect
+    // Handle peer connect — re-announce after GossipSub mesh forms
     this.network.on('peer:connect', (peerId) => {
       this._emit('peer:connect', peerId.toString())
+      // GossipSub needs ~1-2s after TCP connect to establish mesh (GRAFT/PRUNE exchange)
+      // Then re-announce so the new peer learns about us
+      setTimeout(() => this._announcePresence().catch(() => {}), 2000)
     })
 
     this.network.on('peer:disconnect', (peerId) => {
@@ -147,15 +150,13 @@ export class Discovery {
   }
 
   /**
-   * Send heartbeat
+   * Send heartbeat — includes full announcement so late-joining peers can discover us
    */
   async _sendHeartbeat() {
     try {
       await this.network.publish(TOPICS.AGENT_HEARTBEAT, {
-        type: 'heartbeat',
-        agentId: this.identity.agentId,
-        peerId: this.network.getPeerId(),
-        timestamp: Date.now()
+        ...this._buildAnnouncement(),
+        type: 'heartbeat'
       })
     } catch {
       // Heartbeat failures are non-critical
@@ -212,7 +213,7 @@ export class Discovery {
   }
 
   /**
-   * Handle heartbeat
+   * Handle heartbeat — also registers unknown peers (acts as late announce)
    */
   _handleHeartbeat(data) {
     if (data.agentId === this.identity.agentId) return
@@ -220,6 +221,9 @@ export class Discovery {
     const peer = this.peers.get(data.peerId)
     if (peer) {
       peer.touch()
+    } else if (data.agentId && data.name) {
+      // Peer not yet known — register it (heartbeat carries full announcement data)
+      this._handleAnnouncement(data)
     }
   }
 
