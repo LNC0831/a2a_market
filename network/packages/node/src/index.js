@@ -125,10 +125,12 @@ export class MisakaNode {
     await this.discovery.start(resolvedUrl)
     console.log(`✓ Discovery started`)
 
-    // 5. Explicitly dial bootstrap peers (more reliable than libp2p bootstrap module)
-    if (this.config.bootstrapPeers.length > 0) {
-      console.log(`  Connecting to ${this.config.bootstrapPeers.length} bootstrap node(s)...`)
-      for (const addr of this.config.bootstrapPeers) {
+    // 5. Explicitly dial bootstrap peers (skip self)
+    const myPeerId = this.network.getPeerId()
+    const peersToConnect = this.config.bootstrapPeers.filter(addr => !addr.includes(myPeerId))
+    if (peersToConnect.length > 0) {
+      console.log(`  Connecting to ${peersToConnect.length} bootstrap node(s)...`)
+      for (const addr of peersToConnect) {
         try {
           await this.network.dial(addr)
           console.log(`  ✓ Connected: ${addr.slice(0, 40)}...`)
