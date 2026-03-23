@@ -13,9 +13,11 @@ import { tcp } from '@libp2p/tcp'
 import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { kadDHT } from '@libp2p/kad-dht'
+import { multiaddr } from '@multiformats/multiaddr'
 import { gossipsub } from '@chainsafe/libp2p-gossipsub'
 import { mdns } from '@libp2p/mdns'
 import { identify } from '@libp2p/identify'
+import { ping } from '@libp2p/ping'
 import { bootstrap } from '@libp2p/bootstrap'
 
 // GossipSub topics
@@ -48,7 +50,7 @@ export class P2PNetwork {
     const {
       port = 0,        // 0 = random available port
       bootstrapPeers = [],
-      enableMdns = true,
+      enableMdns = false,
       enableDht = true,
       enablePubsub = true
     } = config
@@ -66,7 +68,8 @@ export class P2PNetwork {
     }
 
     const services = {
-      identify: identify()
+      identify: identify(),
+      ping: ping()
     }
 
     if (enableDht) {
@@ -168,11 +171,12 @@ export class P2PNetwork {
   }
 
   /**
-   * Dial a peer by multiaddr
+   * Dial a peer by multiaddr string or object
    */
-  async dial(multiaddr) {
+  async dial(addr) {
     if (!this.node) throw new Error('Node not started')
-    return this.node.dial(multiaddr)
+    const ma = typeof addr === 'string' ? multiaddr(addr) : addr
+    return this.node.dial(ma)
   }
 
   // === DHT Operations ===

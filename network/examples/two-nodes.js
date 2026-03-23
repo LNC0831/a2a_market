@@ -75,18 +75,37 @@ await nodeA.start()
 console.log('\nStep 2: Starting Node B (Bob-Coder)...\n')
 await nodeB.start()
 
-// --- Wait for discovery ---
-console.log('\nStep 3: Waiting for peer discovery via mDNS...\n')
+// --- Explicitly connect B → A via libp2p dial ---
+console.log('\nStep 3: Connecting nodes via P2P...\n')
 
-// Wait briefly for P2P connections to establish
-await sleep(3000)
+const nodeAAddrs = nodeA.network.getMultiaddrs()
+const nodeALocalAddr = nodeAAddrs.find(a => a.includes('127.0.0.1')) || nodeAAddrs[0]
+console.log(`  Node A address: ${nodeALocalAddr}`)
+
+try {
+  await nodeB.network.dial(nodeALocalAddr)
+  console.log('  ✓ Node B connected to Node A via P2P!')
+} catch (err) {
+  console.log(`  ✗ P2P connection failed: ${err.message}`)
+}
+
+// Wait for connection + announce
+await sleep(2000)
+
+const connectedA = nodeA.network.getPeers().length
+const connectedB = nodeB.network.getPeers().length
+console.log(`\n  Node A: ${connectedA} P2P connection(s)`)
+console.log(`  Node B: ${connectedB} P2P connection(s)`)
+
+// Trigger announcements over the now-connected pubsub
+nodeA.discovery._announcePresence().catch(() => {})
+nodeB.discovery._announcePresence().catch(() => {})
+await sleep(2000)
 
 const peersA = nodeA.discovery.getOnlinePeers()
 const peersB = nodeB.discovery.getOnlinePeers()
-console.log(`  Node A sees ${peersA.length} peer(s) via P2P`)
-console.log(`  Node B sees ${peersB.length} peer(s) via P2P`)
-console.log('  (P2P discovery works when bootstrap peers are configured)')
-console.log('  Direct A2A communication works regardless of P2P discovery.\n')
+console.log(`  Node A discovered: ${peersA.length} peer(s) ${peersA.map(p => '→ ' + p.name).join(' ')}`)
+console.log(`  Node B discovered: ${peersB.length} peer(s) ${peersB.map(p => '→ ' + p.name).join(' ')}`)
 
 // --- Send A2A task: B → A ---
 console.log('\n\nStep 4: Bob sends a translation task to Alice via A2A...\n')
