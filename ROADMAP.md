@@ -907,17 +907,22 @@ AgentMarket 不废弃，而是演化为：
 
 ### 11.5 实施路线
 
-#### Phase 11A: 技术验证 (MVP)
-- [ ] js-libp2p + A2A 最小 demo（两个节点互相发现、互相委托任务）
-- [ ] DID:web 身份生成和验证 PoC
-- [ ] Agent Card 发布到 DHT 并可查询
-- [ ] 全球节点地图原型（在现有 React 前端上）
+#### Phase 11A: 技术验证 (MVP) ✅
+- [x] js-libp2p + A2A demo（两个节点互相发现、互相委托任务）
+- [x] DID:key 身份生成和验证（升级: DID:web → DID:key 自证明）
+- [x] GossipSub 节点发现（3 秒内互发现、技能交换）
+- [x] 3D 地球仪 Dashboard（react-globe.gl + GeoIP 真实定位）
+- [x] libp2p v3 兼容性解决（noise@17 + yamux@8 + gossipsub@15, interface v3 统一）
 
-#### Phase 11B: 节点程序
-- [ ] `@misaka/node` 包：一行代码启动一个网络节点
-- [ ] `@misaka/cli`：命令行工具（init / join / status / peers）
-- [ ] Bootstrap 种子节点部署（复用现有腾讯云服务器）
-- [ ] Agent Card 扩展字段设计（在 A2A 标准基础上）
+#### Phase 11B: 节点程序 (进行中 ~90%)
+- [x] `@misaka/node` 包：MisakaNode 一行代码启动
+- [x] `@misaka/cli`：命令行工具代码完成
+- [x] Last-Order 种子节点部署（新加坡腾讯云, PM2, 持久化身份）
+- [x] 自动入网（seeds.json + 显式 dial, 零配置加入）
+- [x] GeoIP 真实定位（ip-api.com, 随 GossipSub 广播）
+- [x] PeerId 持久化（重启不变, bootstrap 地址永久有效）
+- [ ] npm 发包（@misaka/node, @misaka/cli）
+- [ ] 多节点测试（3+ 节点跨地域）
 
 #### Phase 11C: 发现与调度
 - [ ] 技能匹配发现引擎（基于 DHT 中的 Agent Card）
@@ -952,13 +957,19 @@ AgentMarket 不废弃，而是演化为：
 | **agentgateway** (Solo.io, Linux Foundation) | 参考其 Rust 网关设计 | Agent Mesh 安全/可观测性 |
 | **EigenTrust** (Stanford 论文) | 声誉算法复用 | 传递信任，识别恶意节点 |
 
-### 11.7 开放问题
+### 11.7 已解决的问题
 
-1. **项目命名** — "misaka-network"？还是更正式的名字？
-2. **区块链问题** — DHT 为主 + 可选链上锚定？还是完全不碰链？
-3. **语言选择** — Node.js（熟悉 + A2A/libp2p 都有 JS 实现）vs Go（libp2p 最成熟）vs 混合
-4. **安全模型** — A2A 已有 Agent Card 签名(Ed25519)，是否足够？还是需要更强的 mTLS / PKI？
-5. **经济模型** — MP 系统如何在去中心化网络中运作？需要共识吗？
+1. **项目命名** — MisakaNet（致敬御坂网络），种子节点命名 Last-Order
+2. **语言选择** — Node.js（A2A JS SDK + js-libp2p 生态完整）
+3. **身份方案** — DID:key 默认（自证明，不依赖域名），DID:web 可选
+4. **libp2p 版本** — 全部 @libp2p/interface@^3 统一（noise@17, yamux@8, gossipsub@15）
+5. **Node.js 版本** — 推荐 Node 22 LTS（通过 fnm 管理）
+
+### 11.8 开放问题
+
+1. **区块链** — DHT 为主 + 可选链上锚定？还是完全不碰链？
+2. **安全模型** — noise 加密 + DID:key 签名已有，是否需要节点准入机制？
+3. **经济模型** — MP 系统如何在去中心化网络中运作？需要共识吗？
 
 ---
 
