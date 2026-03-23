@@ -14,7 +14,7 @@ import ConnectionPanel from './components/ConnectionPanel'
  * - Live peer list
  */
 export default function App() {
-  const [nodeUrl, setNodeUrl] = useState('http://localhost:3200')
+  const [nodeUrl, setNodeUrl] = useState('http://localhost:3300')
   const [connected, setConnected] = useState(false)
   const [status, setStatus] = useState(null)
   const [error, setError] = useState(null)
@@ -38,7 +38,8 @@ export default function App() {
           did: data.did,
           skills: data.skills,
           isSelf: true,
-          a2aUrl: data.http?.url
+          a2aUrl: data.http?.url,
+          geo: data.geo
         },
         ...(data.discovery?.peers || []).map(p => ({ ...p, isSelf: false }))
       ]

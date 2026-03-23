@@ -33,6 +33,8 @@ function hashToLatLng(str) {
 }
 
 function getNodePosition(peer) {
+  // Priority: real GeoIP data → known locations → hash fallback
+  if (peer.geo?.lat && peer.geo?.lng) return { lat: peer.geo.lat, lng: peer.geo.lng }
   if (KNOWN_LOCATIONS[peer.name]) return KNOWN_LOCATIONS[peer.name]
   return hashToLatLng(peer.agentId || peer.name || 'unknown')
 }
@@ -74,6 +76,8 @@ export default function WorldMap({ peers }) {
   const points = useMemo(() => {
     return peers.map(peer => {
       const pos = getNodePosition(peer)
+      const geo = peer.geo
+      const location = geo ? `${geo.city}${geo.city && geo.country ? ', ' : ''}${geo.country}` : ''
       return {
         ...pos,
         name: peer.name || peer.agentId?.slice(0, 12),
@@ -81,6 +85,7 @@ export default function WorldMap({ peers }) {
         altitude: peer.isSelf ? 0.08 : 0.04,
         radius: peer.isSelf ? 0.7 : 0.4,
         skills: peer.skills || [],
+        location,
         isSelf: peer.isSelf
       }
     })
@@ -145,6 +150,7 @@ export default function WorldMap({ peers }) {
             pointLabel={d => `
               <div style="background:#1e293b;padding:8px 12px;border-radius:8px;border:1px solid #334155;font-size:12px;color:#e2e8f0;">
                 <b style="color:${d.color}">${d.name}</b>${d.isSelf ? ' <span style="color:#22c55e;font-size:10px">(YOU)</span>' : ''}
+                ${d.location ? '<br/><span style="color:#64748b">📍 ' + d.location + '</span>' : ''}
                 ${d.skills.length > 0 ? '<br/><span style="color:#94a3b8">' + d.skills.join(', ') + '</span>' : ''}
               </div>
             `}

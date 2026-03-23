@@ -217,6 +217,7 @@ export class MisakaNode {
         multiaddrs: this.network?.getMultiaddrs() || [],
         connectedPeers: this.network?.getPeers() || []
       },
+      geo: this.discovery?.geo || null,
       discovery: {
         knownPeers: this.discovery?.peerCount || 0,
         knownSkills: this.discovery?.getKnownSkills() || [],
@@ -224,7 +225,8 @@ export class MisakaNode {
           name: p.name,
           agentId: p.agentId,
           skills: p.skills,
-          a2aUrl: p.a2aUrl
+          a2aUrl: p.a2aUrl,
+          geo: p.geo
         })) || []
       }
     }

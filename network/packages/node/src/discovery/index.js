@@ -14,6 +14,22 @@ const HEARTBEAT_INTERVAL = 30000  // 30 seconds
 const PEER_TIMEOUT = 90000        // 90 seconds without heartbeat = offline
 
 /**
+ * Fetch geolocation from IP using free API
+ * Returns { lat, lng, city, country } or null
+ */
+async function fetchGeoIP() {
+  try {
+    const res = await fetch('http://ip-api.com/json/?fields=lat,lon,city,country', { signal: AbortSignal.timeout(5000) })
+    if (!res.ok) return null
+    const data = await res.json()
+    if (data.lat && data.lon) {
+      return { lat: data.lat, lng: data.lon, city: data.city || '', country: data.country || '' }
+    }
+  } catch {}
+  return null
+}
+
+/**
  * PeerInfo - information about a known peer
  */
 class PeerInfo {
@@ -25,6 +41,7 @@ class PeerInfo {
     this.skills = data.skills || []
     this.a2aUrl = data.a2aUrl
     this.multiaddrs = data.multiaddrs || []
+    this.geo = data.geo || null   // { lat, lng, city, country }
     this.lastSeen = Date.now()
     this.joinedAt = data.joinedAt || Date.now()
   }
@@ -47,6 +64,7 @@ export class Discovery {
     this.identity = identity
     this.peers = new Map()       // peerId -> PeerInfo
     this.skillIndex = new Map()  // skill -> Set<peerId>
+    this.geo = null              // { lat, lng, city, country }
     this._heartbeatTimer = null
     this._eventHandlers = new Map()
   }
@@ -56,6 +74,14 @@ export class Discovery {
    */
   async start(a2aUrl) {
     this.a2aUrl = a2aUrl
+
+    // Fetch geolocation (non-blocking)
+    fetchGeoIP().then(geo => {
+      if (geo) {
+        this.geo = geo
+        console.log(`  📍 Location: ${geo.city}, ${geo.country} (${geo.lat.toFixed(2)}, ${geo.lng.toFixed(2)})`)
+      }
+    })
 
     // Subscribe to announcement and heartbeat topics
     this.network.subscribe(TOPICS.AGENT_ANNOUNCE)
@@ -145,6 +171,7 @@ export class Discovery {
       skills: this.identity.skills,
       a2aUrl: this.a2aUrl,
       multiaddrs: this.network.getMultiaddrs(),
+      geo: this.geo,
       timestamp: Date.now()
     }
   }
