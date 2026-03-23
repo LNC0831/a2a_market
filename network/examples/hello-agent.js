@@ -33,8 +33,8 @@ const skills = (getArg('skills', 'greeting,echo') || '').split(',')
 const bootstrapStr = getArg('bootstrap', '')
 const bootstrapPeers = bootstrapStr ? bootstrapStr.split(',') : []
 
-// Use a unique identity file per instance (for running multiple locally)
-const identityPath = join(tmpdir(), `.misaka-${name}-identity.json`)
+// Identity path: --identity flag, or default to temp dir
+const identityPath = getArg('identity', null) || join(tmpdir(), `.misaka-${name}-identity.json`)
 
 const node = new MisakaNode({
   name,
