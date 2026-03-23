@@ -15,8 +15,12 @@
  */
 
 import { MisakaNode } from '../packages/node/src/index.js'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
 import { tmpdir } from 'node:os'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 // Parse CLI args
 const args = process.argv.slice(2)
@@ -26,12 +30,27 @@ function getArg(name, defaultValue) {
   return args[idx + 1] || defaultValue
 }
 
+// Load bootstrap seeds from seeds.json
+function loadSeeds() {
+  try {
+    const seedsPath = join(__dirname, '..', 'bootstrap', 'seeds.json')
+    const data = JSON.parse(readFileSync(seedsPath, 'utf-8'))
+    return (data.seeds || []).map(s => s.multiaddr).filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
 const name = getArg('name', `hello-agent-${Date.now().toString(36)}`)
 const httpPort = parseInt(getArg('port', '0'), 10)
 const p2pPort = parseInt(getArg('p2p-port', '0'), 10)
 const skills = (getArg('skills', 'greeting,echo') || '').split(',')
 const bootstrapStr = getArg('bootstrap', '')
-const bootstrapPeers = bootstrapStr ? bootstrapStr.split(',') : []
+const manualPeers = bootstrapStr ? bootstrapStr.split(',') : []
+const noSeeds = args.includes('--no-seeds')
+
+// Merge: manual --bootstrap peers + seeds.json (unless --no-seeds)
+const bootstrapPeers = [...manualPeers, ...(noSeeds ? [] : loadSeeds())]
 
 // Identity path: --identity flag, or default to temp dir
 const identityPath = getArg('identity', null) || join(tmpdir(), `.misaka-${name}-identity.json`)
