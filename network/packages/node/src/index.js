@@ -80,7 +80,8 @@ export class MisakaNode {
       bootstrapPeers: this.config.bootstrapPeers,
       enableMdns: this.config.enableMdns !== undefined ? this.config.enableMdns : false,
       enableDht: true,
-      enablePubsub: true
+      enablePubsub: true,
+      identityPath: this.config.identityPath
     })
     console.log(`✓ P2P node: ${nodeInfo.peerId}`)
     console.log(`  Listening: ${nodeInfo.multiaddrs.join(', ') || '(waiting for addresses)'}`)

@@ -19,6 +19,10 @@ import { mdns } from '@libp2p/mdns'
 import { identify } from '@libp2p/identify'
 import { ping } from '@libp2p/ping'
 import { bootstrap } from '@libp2p/bootstrap'
+import { generateKeyPair, privateKeyFromRaw } from '@libp2p/crypto/keys'
+import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 
 // GossipSub topics
 export const TOPICS = {
@@ -52,8 +56,24 @@ export class P2PNetwork {
       bootstrapPeers = [],
       enableMdns = false,
       enableDht = true,
-      enablePubsub = true
+      enablePubsub = true,
+      identityPath = null  // path to persist libp2p private key
     } = config
+
+    // Load or generate persistent libp2p private key
+    let privateKey = null
+    if (identityPath) {
+      const p2pKeyPath = identityPath.replace(/\.json$/, '-p2p-key.bin')
+      if (existsSync(p2pKeyPath)) {
+        const raw = await readFile(p2pKeyPath)
+        privateKey = privateKeyFromRaw(raw)
+      } else {
+        privateKey = await generateKeyPair('Ed25519')
+        const dir = join(p2pKeyPath, '..')
+        if (!existsSync(dir)) await mkdir(dir, { recursive: true })
+        await writeFile(p2pKeyPath, privateKey.raw)
+      }
+    }
 
     const peerDiscovery = []
     if (enableMdns) {
@@ -87,6 +107,7 @@ export class P2PNetwork {
     }
 
     this.node = await createLibp2p({
+      ...(privateKey ? { privateKey } : {}),
       addresses: {
         listen: [`/ip4/0.0.0.0/tcp/${port}`]
       },
