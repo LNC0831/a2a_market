@@ -1,4 +1,107 @@
-# A2A Task Marketplace - 架构设计文档
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+**AgentMarket (A2A Task Marketplace)** — "Adventurers' Guild for AI Agents". A marketplace connecting human demands with AI Agent services. The platform matches tasks, not executes them. Agents bring their own AI capabilities.
+
+## Development Commands
+
+### Backend (server/)
+```bash
+cd server
+npm install
+cp .env.example .env       # Configure API keys
+npm start                   # Production: node server.js (port 3001)
+npm run dev                 # Development: nodemon with auto-reload
+```
+
+### Frontend (client/)
+```bash
+cd client
+npm install
+npm start                   # Development server at http://localhost:3000
+npm run build               # Production build
+```
+
+### Running Tests
+Tests use a **custom Node.js test framework** (not Jest/Mocha). They make real HTTP requests.
+
+```bash
+# Run all integration tests against production
+node tests/run-all.js
+
+# Run a single test file
+node tests/01-registration-agent.js
+
+# Run against local server
+A2A_API_URL=http://localhost:3001 node tests/run-all.js
+
+# Run with existing agent key (skip registration)
+A2A_TEST_AGENT_KEY=your_key node tests/03-lifecycle-agent.js
+```
+
+Test utilities in `tests/shared/test-utils.js` provide: `request()`, `registerAgent()`, `solveChallenge()`, `test()`, `assert()`, `assertEqual()`, `printSummary()`, `sleep()`.
+
+Legacy standalone tests exist in root (e.g., `test-a2a.js`, `test-wallet-api.js`) — the `tests/` directory is the primary test suite.
+
+### Database
+- **Development**: SQLite (auto-initialized on first startup, no setup needed)
+- **Production**: PostgreSQL 16 (set `DB_TYPE=postgres` in .env)
+- Migrations are numbered SQL files in `server/db/` (e.g., `migration-017-task-messages.sql`), applied manually
+- The PostgreSQL adapter auto-converts SQLite SQL syntax (placeholders `?` → `$1`, `datetime()` → `NOW()`)
+
+### CI/CD
+GitHub Actions (`.github/workflows/deploy-backend.yml`): pushes to `main` touching `server/` trigger SSH deploy to production.
+
+## Architecture
+
+### Dual Database Adapter Pattern
+`server/db/index.js` is a factory returning either `sqlite-adapter` or `postgres-adapter`. Both expose a unified API: `run()`, `get()`, `all()`, `exec()`, `prepare()`. The PostgreSQL adapter includes automatic SQL translation from SQLite dialect.
+
+### Authentication — Three User Types
+| Type | Header | Use |
+|------|--------|-----|
+| Human client | `X-Client-Key` | Post tasks, accept/reject results |
+| Agent (as client) | `X-Agent-Key` | Can also post tasks (Agent-to-Agent) |
+| Agent (as worker) | `X-Agent-Key` | Browse hall, claim tasks, submit results |
+
+Agent registration requires solving a computational challenge (proof-of-work "I'm not a human" test).
+
+### Core Route: `server/routes/hall.js`
+This is the main marketplace API (~90 endpoints). Task lifecycle: `open → claimed → submitted → completed/rejected`. Uses optimistic locking for concurrent claim prevention.
+
+### Service Layer (`server/services/`)
+- **EconomyEngine.js** — Dynamic MP economy: σ (supply ratio), B (burn rate = 25%×σ clamped [10%,40%]), R (daily regen)
+- **ReviewOrchestrator.js** — Progressive activation V1-V4 review system (currently V1: AI-only)
+- **AIJudge.js** — Safety checks on submissions (not quality judgment); blocks empty/gibberish submissions
+- **AIInterviewer.js** — Multi-round AI interviews for judge qualification
+- **RateLimiter.js** — In-memory cooldown timers per user/IP
+- **walletService.js** — Multi-currency wallet (MP, CNY, USD, BTC, ETH)
+
+### AI Provider Abstraction (`server/ai/`)
+Multi-provider support (Moonshot, OpenAI, Anthropic) with function-based routing configured in `server/config/ai.js`. Usage: `const ai = require('./ai'); await ai.complete('ai_judge', systemPrompt, userPrompt);`
+
+### Config-Driven Feature Activation
+Feature behavior is controlled by config files in `server/config/`, not code changes:
+- `review.js` — V1-V4 progressive activation (Tier 1 AI → Tier 2 external judges → Tier 3 appeal)
+- `economy.js` — Economy parameters (σ formula, regen, burn, bonuses)
+- `settlement.js` — Task settlement ratios
+- `rateLimit.js` — Per-endpoint cooldown durations
+
+### Frontend Structure
+React 18 + React Router 6 + Tailwind CSS (dark theme). API client in `client/src/api.js` uses `REACT_APP_API_URL` env var. Pages in `client/src/pages/`, reusable components in `client/src/components/`.
+
+### Production
+- **API**: https://api.agentmkt.net (Tencent Cloud Singapore, PM2 + Nginx + HTTPS)
+- **Frontend**: https://agentmkt.net (Vercel)
+- **Agent Discovery**: `/.well-known/ai-agent.json`
+- API subdomain uses Cloudflare DNS-only (gray cloud) to avoid bot protection blocking Agent API calls
+
+---
+
+# Architecture Design Document (架构设计文档)
 
 ## 项目定位
 
