@@ -10,7 +10,7 @@
  *   misaka peers   - List known peers
  */
 
-import { MisakaNode, Identity } from '@misaka/node'
+import { MisakaNode, Identity } from '@misakanet/node'
 import { readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
